@@ -1934,9 +1934,6 @@ const App = {
           const qc = q.toCallsign || q.callsign || '';
           return this.isSameOperator(qc, h.callsign);
         });
-        if (!qsoMatch) {
-          console.log('[FMO-DEBUG-SPEAKING] QSO 未匹配到呼号:', h.callsign, '| qsoList 总条数:', this.qsoList.length);
-        }
         if (qsoMatch) {
           const mr = this._getQsoMemoRelay(qsoMatch);
           if (!memo && mr.memo) memo = mr.memo;
@@ -1964,9 +1961,6 @@ const App = {
             const qc = q.toCallsign || q.callsign || '';
             return this.isSameOperator(qc, evt.callsign);
           });
-          if (!qsoMatch) {
-            console.log('[FMO-DEBUG-SPEAKING] QSO 未匹配到呼号:', evt.callsign, '| qsoList 总条数:', this.qsoList.length);
-          }
           if (qsoMatch) {
             const mr = this._getQsoMemoRelay(qsoMatch);
             if (!eMemo && mr.memo) eMemo = mr.memo;
@@ -1997,23 +1991,36 @@ const App = {
       const isActive = activeCallsigns.has(item.callsign);
       const isSelf = this.isSameOperator(item.callsign, this.myCallsign);
 
-      // 直接使用 items 构建时已查好的 grid / memo / relay
-      const grid = item.grid || '';
-      const memo = item.memo || '';
-      const relay = item.relay || '';
+      // 查找匹配 QSO，提取 memo（留言）
+      let memo = '';
+      const matchingQso = this.qsoList.find(q => {
+        const qc = q.toCallsign || q.callsign || '';
+        return this.isSameOperator(qc, item.callsign);
+      });
+      if (matchingQso) {
+        memo = matchingQso.toComment || matchingQso.memo || matchingQso.message || matchingQso.msg || '';
+      }
 
-      // 构建次要信息行
+      // 从 _speakingHistory 获取 serverName
+      let serverName = '';
+      const sh = this._speakingHistory.find(h => h.callsign === item.callsign);
+      if (sh?.serverName) {
+        serverName = sh.serverName;
+      } else if (matchingQso?.serverName) {
+        serverName = matchingQso.serverName;
+      }
+
+      // 构建额外信息行（memo / serverName）
       let extraLine = '';
-      if (grid) extraLine += '<span class="recent-grid">' + this._esc(grid) + '</span>';
-      if (relay) extraLine += '<span class="recent-relay">[' + this._esc(relay) + ']</span>';
-      if (memo) extraLine += '<span class="recent-memo" title="' + this._esc(memo) + '">' + this._esc(memo) + '</span>';
+      if (memo) extraLine += '<span class="recent-memo">' + this._esc(memo) + '</span>';
+      if (serverName) extraLine += '<span class="recent-server">[' + this._esc(serverName) + ']</span>';
 
       return '<div class="recent-item' + (isActive ? ' is-speaking' : '') + (isSelf ? ' is-self' : '') + '" data-callsign="' + item.callsign + '">'
         + '<span class="recent-index-bg">' + (index + 1) + '</span>'
         + '<div class="recent-main">'
         + '<div class="recent-callsign-line"><strong>' + item.callsign + '</strong>' + (isSelf ? '<span class="self-tag">您</span>' : '') + '</div>'
-        + (extraLine ? '<span class="recent-extra">' + extraLine + '</span>' : '')
-        + '<span class="recent-time">' + timeStr + '</span>'
+        + (extraLine ? '<div class="recent-extra">' + extraLine + '</div>' : '')
+        + '<span>' + timeStr + '</span>'
         + '</div>'
         + '<span class="recent-count">x' + count + '</span>'
         + '</div>';

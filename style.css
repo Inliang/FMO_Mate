@@ -1324,9 +1324,9 @@ body {
   color: var(--text-primary);
 }
 .recent-extra {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   font-size: 0.75rem;
   color: #888;
 }
@@ -1340,15 +1340,6 @@ body {
 .recent-server {
   color: #4a9eff;
   flex-shrink: 0;
-}
-.recent-grid {
-  color: #888;
-  font-family: monospace;
-  font-size: 0.72rem;
-}
-.recent-relay {
-  color: #4a9eff;
-  font-size: 0.72rem;
 }
 
 .recent-count {
