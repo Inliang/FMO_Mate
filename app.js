@@ -984,14 +984,13 @@ const App = {
         this.currentServerName = r.data.name || '';
         this._prevServer = this.currentServerName;
         this._showServerInfo();
-        // 提取在线人数
-        const count = r.data.onlineCount ?? r.data.count ?? r.data.users ?? r.data.online;
-        if (count !== undefined && count !== null) this._updateOnlineCount(count);
       }
     } catch (e) {}
 
     this.renderServerList();
     this.renderServerSidebar();
+    // 在线人数从 serverList 长度计算（station.getCurrent 不含在线数）
+    this._updateOnlineCount(this.serverList.length);
     setTimeout(() => this._probeAllServerLatency(), 500);
   },
 
@@ -1331,7 +1330,7 @@ const App = {
       const timeStr = ts
         ? `${ts.getFullYear()}/${String(ts.getMonth()+1).padStart(2,'0')}/${String(ts.getDate()).padStart(2,'0')} ${String(ts.getHours()).padStart(2,'0')}:${String(ts.getMinutes()).padStart(2,'0')}`
         : '--';
-      const callsign = item.toCallsign ?? item.callsign ?? '--';
+      const callsign = this._extractQsoCallsign(item) || '--';
       const grid = item.grid ?? item.locator ?? '';
 
       // QTH：优先缓存命中，否则显示网格码。_resolveGridLocation 已在渲染前异步触发。
@@ -1370,6 +1369,20 @@ const App = {
 
   _esc(str) { return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); },
 
+  _extractQsoCallsign(item) {
+    // FMO 不同版本 API 返回的呼号字段名不一致
+    // toCallsign / callsign / operator / remoteCallsign / peer / fromCallsign
+    return item.toCallsign
+      ?? item.callsign
+      ?? item.operator
+      ?? item.remoteCallsign
+      ?? item.peer
+      ?? item.fromCallsign
+      ?? item.dstCallsign
+      ?? item.srcCallsign
+      ?? '';
+  },
+
   renderPrevCard() {
     const timeEl = document.getElementById('prev-time-ago');
     const contentEl = document.getElementById('prev-card-content');
@@ -1388,7 +1401,7 @@ const App = {
     }
 
     const last = this.qsoList[0];
-    const callsign = last.toCallsign || last.callsign || '--';
+    const callsign = this._extractQsoCallsign(last) || '--';
 
     // 补算：QSO API 可能不含 distance/azimuth，但从 grid 可反算
     let distance = last.distance;
@@ -1414,10 +1427,9 @@ const App = {
     }
 
     // 计算与上一通联呼号的通联次数
-    const prevContactCount = this.qsoList.filter(q => {
-      const toCall = q.toCallsign || q.callsign || '';
-      return this.isSameOperator(toCall, callsign);
-    }).length;
+    const prevContactCount = this.qsoList.filter(q =>
+      this.isSameOperator(this._extractQsoCallsign(q), callsign)
+    ).length;
 
     contentEl.className = '';
     contentEl.innerHTML = `<div class="prev-info-grid">
@@ -1486,10 +1498,9 @@ const App = {
     const result = {};
     if (!callsign || !this.qsoList.length) return result;
 
-    const matchingQsos = this.qsoList.filter(q => {
-      const qc = q.toCallsign || q.callsign || '';
-      return this.isSameOperator(qc, callsign);
-    });
+    const matchingQsos = this.qsoList.filter(q =>
+      this.isSameOperator(this._extractQsoCallsign(q), callsign)
+    );
     if (!matchingQsos.length) return result;
     const qso = matchingQsos.reduce((latest, q) =>
       (q.timestamp || 0) > (latest.timestamp || 0) ? q : latest
@@ -1765,7 +1776,7 @@ const App = {
     let serverName = this._currentSpeaker.serverName;
     if (!serverName) {
       const matchingQso = this.qsoList.find(q => {
-        const qc = q.toCallsign || q.callsign || '';
+        const qc = this._extractQsoCallsign(q);
         return this.isSameOperator(qc, data.callsign);
       });
       if (matchingQso) {
@@ -1973,7 +1984,7 @@ const App = {
 
     const contactCounts = new Map();
     this.qsoList.forEach(q => {
-      const qc = q.toCallsign || q.callsign || '';
+      const qc = this._extractQsoCallsign(q);
       if (qc) {
         const call = this.parseCallsignSsid(qc).call;
         contactCounts.set(call, (contactCounts.get(call) || 0) + 1);
@@ -1997,7 +2008,7 @@ const App = {
         let memo = h.memo || '';
         let relay = h.relay || '';
         const qsoMatch = this.qsoList.find(q => {
-          const qc = q.toCallsign || q.callsign || '';
+          const qc = this._extractQsoCallsign(q);
           return this.isSameOperator(qc, h.callsign);
         });
         if (qsoMatch) {
@@ -2024,7 +2035,7 @@ const App = {
           let eMemo = evt.memo || '';
           let eRelay = evt.relay || '';
           const qsoMatch = this.qsoList.find(q => {
-            const qc = q.toCallsign || q.callsign || '';
+            const qc = this._extractQsoCallsign(q);
             return this.isSameOperator(qc, evt.callsign);
           });
           if (qsoMatch) {
@@ -2060,7 +2071,7 @@ const App = {
       // 查找匹配 QSO，提取 memo（留言）
       let memo = '';
       const matchingQso = this.qsoList.find(q => {
-        const qc = q.toCallsign || q.callsign || '';
+        const qc = this._extractQsoCallsign(q);
         return this.isSameOperator(qc, item.callsign);
       });
       if (matchingQso) {
@@ -2214,10 +2225,9 @@ const App = {
     const cntEl = document.getElementById('sb-contact-count');
     let contactCount = 0;
     if (cntEl) {
-      const qsos = this.qsoList.filter(q => {
-        const toCall = q.toCallsign || q.callsign || '';
-        return this.isSameOperator(toCall, sp.callsign);
-      });
+      const qsos = this.qsoList.filter(q =>
+        this.isSameOperator(this._extractQsoCallsign(q), sp.callsign)
+      );
       contactCount = qsos.length;
       if (contactCount > 1) {
         cntEl.textContent = 'x' + contactCount;
@@ -2377,7 +2387,7 @@ const App = {
       '<EOH>'
     ];
     for (const item of this.qsoList) {
-      const toCallsign = (item.toCallsign ?? item.callsign ?? '').trim();
+      const toCallsign = this._extractQsoCallsign(item).trim();
       const grid = (item.grid ?? item.locator ?? '').trim();
       const ts = this._parseTimestamp(item.timestamp);
       const freqRaw = (item.frequency ?? item.freq ?? '').toString().trim();
