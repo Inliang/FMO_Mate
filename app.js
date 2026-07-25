@@ -2147,13 +2147,12 @@ const App = {
       relayNameEl.textContent = sp.serverName || this.currentServerName || '--';
     }
 
-    // Freq / Height / Altitude from _currentSpeaker
+    // Freq & Height from speaker
     const freqAltEl = document.getElementById('freq-line-text');
     if (freqAltEl) {
       const parts = [];
       if (sp.freq) parts.push(sp.freq + ' MHz');
-      if (this._antHeight) parts.push(this._antHeight + 'm');
-      if (sp.altitude !== undefined && sp.altitude !== null) parts.push(Number(sp.altitude).toFixed(0) + 'm');
+      if (sp.height) parts.push(sp.height + 'm');
       if (parts.length > 0) freqAltEl.textContent = parts.join(' · ');
     }
 
