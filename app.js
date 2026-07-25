@@ -588,12 +588,8 @@ const App = {
       const d = evt.data || evt;
       this.addQsoItem(d);
     } else if (evt.event === 'station_update' || evt.event === 'online_change') {
+      // fetchServerList -> fetchServerListAll -> _countOnlineServers 统一计算
       this.fetchServerList();
-      const d = evt.data || evt;
-      const count = d.onlineCount ?? d.count ?? d.users ?? d.online;
-      if (count !== undefined && count !== null) {
-        this._updateOnlineCount(count);
-      }
     }
 
     // APRS BEACON 消息处理（APFMO4 频率/高度）
@@ -1024,8 +1020,8 @@ const App = {
     const addrEl = document.getElementById('server-addr');
 
     if (nameEl) nameEl.textContent = this.currentServerName || '--';
-    if (addrEl) {
-      addrEl.textContent = (this.hostPort || '').split(':')[0];
+    if (addrEl && this.hostPort) {
+      addrEl.textContent = this.hostPort.split(':')[0];
     }
 
     // Ping show from cache
@@ -1047,8 +1043,7 @@ const App = {
     // 统一使用 _isOnlineServer 判断在线状态，与 renderServerList 保持一致
     const online = this.serverList.filter(s => this._isOnlineServer(s));
     if (online.length > 0) return online.length;
-    // 兜底：所有判断均未命中时回退到全计数
-    return this.serverList.length;
+    return 0;
   },
 
   _isOnlineServer(s) {
@@ -1057,7 +1052,7 @@ const App = {
     // 优先判断布尔字段
     if (s.online !== undefined) return s.online === true;
     if (s.connected !== undefined) return s.connected === true;
-    if (s.status !== undefined) return s.status === 'online';
+    if (s.status !== undefined) return s.status === 'online' || s.status === 'active' || s.status === 'connected';
     // 无布尔/状态字段时，用 onlineCount > 0 作为在线判断
     const count = s.onlineCount ?? s.count ?? s.users ?? 0;
     return count > 0;
@@ -1500,6 +1495,34 @@ const App = {
     const el = document.getElementById('qso-count');
     if (!el) return;
     el.textContent = this.qsoList.length;
+
+    // 本地计算今日通联 / 总通联 / 友台数（不依赖 API，作为基础兜底）
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayTs = Math.floor(today.getTime() / 1000);
+
+    const todayCount = this.qsoList.filter(q => {
+      const ts = q.timestamp ?? q.time ?? 0;
+      const t = typeof ts === 'number'
+        ? (ts > 1e10 ? Math.floor(ts / 1000) : ts)
+        : (new Date(ts).getTime() / 1000 | 0);
+      return t >= todayTs;
+    }).length;
+
+    const uniqueCallers = new Set();
+    this.qsoList.forEach(q => {
+      const qc = this._extractQsoCallsign(q);
+      if (qc) uniqueCallers.add(this.parseCallsignSsid(qc).call);
+    });
+
+    const totalEl = document.getElementById('stat-total');
+    if (totalEl) totalEl.textContent = this.qsoList.length;
+
+    const todayEl = document.getElementById('stat-today');
+    if (todayEl) todayEl.textContent = todayCount;
+
+    const friendsEl = document.getElementById('stat-friends');
+    if (friendsEl) friendsEl.textContent = uniqueCallers.size;
   },
 
   renderTopCallers() {
@@ -1543,24 +1566,33 @@ const App = {
     try {
       const r = await this.send({ type: 'qso', subType: 'getTotalCount' });
       if ((r.code === 0 || r.code === undefined) && r.data != null) {
-        const el = document.getElementById('stat-total');
-        if (el) el.textContent = r.data.count ?? r.data.total ?? r.data.value ?? '--';
+        const val = r.data.count ?? r.data.total ?? r.data.value;
+        if (val != null) {
+          const el = document.getElementById('stat-total');
+          if (el) el.textContent = val;
+        }
       }
     } catch (e) {}
     // 今日通联
     try {
       const r = await this.send({ type: 'qso', subType: 'getTodayCount' });
       if ((r.code === 0 || r.code === undefined) && r.data != null) {
-        const el = document.getElementById('stat-today');
-        if (el) el.textContent = r.data.count ?? r.data.today ?? r.data.value ?? '--';
+        const val = r.data.count ?? r.data.today ?? r.data.value;
+        if (val != null) {
+          const el = document.getElementById('stat-today');
+          if (el) el.textContent = val;
+        }
       }
     } catch (e) {}
     // 友台数
     try {
       const r = await this.send({ type: 'qso', subType: 'getContactCount' });
       if ((r.code === 0 || r.code === undefined) && r.data != null) {
-        const el = document.getElementById('stat-friends');
-        if (el) el.textContent = r.data.count ?? r.data.contacts ?? r.data.friends ?? r.data.value ?? '--';
+        const val = r.data.count ?? r.data.contacts ?? r.data.friends ?? r.data.value;
+        if (val != null) {
+          const el = document.getElementById('stat-friends');
+          if (el) el.textContent = val;
+        }
       }
     } catch (e) {}
   },
