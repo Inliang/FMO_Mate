@@ -11,7 +11,43 @@ AIGC:
 
 # FMO 副屏伴侣 — 更新日志
 
-## 2026-07-22
+## 2026-07-25
+
+### 整站 UI 重构：三主题体系 + 新布局 + 细节打磨（v=0725a ~ v=0725g）
+
+**CyberGuard 赛博青暗色主题（v=0725a）**
+- 全新暗色主题，以赛博青（Cyber Cyan）为主色调
+- CSS 变量体系：`--accent: #00e5ff` 贯穿全局
+- Status Bar / 卡片 / 按钮 / Speaking Bar 全面适配
+
+**布局重构：三段式信息流（v=0725d）**
+
+三段式纵向布局替代旧网格布局：
+
+| 区域 | 类名 | 内容 |
+|------|------|------|
+| 顶部 | `.status-bar` | KPI 卡片行（CALL / UID / 天线 / 固件）融入 Status Bar |
+| 中段 | `.middle-split` | 左：Speaking Bar（当前发言者）+ 右纵列（上个通联 + 服务器卡片） |
+| 底部 | `.bottom-panels` | 最近发言 \| QSO 通联记录等宽分栏 |
+
+- 旧类名 `dashboard-grid` / `dashboard-side` / `bottom-split` / `bottom-row` 全部移除
+- `.kpi-row` 改为 `.status-bar .kpi-row` 紧凑样式
+
+**三主题体系更新**
+- **Steel**：工业风浅色主题（默认），金属灰 + 雾蓝色点缀
+- **CyberGuard**：赛博青暗色主题
+- **E-ink**：高对比度黑白主题，适配墨水屏
+- 三套主题同步覆盖新布局所有断点（≤1200 / ≤900 / ≤480 及横屏）
+
+**细节打磨**
+
+- **Speaking Bar 布局**（v=0725f）：`.ac-hero` 呼号区 `flex:1` 垂直居中，`.detail-card` padding 收窄贴底
+- **页脚单行布局**（v=0725e）：51la 统计左对齐 + GitHub / Envo 链接右对齐，`flex space-between`
+- **服务器列表铺满卡片**（v=0725g）：`.server-list-sidebar` 改为 `flex: 1; min-height: 0`，自动占满剩余空间
+- **最近发言与 QSO 行高统一**：`.recent-item` 由双行改为单行布局，字号与 padding 对齐 `.qso-row`
+- **51la 访客统计**：页脚集成 51la 统计代码
+
+### 最近发言卡片 memo/relay 全链路修复 — 追溯式补全（v=0721c → v=0722a）
 
 ### 最近发言卡片 memo/relay 全链路修复 — 追溯式补全（v=0721c → v=0722a）
 
