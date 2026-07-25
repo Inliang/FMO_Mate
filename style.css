@@ -746,8 +746,8 @@ body {
   height: auto;
 }
 .server-card {
+  height: 100px;
   flex: 0 0 auto;
-  height: auto;
 }
 
 .server-card-header {
@@ -920,8 +920,7 @@ body {
 
 /* Server list sidebar */
 .server-list-sidebar {
-  flex: 1;
-  height: auto;
+  height: 200px;
   overflow-y: auto;
   padding: 6px 10px 10px 10px;
   display: flex;
