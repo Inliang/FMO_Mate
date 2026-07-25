@@ -415,8 +415,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: auto;
-  flex: 0 0 auto;
+  flex: 1;
 }
 
 .hero-main {
@@ -641,7 +640,7 @@ body {
 #contact-details-inline .detail-card {
   background: var(--bg-deepest);
   border-radius: var(--radius-md);
-  padding: 14px 18px;
+  padding: 10px 14px;
   flex: 1;
   min-width: 0;
   cursor: pointer;
