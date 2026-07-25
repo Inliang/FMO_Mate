@@ -1582,11 +1582,11 @@ const App = {
     container.innerHTML = sorted.map(([call, count], i) => {
       const barPct = Math.round((count / maxCount) * 100);
       const isSelf = this.isSameOperator(call, this.myCallsign);
-      const barTier = i < 3 ? 'gold' : i < 10 ? 'mid' : 'low';
+      const barColor = i < 3 ? '#F59E0B' : i < 10 ? '#FFB74D' : 'rgba(255,152,0,0.22)';
       return `<div class="top-item${isSelf ? ' is-self' : ''}">
         <span class="top-rank">${i + 1}</span>
         <span class="top-call">${call}</span>
-        <span class="top-bar-wrap"><span class="top-bar" style="width:${barPct}%;background:var(--top-bar-${barTier})"></span></span>
+        <span class="top-bar-wrap"><span class="top-bar" style="width:${barPct}%;background:${barColor}"></span></span>
         <span class="top-count">${count}次</span>
       </div>`;
     }).join('');
