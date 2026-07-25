@@ -658,49 +658,6 @@ const App = {
       } catch (e) {}
     })());
 
-    // system.getInfo: 固件版本 → MAC 卡片
-    tasks.push((async () => {
-      try {
-        const r = await this.send({ type: 'system', subType: 'getInfo' });
-        if ((r.code === 0 || r.code === undefined) && r.data) {
-          const verEl = document.getElementById('dev-version');
-          const macEl = document.getElementById('dev-mac');
-          if (verEl && (r.data.version || r.data.ver)) verEl.textContent = r.data.version || r.data.ver;
-          if (macEl && (r.data.version || r.data.ver)) macEl.textContent = r.data.version || r.data.ver;
-        }
-      } catch (e) { /* 旧固件不支持 system.getInfo 则静默保持 -- */ }
-    })());
-
-    // radio.getVersion 备用（部分固件版本号在 radio 命名空间）
-    tasks.push((async () => {
-      try {
-        const r = await this.send({ type: 'radio', subType: 'getVersion' });
-        if ((r.code === 0 || r.code === undefined) && r.data) {
-          const verEl = document.getElementById('dev-version');
-          const macEl = document.getElementById('dev-mac');
-          if (verEl && (r.data.version || r.data.ver)) verEl.textContent = r.data.version || r.data.ver;
-          if (macEl && (r.data.version || r.data.ver)) macEl.textContent = r.data.version || r.data.ver;
-        }
-      } catch (e) {}
-    })());
-
-    // config.getSystemInfo 备用路径
-    tasks.push((async () => {
-      try {
-        const r = await this.send({ type: 'config', subType: 'getSystemInfo' });
-        if ((r.code === 0 || r.code === undefined) && r.data) {
-          const verEl = document.getElementById('dev-version');
-          const macEl = document.getElementById('dev-mac');
-          if (verEl && (r.data.version || r.data.ver || r.data.fwVer)) {
-            verEl.textContent = r.data.version || r.data.ver || r.data.fwVer;
-          }
-          if (macEl && (r.data.version || r.data.ver || r.data.fwVer)) {
-            macEl.textContent = r.data.version || r.data.ver || r.data.fwVer;
-          }
-        }
-      } catch (e) {}
-    })());
-
     // config.getUserPhyDeviceName → 硬件型号
     tasks.push((async () => {
       try {
