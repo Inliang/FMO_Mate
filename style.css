@@ -111,8 +111,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  max-width: 1280px;
-  width: 100%;
+  width: 1200px;
   height: calc(100vh - 48px);
   overflow: hidden;
   flex: 0 1 auto;
@@ -405,7 +404,6 @@ body {
 }
 
 .hero-main {
-  width: 100%;
   min-width: 0;
   text-align: center;
 }
@@ -421,7 +419,7 @@ body {
 
 .ac-callsign {
   font-family: var(--font-mono);
-  font-size: clamp(60px, 7vw, 84px);
+  font-size: 72px;
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.01em;
@@ -1051,8 +1049,7 @@ body {
 }
 .bottom-split .live-panel,
 .bottom-split .qso-panel {
-  flex: 1;
-  min-width: 0;
+  width: 596px;
   max-height: 260px;
 }
 
