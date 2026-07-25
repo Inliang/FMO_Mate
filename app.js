@@ -246,7 +246,10 @@ const App = {
 
   loadSettings() {
     const raw = localStorage.getItem('fmo-settings');
-    if (!raw) return;
+    if (!raw) {
+      this.openSettings(true);
+      return;
+    }
     try {
       const { ip, port, protocol } = JSON.parse(raw);
       this.protocol = protocol || 'ws';
