@@ -127,16 +127,7 @@ const App = {
     this._queue = [];
     this._inFlight = null;
     // 预填服务器IP：直接从 localStorage 提取 IP，不等待任何异步流程
-    try {
-      const raw = localStorage.getItem('fmo-settings');
-      if (raw) {
-        const { ip } = JSON.parse(raw);
-        if (ip) {
-          const addrEl = document.getElementById('server-addr');
-          if (addrEl) addrEl.textContent = normalizeHost(ip);
-        }
-      }
-    } catch (e) {}
+    this._updateServerAddr('init');
     this.bindEvents();
     this.loadSettings();
     this.updateConnectionUI(false);
@@ -269,8 +260,7 @@ const App = {
     const host = normalizeHost(ip);
     this.hostPort = `${host}:${port}`;
     // 立即显示服务器IP，不等待 WebSocket 连接或 fetchServerListAll 完成
-    const addrEl = document.getElementById('server-addr');
-    if (addrEl) addrEl.textContent = host;
+    this._updateServerAddr('connect(before-open)');
     const p = this.protocol;
     const wsUrl = `${p}://${this.hostPort}/ws`;
     const evUrl = `${p}://${this.hostPort}/events`;
@@ -282,8 +272,7 @@ const App = {
         this.reconnectAttempts = 0;
         this.updateConnectionUI(true, 'connected');
         // 立即显示服务器IP，不等 fetchAllData 完成
-        const addrEl = document.getElementById('server-addr');
-        if (addrEl) addrEl.textContent = (this.hostPort || '').split(':')[0];
+        this._updateServerAddr('connect(onopen)');
         this.fetchAllData();
         this.startPolling();
 
@@ -1015,9 +1004,7 @@ const App = {
 
     this.renderServerList();
     this.renderServerSidebar();
-    // 统计在线服务器数：优先用 online 布尔字段，其次检查 onlineCount > 0
-    const onlineCount = this._countOnlineServers();
-    this._updateOnlineCount(onlineCount);
+    // renderServerList 内部已自动同步在线人数到 KPI
     setTimeout(() => this._probeAllServerLatency(), 500);
   },
 
@@ -1028,29 +1015,41 @@ const App = {
   _showServerInfo() {
     const nameEl = document.getElementById('server-name-display');
     const pingEl = document.getElementById('server-ping');
-    const addrEl = document.getElementById('server-addr');
 
     if (nameEl) nameEl.textContent = this.currentServerName || '--';
-    if (addrEl) {
-      const hp = this.hostPort || '';
-      if (hp) {
-        addrEl.textContent = hp.split(':')[0];
-      } else {
-        // 兜底：hostPort 为空时从 localStorage 读
-        try {
-          const raw = localStorage.getItem('fmo-settings');
-          if (raw) {
-            const { ip } = JSON.parse(raw);
-            if (ip) addrEl.textContent = normalizeHost(ip);
-          }
-        } catch (e) {}
-      }
-    }
 
     // Ping show from cache
     if (pingEl && this.hostPort) {
       const lat = this._serverLatency[this.hostPort];
       pingEl.textContent = lat === -1 ? '超时' : (lat !== undefined ? lat + 'ms' : '--');
+    }
+
+    // 集中更新服务器 IP
+    this._updateServerAddr('_showServerInfo');
+  },
+
+  /** 集中更新服务器 IP 显示，所有路径统一出口 */
+  _updateServerAddr(caller) {
+    const el = document.getElementById('server-addr');
+    if (!el) { console.warn('[FMO-ADDR] _updateServerAddr 被 ' + caller + ' 调用但 #server-addr 元素不存在'); return; }
+    // 优先级：内存中的 hostPort > localStorage
+    let ip = '';
+    if (this.hostPort) {
+      ip = this.hostPort.split(':')[0];
+    } else {
+      try {
+        const raw = localStorage.getItem('fmo-settings');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.ip) ip = normalizeHost(parsed.ip);
+        }
+      } catch (e) {}
+    }
+    if (ip) {
+      if (el.textContent !== ip) console.log('[FMO-ADDR] IP 由 ' + caller + ' 更新为: ' + ip);
+      el.textContent = ip;
+    } else {
+      console.warn('[FMO-ADDR] _updateServerAddr 被 ' + caller + ' 调用但无可用 IP（hostPort=空，localStorage=无）');
     }
   },
 
@@ -1129,6 +1128,9 @@ const App = {
       el.addEventListener('click', () => this.switchServer(el.dataset.serverName));
     });
     console.log('[FMO-DEBUG-SERVER] renderServerList 完成，渲染了 ' + filtered.length + ' 项');
+
+    // 每次重绘服务器列表都同步更新 KPI 在线人数，防止计数漂移
+    this._updateOnlineCount(filtered.length);
   },
 
   _pn(t) {
