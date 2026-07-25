@@ -2598,10 +2598,14 @@ const App = {
 
   // ============ 设置 ============
 
-  openSettings() {
+  openSettings(firstTime = false) {
     const overlay = document.getElementById('settings-overlay');
     if (!overlay) return;
     overlay.classList.add('open');
+    const heading = document.getElementById('settings-heading');
+    if (heading) {
+      heading.textContent = firstTime ? '首次使用 · 请设置 FMO 设备地址' : '设置';
+    }
     const raw = localStorage.getItem('fmo-settings');
     if (raw) {
       try {
