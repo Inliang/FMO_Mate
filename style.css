@@ -1043,7 +1043,7 @@ body {
   flex-shrink: 0;
   width: 1200px;
   height: 260px;
-  margin-top: 16px;
+  margin-top: auto;
 }
 .bottom-split .live-panel,
 .bottom-split .qso-panel {
