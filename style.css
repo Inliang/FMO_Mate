@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    FMO Secondary Dashboard - World Clock Dashboard Style
    White / Warm Orange / Soft Card Design
    ============================================================ */
@@ -322,7 +322,7 @@ body {
 .status-bar .kpi-row {
   display: flex;
   gap: var(--space-2);
-  padding: var(--space-1) var(--space-4) var(--space-3);
+  padding: 2px var(--space-3) 4px;
   flex-shrink: 0;
   flex-wrap: wrap;
 }
@@ -330,7 +330,7 @@ body {
 .status-bar .kpi-card {
   background: var(--bg-deepest);
   border-radius: var(--radius-sm);
-  padding: var(--space-1) var(--space-2);
+  padding: 2px var(--space-1);
   flex: 1;
   min-width: 0;
   box-shadow: none;
@@ -373,6 +373,16 @@ body {
   font-size: 16px;
   color: var(--text-secondary);
   font-weight: 400;
+}
+
+.status-bar .live-clock {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--accent);
+  margin-left: var(--space-2);
+  padding: 1px var(--space-1);
+  background: var(--bg-deepest);
+  border-radius: var(--radius-sm);
 }
 
 /* ============================================================
@@ -1628,7 +1638,7 @@ body {
    10. RESPONSIVE
    ============================================================ */
 
-/* Tablet & Small Desktop (≤1200px) */
+/* Tablet & Small Desktop (鈮?200px) */
 @media (max-width: 1200px) {
   .middle-sidebar {
     width: 240px;
@@ -1646,7 +1656,7 @@ body {
   .bearing-meta strong { font-size: 16px; }
 }
 
-/* Tablet Portrait (≤900px) */
+/* Tablet Portrait (鈮?00px) */
 @media (max-width: 900px) {
   body { padding: 6px; }
   .app-wrapper {
@@ -1737,7 +1747,7 @@ body {
   .section-label { padding: 8px 12px 4px 12px; font-size: 10px; }
 }
 
-/* Mobile Portrait (≤480px) */
+/* Mobile Portrait (鈮?80px) */
 @media (max-width: 480px) {
   body { padding: 4px; }
   .app-wrapper { height: calc(100vh - 8px); }
@@ -1924,10 +1934,10 @@ body {
 }
 
 /* ============================================================
-   Theme: Light (Steel Industrial — inherits :root)
+   Theme: Light (Steel Industrial 鈥?inherits :root)
    ============================================================ */
 [data-theme="light"] {
-  /* All variables inherited from :root — no overrides needed */
+  /* All variables inherited from :root 鈥?no overrides needed */
 }
 
 /* ============================================================
