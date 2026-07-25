@@ -2122,11 +2122,17 @@ const App = {
       qthCardEl.textContent = loc;
     }
 
-    // Server name
+    // Server name (small subtext)
     const srvEl = document.getElementById('sb-server');
     if (srvEl) {
       srvEl.textContent = sp.serverName || '';
       srvEl.style.display = sp.serverName ? '' : 'none';
+    }
+
+    // 中继/服务器卡片主标题（server-name-display）
+    const relayNameEl = document.getElementById('server-name-display');
+    if (relayNameEl) {
+      relayNameEl.textContent = sp.serverName || this.currentServerName || '--';
     }
 
     // Freq / Height / Altitude from _currentSpeaker

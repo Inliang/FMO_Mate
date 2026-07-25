@@ -719,17 +719,6 @@ body {
 }
 .active-contact-card:not(.active) .ac-elapsed { display: none; }
 
-.vu-indicator {
-  position: absolute;
-  bottom: 12px;
-  right: 12px;
-  z-index: 2;
-  color: var(--accent);
-  opacity: 0;
-  transition: opacity 0.15s var(--ease-out);
-}
-.active-contact-card.active .vu-indicator { opacity: 0.25; }
-
 /* ============================================================
    4. MIDDLE SIDEBAR (Previous Card + Server Card)
    ============================================================ */
