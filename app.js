@@ -606,7 +606,7 @@ const App = {
       } catch (e) {}
     })());
 
-    // system.getInfo: 固件版本 + MAC
+    // system.getInfo: 固件版本 → MAC 卡片
     tasks.push((async () => {
       try {
         const r = await this.send({ type: 'system', subType: 'getInfo' });
@@ -614,7 +614,7 @@ const App = {
           const verEl = document.getElementById('dev-version');
           const macEl = document.getElementById('dev-mac');
           if (verEl && (r.data.version || r.data.ver)) verEl.textContent = r.data.version || r.data.ver;
-          if (macEl && r.data.mac) macEl.textContent = r.data.mac;
+          if (macEl && (r.data.version || r.data.ver)) macEl.textContent = r.data.version || r.data.ver;
         }
       } catch (e) { /* 旧固件不支持 system.getInfo 则静默保持 -- */ }
     })());
@@ -625,7 +625,9 @@ const App = {
         const r = await this.send({ type: 'radio', subType: 'getVersion' });
         if ((r.code === 0 || r.code === undefined) && r.data) {
           const verEl = document.getElementById('dev-version');
+          const macEl = document.getElementById('dev-mac');
           if (verEl && (r.data.version || r.data.ver)) verEl.textContent = r.data.version || r.data.ver;
+          if (macEl && (r.data.version || r.data.ver)) macEl.textContent = r.data.version || r.data.ver;
         }
       } catch (e) {}
     })());
@@ -640,8 +642,8 @@ const App = {
           if (verEl && (r.data.version || r.data.ver || r.data.fwVer)) {
             verEl.textContent = r.data.version || r.data.ver || r.data.fwVer;
           }
-          if (macEl && (r.data.mac || r.data.wifiMac)) {
-            macEl.textContent = r.data.mac || r.data.wifiMac;
+          if (macEl && (r.data.version || r.data.ver || r.data.fwVer)) {
+            macEl.textContent = r.data.version || r.data.ver || r.data.fwVer;
           }
         }
       } catch (e) {}
@@ -660,7 +662,7 @@ const App = {
       } catch (e) {}
     })());
 
-    // config.getUserPhyAnt → 天线类型
+    // config.getUserPhyAnt → 天线类型（仅名称）+ VER（高度）
     tasks.push((async () => {
       try {
         const r = await this.send({ type: 'config', subType: 'getUserPhyAnt' });
@@ -669,21 +671,28 @@ const App = {
           const antName = r.data.name || r.data.ant || r.data.antenna || '';
           const antH = r.data.height || r.data.antHeight || '';
           if (antEl) {
-            antEl.textContent = antName + (antH ? ' @' + antH + 'm' : '') || '--';
+            antEl.textContent = antName || '--';
+          }
+          // VER = 天线高度
+          if (antH) {
+            const verEl = document.getElementById('dev-version');
+            if (verEl) verEl.textContent = antH + 'm';
           }
         }
       } catch (e) {}
     })());
 
-    // config.getUserPhyAntHeight → 天线高度（备用独立 API）
+    // config.getUserPhyAntHeight → VER 备用（天线高度独立 API）
     tasks.push((async () => {
       try {
         const r = await this.send({ type: 'config', subType: 'getUserPhyAntHeight' });
         if ((r.code === 0 || r.code === undefined) && r.data) {
-          const antEl = document.getElementById('dev-ant');
           const h = r.data.height || r.data.antHeight || r.data.value;
-          if (antEl && h != null && (antEl.textContent === '--' || !antEl.textContent.includes('@'))) {
-            antEl.textContent = (antEl.textContent === '--' ? '' : antEl.textContent) + ' @' + h + 'm';
+          if (h != null) {
+            const verEl = document.getElementById('dev-version');
+            if (verEl && verEl.textContent === '--') {
+              verEl.textContent = h + 'm';
+            }
           }
         }
       } catch (e) {}
