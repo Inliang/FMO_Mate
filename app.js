@@ -103,6 +103,7 @@ const App = {
   _recentHistoryTimer: null,
   _currentFreq: '',
   _currentAltitude: '',
+  _antHeight: '',
 
   // --- API Keys ---
   _AMAP_KEY: 'JCx9Yn0hNGQgCgJRUCAueTd2emFlJ1EFUARweXkxdiU=', // 高德 Web 服务 Key（XOR+Base64 混淆）
@@ -675,6 +676,7 @@ const App = {
           }
           // VER = 天线高度
           if (antH) {
+            this._antHeight = antH;
             const verEl = document.getElementById('dev-version');
             if (verEl) verEl.textContent = antH + 'm';
           }
@@ -693,6 +695,7 @@ const App = {
             if (verEl && verEl.textContent === '--') {
               verEl.textContent = h + 'm';
             }
+            if (!this._antHeight) this._antHeight = h;
           }
         }
       } catch (e) {}
@@ -964,7 +967,7 @@ const App = {
 
     if (nameEl) nameEl.textContent = this.currentServerName || '--';
     if (addrEl) {
-      const host = this.hostPort || '--';
+      const host = this.hostPort || '';
       addrEl.textContent = host;
     }
 
@@ -2149,7 +2152,7 @@ const App = {
     if (freqAltEl) {
       const parts = [];
       if (sp.freq) parts.push(sp.freq + ' MHz');
-      if (sp.height) parts.push(sp.height + 'm');
+      if (this._antHeight) parts.push(this._antHeight + 'm');
       if (sp.altitude !== undefined && sp.altitude !== null) parts.push(Number(sp.altitude).toFixed(0) + 'm');
       if (parts.length > 0) freqAltEl.textContent = parts.join(' · ');
     }
