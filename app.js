@@ -126,6 +126,17 @@ const App = {
   init() {
     this._queue = [];
     this._inFlight = null;
+    // 预填服务器IP：直接从 localStorage 提取 IP，不等待任何异步流程
+    try {
+      const raw = localStorage.getItem('fmo-settings');
+      if (raw) {
+        const { ip } = JSON.parse(raw);
+        if (ip) {
+          const addrEl = document.getElementById('server-addr');
+          if (addrEl) addrEl.textContent = normalizeHost(ip);
+        }
+      }
+    } catch (e) {}
     this.bindEvents();
     this.loadSettings();
     this.updateConnectionUI(false);
@@ -1020,8 +1031,20 @@ const App = {
     const addrEl = document.getElementById('server-addr');
 
     if (nameEl) nameEl.textContent = this.currentServerName || '--';
-    if (addrEl && this.hostPort) {
-      addrEl.textContent = this.hostPort.split(':')[0];
+    if (addrEl) {
+      const hp = this.hostPort || '';
+      if (hp) {
+        addrEl.textContent = hp.split(':')[0];
+      } else {
+        // 兜底：hostPort 为空时从 localStorage 读
+        try {
+          const raw = localStorage.getItem('fmo-settings');
+          if (raw) {
+            const { ip } = JSON.parse(raw);
+            if (ip) addrEl.textContent = normalizeHost(ip);
+          }
+        } catch (e) {}
+      }
     }
 
     // Ping show from cache
