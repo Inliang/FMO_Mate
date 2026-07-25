@@ -257,6 +257,9 @@ const App = {
     this.updateConnectionUI(false, 'connecting');
     const host = normalizeHost(ip);
     this.hostPort = `${host}:${port}`;
+    // 立即显示服务器IP，不等待 WebSocket 连接或 fetchServerListAll 完成
+    const addrEl = document.getElementById('server-addr');
+    if (addrEl) addrEl.textContent = host;
     const p = this.protocol;
     const wsUrl = `${p}://${this.hostPort}/ws`;
     const evUrl = `${p}://${this.hostPort}/events`;
@@ -267,6 +270,9 @@ const App = {
         this.connected = true;
         this.reconnectAttempts = 0;
         this.updateConnectionUI(true, 'connected');
+        // 立即显示服务器IP，不等 fetchAllData 完成
+        const addrEl = document.getElementById('server-addr');
+        if (addrEl) addrEl.textContent = (this.hostPort || '').split(':')[0];
         this.fetchAllData();
         this.startPolling();
 
@@ -1002,8 +1008,9 @@ const App = {
 
     this.renderServerList();
     this.renderServerSidebar();
-    // 在线人数从 serverList 长度计算（station.getCurrent 不含在线数）
-    this._updateOnlineCount(this.serverList.length);
+    // 统计在线服务器数：优先用 online 布尔字段，其次检查 onlineCount > 0
+    const onlineCount = this._countOnlineServers();
+    this._updateOnlineCount(onlineCount);
     setTimeout(() => this._probeAllServerLatency(), 500);
   },
 
@@ -1035,15 +1042,37 @@ const App = {
     if (el) el.textContent = count;
   },
 
+  _countOnlineServers() {
+    if (!this.serverList || !this.serverList.length) return 0;
+    // 统一使用 _isOnlineServer 判断在线状态，与 renderServerList 保持一致
+    const online = this.serverList.filter(s => this._isOnlineServer(s));
+    if (online.length > 0) return online.length;
+    // 兜底：所有判断均未命中时回退到全计数
+    return this.serverList.length;
+  },
+
+  _isOnlineServer(s) {
+    // 当前连接的服务器必定在线
+    if (s.name === this.currentServerName) return true;
+    // 优先判断布尔字段
+    if (s.online !== undefined) return s.online === true;
+    if (s.connected !== undefined) return s.connected === true;
+    if (s.status !== undefined) return s.status === 'online';
+    // 无布尔/状态字段时，用 onlineCount > 0 作为在线判断
+    const count = s.onlineCount ?? s.count ?? s.users ?? 0;
+    return count > 0;
+  },
+
   renderServerList() {
     console.log('[FMO-DEBUG-SERVER] renderServerList 被调用，serverList 长度=' + (this.serverList ? this.serverList.length : 'undefined'));
 
     const container = document.getElementById('server-list-container');
     if (!container) return;
 
-    let filtered = this.serverList;
+    // 只显示在线服务器
+    let filtered = this.serverList.filter(s => this._isOnlineServer(s));
     if (this.serverSearch) {
-      filtered = this.serverList.filter(s => {
+      filtered = filtered.filter(s => {
         const kw = this.serverSearch.toLowerCase();
         const nameMatch = (s.name || '').toLowerCase().includes(kw);
         const uid = s.uid ?? s._id ?? s.id ?? '';
@@ -1281,6 +1310,7 @@ const App = {
     all.forEach(q => { if (q.grid || q.locator) this._resolveGridLocation(q.grid || q.locator); });
     this.updateQsoCount();
     this.renderPrevCard();
+    this.renderTopCallers();
   },
 
   /* 通过 qso.getDetail 补全列表中 QSO 的留言/中继字段（getList 只返回基础字段） */
@@ -1463,12 +1493,49 @@ const App = {
     this.updateQsoCount();
     this.refreshStats();
     this.renderPrevCard();
+    this.renderTopCallers();
   },
 
   updateQsoCount() {
     const el = document.getElementById('qso-count');
     if (!el) return;
     el.textContent = this.qsoList.length;
+  },
+
+  renderTopCallers() {
+    const container = document.getElementById('top-callers');
+    if (!container) return;
+
+    const counts = new Map();
+    this.qsoList.forEach(q => {
+      const qc = this._extractQsoCallsign(q);
+      if (qc) {
+        const call = this.parseCallsignSsid(qc).call;
+        counts.set(call, (counts.get(call) || 0) + 1);
+      }
+    });
+
+    const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20);
+
+    const countEl = document.getElementById('top-count');
+    if (countEl) countEl.textContent = sorted.length;
+
+    if (!sorted.length) {
+      container.innerHTML = '<div class="list-empty">暂无数据</div>';
+      return;
+    }
+
+    const maxCount = sorted[0][1];
+    container.innerHTML = sorted.map(([call, count], i) => {
+      const barPct = Math.round((count / maxCount) * 100);
+      const isSelf = this.isSameOperator(call, this.myCallsign);
+      return `<div class="top-item${isSelf ? ' is-self' : ''}">
+        <span class="top-rank">${i + 1}</span>
+        <span class="top-call">${call}</span>
+        <span class="top-bar-wrap"><span class="top-bar" style="width:${barPct}%"></span></span>
+        <span class="top-count">${count}次</span>
+      </div>`;
+    }).join('');
   },
 
   async refreshStats() {
@@ -2204,11 +2271,21 @@ const App = {
       qthEl.style.display = loc ? '' : 'none';
     }
 
-    // QTH 卡片 (freq-qth)
+    // QTH 卡片 (freq-qth) — 含方位+距离
     const qthCardEl = document.getElementById('freq-qth');
     if (qthCardEl) {
-      const loc = this._gridLocationCache[sp?.grid] || sp?.grid || '--';
-      qthCardEl.textContent = loc;
+      const loc = this._gridLocationCache[sp?.grid] || sp?.grid || '';
+      const parts = [];
+      if (loc) parts.push(loc);
+      if (sp.azimuth !== undefined && sp.azimuth !== null) {
+        const dir = this._azimuthToDirection(sp.azimuth);
+        let bearingStr = dir + ' ' + sp.azimuth + '°';
+        if (sp.distance !== undefined && sp.distance !== null) {
+          bearingStr += ' · ' + Number(sp.distance).toFixed(0) + 'km';
+        }
+        parts.push(bearingStr);
+      }
+      qthCardEl.textContent = parts.join('  ') || '--';
     }
 
     // Server name (small subtext)
