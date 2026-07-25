@@ -588,7 +588,14 @@ const App = {
       const d = evt.data || evt;
       this.addQsoItem(d);
     } else if (evt.event === 'station_update' || evt.event === 'online_change') {
-      // fetchServerList -> fetchServerListAll -> _countOnlineServers 统一计算
+      // 从事件 data 中直接提取在线人数，不回退到重拉列表
+      if (evt.event === 'online_change') {
+        const evtCount = evt.data?.onlineCount ?? evt.data?.count ?? evt.onlineCount;
+        if (evtCount !== undefined && evtCount !== null) {
+          this._updateOnlineCount(evtCount);
+        }
+      }
+      // 同时刷新服务器列表（station_update 场景需要）
       this.fetchServerList();
     }
 
@@ -955,6 +962,13 @@ const App = {
       if ((r.code === 0 || r.code === undefined) && r.data) {
         this.currentServerName = r.data.name || '';
         this._prevServer = this.currentServerName;
+        this._currentServerUid = r.data.uid || '';
+        // 从 getCurrent 响应直接提取在线人数
+        const oc = r.data.onlineCount ?? r.data.count ?? r.data.users ?? r.data.online ?? r.data.userCount;
+        if (oc !== undefined && oc !== null) {
+          this._updateOnlineCount(oc);
+          console.log('[FMO-DEBUG-OC] getCurrent 直接返回在线人数:', oc);
+        }
         this._showServerInfo();
       }
     } catch (e) {}
@@ -1010,10 +1024,26 @@ const App = {
     if (el) el.textContent = count;
   },
 
-  /** 同步 KPI 在线人数：从 serverList 中取当前服务器的 onlineCount */
+  /** 同步 KPI 在线人数：优先 getCurrent 提取，兜底从 serverList 匹配 */
   _syncKpiOnlineCount() {
-    if (!this.serverList.length || !this.currentServerName) return;
-    const currentServer = this.serverList.find(s => s.name === this.currentServerName);
+    if (!this.serverList.length) return;
+    
+    // 尝试按名称匹配当前服务器
+    let currentServer = null;
+    if (this.currentServerName) {
+      currentServer = this.serverList.find(s => s.name === this.currentServerName);
+    }
+    // 兜底：按 UID 匹配（getCurrent 可能返回 uid）
+    if (!currentServer && this._currentServerUid) {
+      currentServer = this.serverList.find(s => s.uid === this._currentServerUid);
+    }
+    // 再兜底：取第一个有在线人数的服务器
+    if (!currentServer) {
+      currentServer = this.serverList.find(s =>
+        (s.onlineCount ?? s.count ?? s.users ?? s.online ?? s.userCount) !== undefined
+      );
+    }
+    
     if (currentServer) {
       const count = currentServer.onlineCount
         ?? currentServer.count
@@ -1025,15 +1055,10 @@ const App = {
         return;
       }
     }
-    // 兜底：取第一个在线服务器的人数（通常是本地 FMO）
-    const fallback = this.serverList.find(s =>
-      (s.onlineCount ?? s.count ?? s.users ?? s.online ?? s.userCount) !== undefined
-    );
-    if (fallback) {
-      const fallbackCount = fallback.onlineCount ?? fallback.count ?? fallback.users ?? fallback.online ?? fallback.userCount;
-      if (fallbackCount !== undefined && fallbackCount !== null) {
-        this._updateOnlineCount(fallbackCount);
-      }
+    
+    console.log('[FMO-DEBUG-OC] _syncKpiOnlineCount: 未在任何 station 中找到在线人数字段。serverList.length=' + this.serverList.length + ', currentServerName=' + this.currentServerName);
+    if (this.serverList.length > 0) {
+      console.log('[FMO-DEBUG-OC] 首个 station keys:', Object.keys(this.serverList[0]).join(', '));
     }
   },
 
