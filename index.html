@@ -7,172 +7,58 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>FMO Secondary Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=0722h">
+  <link rel="stylesheet" href="style.css?v=0801a">
   <style>
-    /* === 三层覆盖策略 Layer 1: head !important 全量按钮清零 === */
-    button, [type="button"], [type="submit"] {
-      background-image: none !important;
-    }
-    .refresh-btn, .server-list-trigger, #ac-refresh-btn,
-    .server-card-header, .panel-export-btn, .export-adif-btn {
-      background: #141c24 !important;
-      color: #8899a6 !important;
-      border: none !important;
-      box-shadow: none !important;
-      outline: none !important;
-      appearance: none !important;
-      -webkit-appearance: none !important;
-      -moz-appearance: none !important;
-      text-decoration: none !important;
-      background-image: none !important;
-    }
-    .refresh-btn:hover, .server-list-trigger:hover, #ac-refresh-btn:hover,
-    .panel-export-btn:hover, .export-adif-btn:hover {
-      background: #0c1117 !important;
-      color: #c5cdd3 !important;
-      box-shadow: none !important;
-      background-image: none !important;
-    }
-    .server-card-header, .server-card-header:hover {
-      background: #141c24 !important;
-      color: #8899a6 !important;
-      border: none !important;
-      box-shadow: none !important;
-      background-image: none !important;
-    }
-    .server-card-header:hover {
-      background: #0c1117 !important;
-    }
-    .tool-btn, .tool-btn:hover, #cmd-server-btn, #cmd-settings-btn,
-    .view-toggle-btn, .settings-btn {
-      background: #141c24 !important;
-      color: #8899a6 !important;
-      border: none !important;
-      box-shadow: none !important;
-      outline: none !important;
-      appearance: none !important;
-      -webkit-appearance: none !important;
-      -moz-appearance: none !important;
-      text-decoration: none !important;
-      width: auto !important;
-      height: auto !important;
-      background-image: none !important;
-    }
-    .tool-btn:hover, #cmd-server-btn:hover, #cmd-settings-btn:hover,
-    .view-toggle-btn:hover, .settings-btn:hover {
-      background: #0c1117 !important;
-      color: #c5cdd3 !important;
-      background-image: none !important;
-    }
-
     /* 设置面板 overlay — 内嵌确保 file:// 协议下生效 */
     .overlay {
       display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 200;
-      background: rgba(0, 0, 0, 0.6);
-      justify-content: center;
-      align-items: center;
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,0.3);
+      justify-content: center; align-items: center;
     }
-    .overlay.open {
-      display: flex;
-    }
+    .overlay.open { display: flex; }
     .overlay-box {
-      width: 360px;
-      max-width: 92vw;
-      background: #0c1117;
-      border-radius: 8px;
-      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 8px 32px rgba(0, 0, 0, 0.5);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      padding: 22px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
+      width: 360px; max-width: 92vw;
+      background: var(--bg-card, #F7F7F7);
+      border-radius: var(--radius-lg, 16px);
+      box-shadow: var(--shadow-elevated, 0 8px 32px rgba(0,0,0,0.08));
+      padding: 24px; display: flex; flex-direction: column; gap: 16px;
     }
-    .overlay-box h2 {
-      font-size: 15px;
-      font-weight: 600;
-      color: #e8ecef;
-    }
-    .settings-row {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
+    .overlay-box h2 { font-size: var(--text-lg, 18px); font-weight: 700; color: var(--text-primary, #1A1A1A); }
+    .settings-row { display: flex; flex-direction: column; gap: 5px; }
     .settings-row label {
-      font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
-      font-size: 12px;
-      color: #5c6975;
-      letter-spacing: 0.1em;
-      font-weight: 600;
-      text-transform: uppercase;
+      font-family: system-ui, sans-serif; font-size: 12px;
+      color: var(--text-muted, #9F9E9E); letter-spacing: 0.08em;
+      font-weight: 600; text-transform: uppercase;
     }
-    .settings-row input,
-    .settings-row select {
-      padding: 9px 12px;
-      background: #141c24;
-      border-radius: 4px;
-      box-shadow: none;
-      border: none;
-      color: #e8ecef;
-      font-size: 14px;
-      font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+    .settings-row input, .settings-row select {
+      padding: 10px 14px; background: var(--bg-input, #FFFFFF);
+      border-radius: var(--radius-sm, 8px); border: 1px solid var(--border-card, #E8E8E8);
+      color: var(--text-primary, #1A1A1A); font-size: 14px; font-family: system-ui, sans-serif;
       transition: background 0.2s ease;
     }
-    .settings-row input:focus,
-    .settings-row select:focus {
-      background: #0e141b;
-      outline: none;
+    .settings-row input:focus, .settings-row select:focus {
+      outline: none; border-color: rgba(215,96,18,0.25); box-shadow: 0 0 0 2px rgba(215,96,18,0.10);
     }
     .settings-row select {
-      cursor: pointer;
-      appearance: none;
-      -webkit-appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235c6975'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 12px center;
-      padding-right: 32px;
+      cursor: pointer; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239F9E9E'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px;
     }
-    .overlay-btns {
-      display: flex;
-      gap: 8px;
-      justify-content: flex-end;
-      margin-top: 4px;
-    }
+    .overlay-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
     .btn-accent {
-      padding: 9px 22px;
-      background: #141c24;
-      color: #8899a6;
-      border: none;
-      border-radius: 4px;
-      font-size: 14px;
-      cursor: pointer;
-      font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
-      box-shadow: none;
-      outline: none;
-      transition: all 0.2s ease;
+      padding: 10px 24px; background: var(--accent, #D76012); color: #fff; border: none;
+      border-radius: var(--radius-sm, 8px); font-size: 14px; cursor: pointer;
+      font-family: system-ui, sans-serif; font-weight: 600; transition: all 0.2s ease;
     }
-    .btn-accent:hover {
-      background: #0c1117;
-      color: #c5cdd3;
-    }
+    .btn-accent:hover { background: var(--accent-hover, #E8701F); }
     .btn-muted {
-      padding: 9px 22px;
-      background: rgba(255,255,255,0.04);
-      color: #8899a6;
-      border: none;
-      border-radius: 4px;
-      font-size: 14px;
-      cursor: pointer;
-      font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
-      box-shadow: none;
-      transition: all 0.2s ease;
+      padding: 10px 24px; background: var(--bg-input, #FFFFFF);
+      color: var(--text-secondary, #5B5B5A); border: none;
+      border-radius: var(--radius-sm, 8px); font-size: 14px; font-family: system-ui, sans-serif;
+      cursor: pointer; transition: all 0.2s ease;
     }
-    .btn-muted:hover {
-      background: rgba(255,255,255,0.08);
-      color: #e8ecef;
-    }
+    .btn-muted:hover { background: var(--bg-hover, #EFEFEF); color: var(--text-primary, #1A1A1A); }
   </style>
 </head>
 <body>
@@ -199,11 +85,11 @@
         <span id="stat-friends">--</span>
       </span>
       <div class="tool-btn-group">
-        <button class="tool-btn theme-btn" id="theme-dark" data-theme="dark" title="深色主题" style="background:#141c24;color:#8899a6;border:none;border-radius:6px;padding:4px 10px;font-size:13px;font-weight:500;letter-spacing:0.02em;font-family:Cascadia Code,Fira Code,Consolas,monospace;cursor:pointer;box-shadow:none;appearance:none;outline:none;text-decoration:none;">暗</button>
-        <button class="tool-btn theme-btn" id="theme-light" data-theme="light" title="浅色主题" style="background:#141c24;color:#8899a6;border:none;border-radius:6px;padding:4px 10px;font-size:13px;font-weight:500;letter-spacing:0.02em;font-family:Cascadia Code,Fira Code,Consolas,monospace;cursor:pointer;box-shadow:none;appearance:none;outline:none;text-decoration:none;">亮</button>
-        <button class="tool-btn theme-btn" id="theme-eink" data-theme="e-ink" title="水墨屏" style="background:#141c24;color:#8899a6;border:none;border-radius:6px;padding:4px 10px;font-size:13px;font-weight:500;letter-spacing:0.02em;font-family:Cascadia Code,Fira Code,Consolas,monospace;cursor:pointer;box-shadow:none;appearance:none;outline:none;text-decoration:none;">墨</button>
-        <button class="tool-btn theme-btn orientation-toggle" id="orientation-toggle-btn" title="切换横竖屏" style="background:#141c24;color:#8899a6;border:none;border-radius:6px;padding:4px 10px;font-size:13px;font-weight:500;letter-spacing:0.02em;font-family:Cascadia Code,Fira Code,Consolas,monospace;cursor:pointer;box-shadow:none;appearance:none;outline:none;text-decoration:none;">⇅</button>
-        <button class="tool-btn" id="cmd-settings-btn" title="设置" style="background:#141c24;color:#8899a6;border:none;border-radius:6px;padding:4px 12px;font-size:13px;font-weight:500;letter-spacing:0.02em;font-family:Cascadia Code,Fira Code,Consolas,monospace;cursor:pointer;box-shadow:none;appearance:none;outline:none;text-decoration:none;">设置</button>
+        <button class="tool-btn theme-btn" id="theme-dark" data-theme="dark" title="深色主题">暗</button>
+        <button class="tool-btn theme-btn" id="theme-light" data-theme="light" title="浅色主题">亮</button>
+        <button class="tool-btn theme-btn" id="theme-eink" data-theme="e-ink" title="水墨屏">墨</button>
+        <button class="tool-btn theme-btn orientation-toggle" id="orientation-toggle-btn" title="切换横竖屏">⇅</button>
+        <button class="tool-btn" id="cmd-settings-btn" title="设置">设置</button>
       </div>
     </div>
   </header>
@@ -247,7 +133,7 @@
             <span class="tag" id="sb-qth"></span>
           </div>
           <div class="ac-controls">
-            <button class="refresh-btn" id="ac-refresh-btn" style="background:#141c24;color:#8899a6;border:none;border-radius:6px;padding:4px 12px;font-size:13px;font-weight:500;letter-spacing:0.02em;font-family:Cascadia Code,Fira Code,Consolas,monospace;cursor:pointer;box-shadow:none;appearance:none;outline:none;text-decoration:none;">刷新现场</button>
+            <button class="refresh-btn" id="ac-refresh-btn">刷新现场</button>
           </div>
         </div>
         <div class="bearing-panel">
@@ -318,7 +204,7 @@
       <section class="server-card" id="server-card-sidebar">
         <div class="section-label server-card-header" id="server-card-header-btn">
           <span>收藏中继 / 服务器</span>
-          <span class="server-list-trigger" id="server-search-trigger" style="color:#8899a6;background:#141c24;border:none;border-radius:6px;padding:2px 6px;font-size:12px;font-weight:500;font-family:Cascadia Code,Fira Code,Consolas,monospace;cursor:pointer;box-shadow:none;appearance:none;outline:none;">搜索</span>
+          <span class="server-list-trigger" id="server-search-trigger">搜索</span>
           <div class="server-search-popup" id="server-search-popup" style="display:none;">
             <input type="text" class="server-search-input" id="server-search-input" placeholder="拼音/名称搜索..." autocomplete="off">
             <div class="server-search-results" id="server-search-results"></div>
@@ -357,7 +243,7 @@
       <div class="panel-header">
         <span>通联记录</span>
         <div class="panel-header-actions">
-          <button id="panel-export-btn" class="panel-export-btn" title="导出 ADIF 日志" style="background:#141c24;color:#8899a6;border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:500;font-family:Cascadia Code,Fira Code,Consolas,monospace;cursor:pointer;box-shadow:none;appearance:none;outline:none;text-decoration:none;background-image:none;">导出 ADIF</button>
+          <button id="panel-export-btn" class="panel-export-btn" title="导出 ADIF 日志">导出 ADIF</button>
           <span class="panel-count" id="qso-count">0</span>
         </div>
       </div>
@@ -410,6 +296,6 @@
 
 </div>
 
-  <script src="app.js?v=0722h"></script>
+  <script src="app.js?v=0801a"></script>
 </body>
 </html>
