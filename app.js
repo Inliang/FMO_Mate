@@ -1,13 +1,13 @@
-﻿/* ============================================================
-   FMO 鍓睆浼翠荆 鈥?app.js v8
-   v0.4.17: fetchDeviceInfo 鍔犺秴鏃朵繚鎶?+ 棣栧熬鏃ュ織锛岄槻姝?Phase 1 鍗℃闃诲 Phase 2 QSO 鍔犺浇
-   v0.4.15: 濉厖鎵€鏈?-- 鍗犱綅鍙傛暟 (璁惧IP/QSO缁熻/鏈嶅姟鍣ㄥ湪绾挎暟) + 鏂板 refreshStats
-   v0.4.13: 淇 V2 鍗忚鍝嶅簲鍖归厤 鈥?isResponseLike 鍔犲叆 event==='ok' 鍒ゅ埆
-   v0.4.12: 淇 RESPONSE_ALIASES (getListResponse) + 鍝嶅簲鍖归厤鍏煎 V2 鍗忚 event 瀛楁
-   v0.4.0: 鎺ㄧ炕鍥涜薄闄愬竷灞€锛孎MO-Dashboard 椋庢牸绾靛悜淇℃伅娴?
-   - 閫傞厤鏂?DOM 缁撴瀯锛坰peaking-bar 鍒嗚瘝濉厖銆乨evice/server 鏍囩缁勶級
-   - QSO 鍒楄〃鏀圭敤 .item-row 绯诲垪 CSS 绫?
-   - 淇濈暀鎵€鏈夋牳蹇冨姛鑳斤紙Speaking Bar / 璁惧 / 鏈嶅姟鍣?/ 鏈€杩戝彂瑷€ / QSO / 鏈嶅姟鍣ㄥ垏鎹?/ 璁剧疆 / ADIF 瀵煎嚭锛?
+/* ============================================================
+   FMO 副屏伴侣 — app.js v8
+   v0.4.17: fetchDeviceInfo 加超时保护 + 首尾日志，防止 Phase 1 卡死阻塞 Phase 2 QSO 加载
+   v0.4.15: 填充所有 -- 占位参数 (设备IP/QSO统计/服务器在线数) + 新增 refreshStats
+   v0.4.13: 修复 V2 协议响应匹配 — isResponseLike 加入 event==='ok' 判别
+   v0.4.12: 修复 RESPONSE_ALIASES (getListResponse) + 响应匹配兼容 V2 协议 event 字段
+   v0.4.0: 推翻四象限布局，FMO-Dashboard 风格纵向信息流
+   - 适配新 DOM 结构（speaking-bar 分词填充、device/server 标签组）
+   - QSO 列表改用 .item-row 系列 CSS 类
+   - 保留所有核心功能（Speaking Bar / 设备 / 服务器 / 最近发言 / QSO / 服务器切换 / 设置 / ADIF 导出）
    ============================================================ */
 
 function normalizeHost(addr) {
@@ -61,7 +61,7 @@ class PcmTap {
 }
 
 const App = {
-  // --- 杩炴帴 ---
+  // --- 连接 ---
   ws: null,
   eventsWs: null,
   audioWs: null,
@@ -71,11 +71,11 @@ const App = {
   reconnectAttempts: 0,
   maxReconnectAttempts: 10,
 
-  // --- 涓茶闃熷垪 ---
+  // --- 串行队列 ---
   _queue: null,
   _inFlight: null,
 
-  // --- 鏁版嵁 ---
+  // --- 数据 ---
   myCallsign: '',
   myUid: '',
   myGrid: '',
@@ -87,7 +87,7 @@ const App = {
   _prevServer: '',
   serverSearch: '',
 
-  // --- 闊抽 ---
+  // --- 音频 ---
   audioCtx: null,
   audioConnected: false,
   isMuted: false,
@@ -106,23 +106,23 @@ const App = {
   _antHeight: '',
 
   // --- API Keys ---
-  _AMAP_KEY: 'JCx9Yn0hNGQgCgJRUCAueTd2emFlJ1EFUARweXkxdiU=', // 楂樺痉 Web 鏈嶅姟 Key锛圶OR+Base64 娣锋穯锛?
+  _AMAP_KEY: 'JCx9Yn0hNGQgCgJRUCAueTd2emFlJ1EFUARweXkxdiU=', // 高德 Web 服务 Key（XOR+Base64 混淆）
 
-  // --- 缂撳瓨 ---
+  // --- 缓存 ---
   _gridLocationCache: {},
   _qsoDetailCache: {},
   _gridLocationPending: new Set(),
   _serverLatency: {},
   _serverLatencyPending: {},
 
-  // --- 瀹氭椂鍣?---
+  // --- 定时器 ---
   pollTimer: null,
 
-  // --- 鍦ㄧ嚎浜烘暟 ---
+  // --- 在线人数 ---
   _onlineCount: 0,
   _lastRefresh: 0,
 
-  // --- 鍒濆鍖?---
+  // --- 初始化 ---
   init() {
     this._queue = [];
     this._inFlight = null;
@@ -136,7 +136,7 @@ const App = {
   bindEvents() {
     const $ = id => document.getElementById(id);
 
-    // 璁剧疆闈㈡澘
+    // 设置面板
     const settingsOverlay = $('settings-overlay');
     if (settingsOverlay) {
       settingsOverlay.addEventListener('click', (e) => {
@@ -152,7 +152,7 @@ const App = {
     if (fmoIp) fmoIp.addEventListener('keydown', (e) => { if (e.key === 'Enter') this.saveSettings(); });
     if (fmoPort) fmoPort.addEventListener('keydown', (e) => { if (e.key === 'Enter') this.saveSettings(); });
 
-    // 鏈嶅姟鍣ㄦ悳绱?
+    // 服务器搜索
     const si = $('server-search');
     if (si) {
       si.addEventListener('input', (e) => {
@@ -161,7 +161,7 @@ const App = {
       });
     }
 
-    // 鏈嶅姟鍣ㄦ悳绱㈠脊绐楋紙娴姩鎼滅储妗嗭級
+    // 服务器搜索弹窗（浮动搜索框）
     const searchTrigger = $('server-search-trigger');
     const searchPopup = $('server-search-popup');
     const searchInput = $('server-search-input');
@@ -189,13 +189,13 @@ const App = {
       }
     }
 
-    // 璁剧疆闈㈡澘锛堥€氳繃鍙充笂瑙掓寜閽Е鍙戯級
+    // 设置面板（通过右上角按钮触发）
     const cmdSettingsBtn = $('cmd-settings-btn');
     if (cmdSettingsBtn) {
       cmdSettingsBtn.addEventListener('click', () => this.openSettings());
     }
 
-    // 涓婚鍒囨崲锛堥€氳繃鍙充笂瑙掓寜閽Е鍙戯級
+    // 主题切换（通过右上角按钮触发）
     const savedTheme = localStorage.getItem('fmo-theme') || 'dark';
     this._applyTheme(savedTheme);
     document.querySelectorAll('.theme-btn').forEach(btn => {
@@ -206,23 +206,23 @@ const App = {
       });
     });
 
-    // 妯珫灞忓垏鎹紙绉诲姩绔寜閽Е鍙戯級
+    // 横竖屏切换（移动端按钮触发）
     const orientBtn = document.getElementById('orientation-toggle-btn');
     if (orientBtn) {
       orientBtn.addEventListener('click', () => {
         document.body.classList.toggle('mobile-landscape');
         const isLandscape = document.body.classList.contains('mobile-landscape');
         localStorage.setItem('fmo-orientation', isLandscape ? 'landscape' : 'portrait');
-        orientBtn.textContent = isLandscape ? '鈬? : '鈬?;
+        orientBtn.textContent = isLandscape ? '⇊' : '⇅';
       });
-      // 鎭㈠涓婃鍋忓ソ
+      // 恢复上次偏好
       if (localStorage.getItem('fmo-orientation') === 'landscape') {
         document.body.classList.add('mobile-landscape');
-        orientBtn.textContent = '鈬?;
+        orientBtn.textContent = '⇊';
       }
     }
 
-    // 瀵煎嚭 ADIF锛堥€氳繃閫氳仈璁板綍闈㈡澘鎸夐挳瑙﹀彂锛?
+    // 导出 ADIF（通过通联记录面板按钮触发）
     const panelExportBtn = $('panel-export-btn');
     if (panelExportBtn) {
       panelExportBtn.addEventListener('click', () => this.exportQso());
@@ -240,7 +240,7 @@ const App = {
     });
   },
 
-  // ============ 杩炴帴绠＄悊 ============
+  // ============ 连接管理 ============
 
   loadSettings() {
     const raw = localStorage.getItem('fmo-settings');
@@ -336,23 +336,23 @@ const App = {
     if (!dot || !text) return;
     if (status === 'connecting') {
       dot.className = 'status-dot connecting';
-      text.textContent = '杩炴帴涓?;
+      text.textContent = '连接中';
     } else if (connected) {
       dot.className = 'status-dot connected';
-      text.textContent = '宸茶繛鎺?;
+      text.textContent = '已连接';
     } else {
       dot.className = 'status-dot';
-      text.textContent = '鏈繛鎺?;
-      // 鏂繛鏃舵仮澶嶈嚜韬懠鍙锋樉绀?
+      text.textContent = '未连接';
+      // 断连时恢复自身呼号显示
       const cmdDescEl = document.getElementById('command-desc');
-      if (cmdDescEl) cmdDescEl.textContent = (this.myCallsign || 'N0CALL') + ' 姝ｅ湪瀹堝惉';
+      if (cmdDescEl) cmdDescEl.textContent = (this.myCallsign || 'N0CALL') + ' 正在守听';
       const devCallsignEl = document.getElementById('dev-callsign');
       if (devCallsignEl) devCallsignEl.textContent = this.myCallsign || 'N0CALL';
     }
     this._updateNetworkType();
   },
 
-  /* 妫€娴嬫湰鏈?/ 澶栫綉璁块棶 */
+  /* 检测本机 / 外网访问 */
   _updateNetworkType() {
     const el = document.getElementById('net-type');
     if (!el) return;
@@ -363,11 +363,11 @@ const App = {
       || host.startsWith('192.168.')
       || host.startsWith('10.')
       || host.startsWith('172.');
-    el.textContent = isLocal ? '鏈満' : '澶栫綉';
+    el.textContent = isLocal ? '本机' : '外网';
     el.className = 'net-type-tag' + (isLocal ? '' : ' wan');
   },
 
-  /* 鏇存柊鏈€鍚庡埛鏂版椂闂?*/
+  /* 更新最后刷新时间 */
   _updateRefreshTime() {
     const el = document.getElementById('last-refresh');
     if (!el) return;
@@ -389,11 +389,11 @@ const App = {
     this._clockTimer = setInterval(tick, 1000);
   },
 
-  // ============ 涓茶闃熷垪 ============
+  // ============ 串行队列 ============
 
   send(req) {
     if (!this.connected || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      return Promise.reject(new Error('鏈繛鎺?));
+      return Promise.reject(new Error('未连接'));
     }
     return new Promise((resolve, reject) => {
       this._queue.push({ req, resolve, reject });
@@ -407,7 +407,7 @@ const App = {
     const timer = setTimeout(() => {
       if (this._inFlight === flight) {
         this._inFlight = null;
-        next.reject(new Error(`瓒呮椂: ${next.req.type}/${next.req.subType}`));
+        next.reject(new Error(`超时: ${next.req.type}/${next.req.subType}`));
         this._processQueue();
       }
     }, 5000);
@@ -422,7 +422,7 @@ const App = {
     const dbg = (...args) => console.log('[FMO-DEBUG]', ...args);
     dbg('recv', msg.type, msg.event, msg.subType, msg.code, Object.keys(msg.data||{}));
 
-    // 鍝嶅簲鍖归厤锛歏2 鍗忚鍝嶅簲鍙兘甯?event:"ok"锛屾晠鐢?subType/code/event 杈呭姪鍒ゅ埆
+    // 响应匹配：V2 协议响应可能带 event:"ok"，故用 subType/code/event 辅助判别
     const isResponseLike = msg.event === 'ok' || !msg.event || msg.subType !== undefined || msg.code !== undefined;
     dbg('isResponseLike', isResponseLike, '_inFlight', !!this._inFlight);
     if (isResponseLike && this._inFlight) {
@@ -440,7 +440,7 @@ const App = {
         dbg('match', 'first');
       }
 
-      // V2: 鍝嶅簲甯?event:"ok" 涓斿惈 data锛岄€氳繃 type 鍖归厤锛堟帓闄ょ函蹇冭烦锛?
+      // V2: 响应带 event:"ok" 且含 data，通过 type 匹配（排除纯心跳）
       if (!matched && msg.event === 'ok' && msg.type === r.type && msg.data !== undefined) {
         matched = true;
         dbg('match', 'second');
@@ -518,7 +518,7 @@ const App = {
         serverName: srv.name || evt.serverName || '',
         serverUid: srv.uid || evt.serverUid || '',
       });
-      // 浠庝簨浠朵腑鎻愬彇鍛煎彨浜虹殑棰戠巼/楂樺害
+      // 从事件中提取呼叫人的频率/高度
       const freqFields = this._extractFreqFromEvent(evt);
       if (freqFields) {
         this._currentFreq = freqFields.mhz;
@@ -551,7 +551,7 @@ const App = {
           serverName: srv.name || d.serverName || '',
           serverUid: srv.uid || d.serverUid || '',
         });
-        // 浠?data 瀛楁鎻愬彇棰戠巼/楂樺害
+        // 从 data 字段提取频率/高度
         const freqFields = this._extractFreqFromEvent(d);
         if (freqFields) {
           this._currentFreq = freqFields.mhz;
@@ -590,7 +590,7 @@ const App = {
       }
     }
 
-    // APRS BEACON 娑堟伅澶勭悊锛圓PFMO4 棰戠巼/楂樺害锛?
+    // APRS BEACON 消息处理（APFMO4 频率/高度）
     if (evt.event === 'beacon' || evt.type === 'beacon') {
       const d = evt.data || evt;
       const payload = d.payload || d.raw || d.message || d.text || '';
@@ -601,16 +601,16 @@ const App = {
     }
   },
 
-  // ============ 鏁版嵁鑾峰彇 ============
+  // ============ 数据获取 ============
 
   async fetchAllData() {
-    console.log('[FMO-DEBUG-SERVER] fetchAllData 寮€濮嬶紙Phase 1: device + server锛?);
+    console.log('[FMO-DEBUG-SERVER] fetchAllData 开始（Phase 1: device + server）');
 
     const withTimeout = (promise, name, ms) => {
       return Promise.race([
         promise,
         new Promise((resolve) => setTimeout(() => {
-          console.warn('[FMO-DEBUG-SERVER] ' + name + ' 瓒呮椂(' + ms + 'ms)锛屽己鍒剁户缁?Phase 2');
+          console.warn('[FMO-DEBUG-SERVER] ' + name + ' 超时(' + ms + 'ms)，强制继续 Phase 2');
           resolve();
         }, ms))
       ]);
@@ -620,16 +620,16 @@ const App = {
       withTimeout(this.fetchDeviceInfo(), 'fetchDeviceInfo', 15000),
       withTimeout(this.fetchServerListAll(), 'fetchServerListAll', 30000)
     ]);
-    console.log('[FMO-DEBUG-SERVER] Phase 1 瀹屾垚锛孭hase 2: 鍔犺浇 QSO 鍒楄〃');
+    console.log('[FMO-DEBUG-SERVER] Phase 1 完成，Phase 2: 加载 QSO 列表');
     await this.fetchQsoListAll();
-    // 濡傛灉浠ヤ笂閮芥湭鑳借幏鍙栭鐜囷紝棰濆灏濊瘯 radio API
+    // 如果以上都未能获取频率，额外尝试 radio API
     if (!this._currentFreq) await this.fetchRadioInfo();
     this._updateRefreshTime();
-    console.log('[FMO-DEBUG-SERVER] fetchAllData 鍏ㄩ儴瀹屾垚');
+    console.log('[FMO-DEBUG-SERVER] fetchAllData 全部完成');
   },
 
   async fetchDeviceInfo() {
-    console.log('[FMO-DEBUG-DEVICE] fetchDeviceInfo 寮€濮?);
+    console.log('[FMO-DEBUG-DEVICE] fetchDeviceInfo 开始');
     const tasks = [];
 
     // user.getInfo
@@ -643,7 +643,7 @@ const App = {
       } catch (e) { console.warn('user:', e.message); }
     })());
 
-    // config: 鍧愭爣 + 缃戞牸
+    // config: 坐标 + 网格
     tasks.push((async () => {
       try {
         const r = await this.send({ type: 'config', subType: 'getCordinate' });
@@ -656,7 +656,7 @@ const App = {
       } catch (e) {}
     })());
 
-    // system.getInfo: 鍥轰欢鐗堟湰 鈫?MAC 鍗＄墖
+    // system.getInfo: 固件版本 → MAC 卡片
     tasks.push((async () => {
       try {
         const r = await this.send({ type: 'system', subType: 'getInfo' });
@@ -666,10 +666,10 @@ const App = {
           if (verEl && (r.data.version || r.data.ver)) verEl.textContent = r.data.version || r.data.ver;
           if (macEl && (r.data.version || r.data.ver)) macEl.textContent = r.data.version || r.data.ver;
         }
-      } catch (e) { /* 鏃у浐浠朵笉鏀寔 system.getInfo 鍒欓潤榛樹繚鎸?-- */ }
+      } catch (e) { /* 旧固件不支持 system.getInfo 则静默保持 -- */ }
     })());
 
-    // radio.getVersion 澶囩敤锛堥儴鍒嗗浐浠剁増鏈彿鍦?radio 鍛藉悕绌洪棿锛?
+    // radio.getVersion 备用（部分固件版本号在 radio 命名空间）
     tasks.push((async () => {
       try {
         const r = await this.send({ type: 'radio', subType: 'getVersion' });
@@ -682,7 +682,7 @@ const App = {
       } catch (e) {}
     })());
 
-    // config.getSystemInfo 澶囩敤璺緞
+    // config.getSystemInfo 备用路径
     tasks.push((async () => {
       try {
         const r = await this.send({ type: 'config', subType: 'getSystemInfo' });
@@ -699,7 +699,7 @@ const App = {
       } catch (e) {}
     })());
 
-    // config.getUserPhyDeviceName 鈫?纭欢鍨嬪彿
+    // config.getUserPhyDeviceName → 硬件型号
     tasks.push((async () => {
       try {
         const r = await this.send({ type: 'config', subType: 'getUserPhyDeviceName' });
@@ -712,7 +712,7 @@ const App = {
       } catch (e) {}
     })());
 
-    // config.getUserPhyAnt 鈫?澶╃嚎绫诲瀷锛堜粎鍚嶇О锛? VER锛堥珮搴︼級
+    // config.getUserPhyAnt → 天线类型（仅名称）+ VER（高度）
     tasks.push((async () => {
       try {
         const r = await this.send({ type: 'config', subType: 'getUserPhyAnt' });
@@ -723,7 +723,7 @@ const App = {
           if (antEl) {
             antEl.textContent = antName || '--';
           }
-          // VER = 澶╃嚎楂樺害
+          // VER = 天线高度
           if (antH) {
             this._antHeight = antH;
             const verEl = document.getElementById('dev-version');
@@ -733,7 +733,7 @@ const App = {
       } catch (e) {}
     })());
 
-    // config.getUserPhyAntHeight 鈫?VER 澶囩敤锛堝ぉ绾块珮搴︾嫭绔?API锛?
+    // config.getUserPhyAntHeight → VER 备用（天线高度独立 API）
     tasks.push((async () => {
       try {
         const r = await this.send({ type: 'config', subType: 'getUserPhyAntHeight' });
@@ -750,31 +750,31 @@ const App = {
       } catch (e) {}
     })());
 
-    // config.getUserPhyFreq 鈫?鐢ㄦ埛鐗╃悊棰戠偣璁剧疆
+    // config.getUserPhyFreq → 用户物理频点设置
     tasks.push((async () => {
       try {
         const r = await this.send({ type: 'config', subType: 'getUserPhyFreq' });
-        console.log('[FMO-DEBUG-FREQ] getUserPhyFreq 鍘熷鍝嶅簲:', JSON.stringify(r));
-        console.log('[FMO-DEBUG-FREQ] freq 鍊?', r?.data?.freq, '绫诲瀷:', typeof r?.data?.freq);
+        console.log('[FMO-DEBUG-FREQ] getUserPhyFreq 原始响应:', JSON.stringify(r));
+        console.log('[FMO-DEBUG-FREQ] freq 值:', r?.data?.freq, '类型:', typeof r?.data?.freq);
         if ((r.code === 0 || r.code === undefined) && r.data) {
           const freqEl = document.getElementById('dev-user-freq');
           const freq = r.data.frequency ?? r.data.freq ?? r.data.rx_freq;
           if (freqEl && freq != null && freq > 0) {
             const mhz = (freq > 10000 ? freq / 1e6 : freq).toFixed(4);
             freqEl.textContent = mhz + ' MHz';
-            // 鍚屾鍒拌璇濋潰鏉块鐜囨樉绀?
+            // 同步到说话面板频率显示
             this._currentFreq = mhz;
             const altVal = r.data.altitude ?? r.data.alt ?? r.data.height;
             this._currentAltitude = altVal != null ? altVal + 'm' : '';
             this._updateFreqDisplay(mhz, this._currentAltitude);
           } else if (!freq || freq === 0) {
-            console.log('[FMO-DEBUG-FREQ] getUserPhyFreq 鍝嶅簲鏃?freq 瀛楁鎴?freq=0, data keys:', Object.keys(r.data || {}));
+            console.log('[FMO-DEBUG-FREQ] getUserPhyFreq 响应无 freq 字段或 freq=0, data keys:', Object.keys(r.data || {}));
           }
         }
       } catch (e) {}
     })());
 
-    // radio.getRxFrequency 棰戠巼鍥為€€锛堜粎褰?getUserPhyFreq 鏃犻鐜囨椂灏濊瘯锛?
+    // radio.getRxFrequency 频率回退（仅当 getUserPhyFreq 无频率时尝试）
     tasks.push((async () => {
       if (this._currentFreq) return;
       try {
@@ -792,7 +792,7 @@ const App = {
       } catch (e) {}
     })());
 
-    // radio.getStatus 棰戠巼鍏滃簳锛堥儴鍒嗘棫鍥轰欢锛?
+    // radio.getStatus 频率兜底（部分旧固件）
     tasks.push((async () => {
       if (this._currentFreq) return;
       try {
@@ -810,7 +810,7 @@ const App = {
       } catch (e) {}
     })());
 
-    // QSO 缁熻: 鎬婚€氳仈 / 浠婃棩 / 鍙嬪彴鏁帮紙涓庤澶囦俊鎭苟琛岃幏鍙栵級
+    // QSO 统计: 总通联 / 今日 / 友台数（与设备信息并行获取）
     tasks.push((async () => {
       try {
         const r = await this.send({ type: 'qso', subType: 'getTotalCount' });
@@ -840,21 +840,21 @@ const App = {
     })());
 
     await Promise.all(tasks);
-    console.log('[FMO-DEBUG-DEVICE] fetchDeviceInfo 瀹屾垚锛屽叡 ' + tasks.length + ' 涓换鍔?);
+    console.log('[FMO-DEBUG-DEVICE] fetchDeviceInfo 完成，共 ' + tasks.length + ' 个任务');
 
-    // 鑷韩鍛煎彿鏄剧ず锛團MO 瑙勮寖锛氱晫闈㈠厓绱? - 鏈璇佹樉绀?N0CALL锛屽凡璁よ瘉鏄剧ず鐪熷疄鍛煎彿锛?
+    // 自身呼号显示（FMO 规范：界面元素4 - 未认证显示 N0CALL，已认证显示真实呼号）
     const devCallsignEl = document.getElementById('dev-callsign');
     const devUidEl = document.getElementById('dev-uid');
     const cmdDescEl = document.getElementById('command-desc');
     const cs = this.myCallsign || 'N0CALL';
     if (devCallsignEl) devCallsignEl.textContent = cs;
     if (devUidEl) devUidEl.textContent = this.myUid || '--';
-    if (cmdDescEl) cmdDescEl.textContent = cs + ' 姝ｅ湪瀹堝惉';
+    if (cmdDescEl) cmdDescEl.textContent = cs + ' 正在守听';
   },
 
   async fetchRadioInfo() {
-    // 棰戠巼鑾峰彇锛氬皾璇?radio.getRxFrequency / radio.getStatus
-    // 娉ㄦ剰锛氫笉瑕嗙洊 _currentAltitude锛岄伩鍏嶆竻闄?getUserPhyFreq 宸茶缃殑楂樺害
+    // 频率获取：尝试 radio.getRxFrequency / radio.getStatus
+    // 注意：不覆盖 _currentAltitude，避免清除 getUserPhyFreq 已设置的高度
     const setFreq = (freqHz) => {
       if (freqHz == null || freqHz <= 0) return;
       const mhz = (freqHz > 10000 ? freqHz / 1e6 : freqHz).toFixed(4);
@@ -874,7 +874,7 @@ const App = {
       }
     } catch (e) {}
 
-    // 鍥為€€锛氬皾璇?radio.getStatus锛堥儴鍒嗗浐浠剁増鏈級
+    // 回退：尝试 radio.getStatus（部分固件版本）
     try {
       const r = await this.send({ type: 'radio', subType: 'getStatus' });
       if ((r.code === 0 || r.code === undefined) && r.data) {
@@ -899,7 +899,7 @@ const App = {
            String.fromCharCode(97+ssLon) + String.fromCharCode(97+ssLat);
   },
 
-  // ============ 杈呭姪鍑芥暟 ============
+  // ============ 辅助函数 ============
 
   parseCallsignSsid(callsign) {
     if (!callsign) return { call: '', ssid: '' };
@@ -925,23 +925,23 @@ const App = {
   formatTimeAgo(unixSeconds, nowMs) {
     const diffMs = nowMs - unixSeconds * 1000;
     const diffS = Math.floor(diffMs / 1000);
-    if (diffS < 60) return diffS + 's鍓?;
+    if (diffS < 60) return diffS + 's前';
     const diffM = Math.floor(diffS / 60);
-    if (diffM < 60) return diffM + 'm鍓?;
+    if (diffM < 60) return diffM + 'm前';
     const diffH = Math.floor(diffM / 60);
-    if (diffH < 48) return diffH + 'h鍓?;
-    return Math.floor(diffH / 24) + 'd鍓?;
+    if (diffH < 48) return diffH + 'h前';
+    return Math.floor(diffH / 24) + 'd前';
   },
 
-  // ============ 鏈嶅姟鍣ㄥ垪琛?============
+  // ============ 服务器列表 ============
 
   async fetchServerListAll() {
     const pageSize = 20, maxPages = 50;
     const all = [];
-    console.log('[FMO-DEBUG-SERVER] fetchServerListAll 寮€濮嬶紝pageSize=20, maxPages=50');
+    console.log('[FMO-DEBUG-SERVER] fetchServerListAll 开始，pageSize=20, maxPages=50');
 
     try {
-      // 鎵归噺棰勫彇鍓?5 椤碉紙瑕嗙洊100涓湇鍔″櫒锛夛紝澶ч儴鍒嗗満鏅笅瓒冲
+      // 批量预取前 5 页（覆盖100个服务器），大部分场景下足够
       const PREFETCH_PAGES = 5;
       const respExtract = (resp) => {
         const payload = resp.data;
@@ -960,14 +960,14 @@ const App = {
         )
       );
 
-      if (firstBatch.length > 0) console.log('[FMO-DEBUG-SERVER] 绗?椤靛師濮嬪搷搴?', JSON.stringify(firstBatch[0]));
+      if (firstBatch.length > 0) console.log('[FMO-DEBUG-SERVER] 第1页原始响应:', JSON.stringify(firstBatch[0]));
 
       let stoppedEarly = false;
       for (let i = 0; i < firstBatch.length; i++) {
         const resp = firstBatch[i];
         if (!resp || (resp.code !== undefined && resp.code !== 0)) { stoppedEarly = true; break; }
         const list = respExtract(resp);
-        console.log('[FMO-DEBUG-SERVER] 绗?' + (i + 1) + ' 椤佃繑鍥烇紝listLength=' + list.length);
+        console.log('[FMO-DEBUG-SERVER] 第 ' + (i + 1) + ' 页返回，listLength=' + list.length);
         if (list.length === 0) { stoppedEarly = true; break; }
         all.push(...list);
         if (list.length < pageSize) { stoppedEarly = true; break; }
@@ -978,7 +978,7 @@ const App = {
           const resp = await this.send({ type: 'station', subType: 'getListRange', data: { start: i * pageSize, count: pageSize } });
           if (resp.code !== undefined && resp.code !== 0) break;
           const list = respExtract(resp);
-          console.log('[FMO-DEBUG-SERVER] 绗?' + (i + 1) + ' 椤佃繑鍥烇紝listLength=' + list.length);
+          console.log('[FMO-DEBUG-SERVER] 第 ' + (i + 1) + ' 页返回，listLength=' + list.length);
           if (list.length === 0) break;
           all.push(...list);
           if (list.length < pageSize) break;
@@ -986,11 +986,11 @@ const App = {
       }
     } catch (e) { console.warn('station list:', e.message); }
 
-    console.log('[FMO-DEBUG-SERVER] 寰幆缁撴潫锛屽叡绱Н ' + all.length + ' 鏉?);
+    console.log('[FMO-DEBUG-SERVER] 循环结束，共累积 ' + all.length + ' 条');
 
     this.serverList = all;
 
-    // 褰撳墠鏈嶅姟鍣?
+    // 当前服务器
     try {
       const r = await this.send({ type: 'station', subType: 'getCurrent' });
       if ((r.code === 0 || r.code === undefined) && r.data) {
@@ -1002,7 +1002,7 @@ const App = {
 
     this.renderServerList();
     this.renderServerSidebar();
-    // 鍦ㄧ嚎浜烘暟浠?serverList 闀垮害璁＄畻锛坰tation.getCurrent 涓嶅惈鍦ㄧ嚎鏁帮級
+    // 在线人数从 serverList 长度计算（station.getCurrent 不含在线数）
     this._updateOnlineCount(this.serverList.length);
     setTimeout(() => this._probeAllServerLatency(), 500);
   },
@@ -1024,7 +1024,7 @@ const App = {
     // Ping show from cache
     if (pingEl && this.hostPort) {
       const lat = this._serverLatency[this.hostPort];
-      pingEl.textContent = lat === -1 ? '瓒呮椂' : (lat !== undefined ? lat + 'ms' : '--');
+      pingEl.textContent = lat === -1 ? '超时' : (lat !== undefined ? lat + 'ms' : '--');
     }
   },
 
@@ -1036,7 +1036,7 @@ const App = {
   },
 
   renderServerList() {
-    console.log('[FMO-DEBUG-SERVER] renderServerList 琚皟鐢紝serverList 闀垮害=' + (this.serverList ? this.serverList.length : 'undefined'));
+    console.log('[FMO-DEBUG-SERVER] renderServerList 被调用，serverList 长度=' + (this.serverList ? this.serverList.length : 'undefined'));
 
     const container = document.getElementById('server-list-container');
     if (!container) return;
@@ -1053,11 +1053,11 @@ const App = {
     }
 
     if (!this.serverList.length) {
-      container.innerHTML = '<div class="server-list-empty">鍔犺浇涓?..</div>';
+      container.innerHTML = '<div class="server-list-empty">加载中...</div>';
       return;
     }
     if (!filtered.length) {
-      container.innerHTML = '<div class="server-list-empty">鏃犲尮閰嶆湇鍔″櫒</div>';
+      container.innerHTML = '<div class="server-list-empty">无匹配服务器</div>';
       return;
     }
 
@@ -1066,14 +1066,14 @@ const App = {
       const active = s.name === this.currentServerName;
       const host = s.host || s.addr || s.address || s.url || '';
       const lat = this._serverLatency[host];
-      const latStr = lat === -1 ? '瓒呮椂' : (lat !== undefined ? lat + 'ms' : '...');
+      const latStr = lat === -1 ? '超时' : (lat !== undefined ? lat + 'ms' : '...');
       return `<div class="server-item${active ? ' active' : ''}" data-server-name="${s.name}" data-server-key="${host || s.name}">
         <span class="server-item-uid">#${uid}</span>
         <span class="server-item-name">${s.name || '--'}</span>
         <span>
-          <span class="server-item-count">U${s.onlineCount ?? s.count ?? s.users ?? s.online ?? '--'} 鍦ㄧ嚎</span>
+          <span class="server-item-count">U${s.onlineCount ?? s.count ?? s.users ?? s.online ?? '--'} 在线</span>
           <span class="server-item-latency">${latStr}</span>
-          ${active ? '<span class="server-item-check">鉁?/span>' : ''}
+          ${active ? '<span class="server-item-check">✓</span>' : ''}
         </span>
       </div>`;
     }).join('');
@@ -1081,14 +1081,14 @@ const App = {
     container.querySelectorAll('.server-item').forEach(el => {
       el.addEventListener('click', () => this.switchServer(el.dataset.serverName));
     });
-    console.log('[FMO-DEBUG-SERVER] renderServerList 瀹屾垚锛屾覆鏌撲簡 ' + filtered.length + ' 椤?);
+    console.log('[FMO-DEBUG-SERVER] renderServerList 完成，渲染了 ' + filtered.length + ' 项');
   },
 
   _pn(t) {
     if (!t) return '';
     const c = t.charCodeAt(0);
     if (c < 0x4e00 || c > 0x9fff) return t[0].toUpperCase();
-    const map = { 闃?'A',鍏?'B',鎿?'C',澶?'D',鎭?'E',鍙?'F',鍢?'G',鍝?'H',鍑?'J',鍗?'K',鎷?'L',濡?'M',鎷?'N',鍝?'O',瓒?'P',涓?'Q',鐒?'R',鎾?'S',浠?'T',鎸?'W',瑗?'X',鍘?'Y',鍖?'Z' };
+    const map = { 阿:'A',八:'B',擦:'C',大:'D',恶:'E',发:'F',嘎:'G',哈:'H',击:'J',卡:'K',拉:'L',妈:'M',拿:'N',哦:'O',趴:'P',七:'Q',然:'R',撒:'S',他:'T',挖:'W',西:'X',压:'Y',匝:'Z' };
     for (const [k, v] of Object.entries(map)) { if (c >= k.charCodeAt(0)) return v; }
     return 'Z';
   },
@@ -1105,7 +1105,7 @@ const App = {
 
     const q = (query || '').trim().toLowerCase();
     if (!this.serverList.length) {
-      results.innerHTML = '<div class="server-search-empty">鍔犺浇涓?..</div>';
+      results.innerHTML = '<div class="server-search-empty">加载中...</div>';
       popup.style.display = 'flex';
       return;
     }
@@ -1124,7 +1124,7 @@ const App = {
     }
 
     if (!filtered.length) {
-      results.innerHTML = '<div class="server-search-empty">鏃犲尮閰嶆湇鍔″櫒</div>';
+      results.innerHTML = '<div class="server-search-empty">无匹配服务器</div>';
     } else {
       results.innerHTML = filtered.map(s => {
         const uid = s.uid ?? s._id ?? s.id ?? '--';
@@ -1148,7 +1148,7 @@ const App = {
     if (!sidebar) return;
 
     if (!this.serverList.length) {
-      sidebar.innerHTML = '<div class="side-loading"><span>鏆傛棤鏈嶅姟鍣?/span></div>';
+      sidebar.innerHTML = '<div class="side-loading"><span>暂无服务器</span></div>';
       return;
     }
 
@@ -1160,7 +1160,7 @@ const App = {
       const activeClass = name === this.currentServerName ? ' active' : '';
       return `<div class="server-item-side${activeClass}" data-server-name="${name}">
         <span class="station-name">${name}</span>
-        <span class="server-sidebar-count">U${count} 鍦ㄧ嚎</span>
+        <span class="server-sidebar-count">U${count} 在线</span>
       </div>`;
     }).join('');
 
@@ -1180,7 +1180,7 @@ const App = {
 
     // Update server display to show switching state
     const nameEl = document.getElementById('server-name-display');
-    if (nameEl) nameEl.textContent = name + ' 鈥?;
+    if (nameEl) nameEl.textContent = name + ' …';
     this.currentServerName = name;
     this.renderServerList();
     this.renderServerSidebar();
@@ -1215,16 +1215,16 @@ const App = {
     await this.fetchQsoListAll();
   },
 
-  // ============ QSO 鍒楄〃 ============
+  // ============ QSO 列表 ============
 
   async fetchQsoListAll() {
-    console.log('[FMO-DEBUG-QSO] fetchQsoListAll 寮€濮?);
+    console.log('[FMO-DEBUG-QSO] fetchQsoListAll 开始');
     const pageSize = 200;
     const maxPages = 200;
     const all = [];
 
     try {
-      // 鎵归噺棰勫彇鍓?3 椤碉紝澶ч儴鍒嗚澶囩殑鎬?QSO 鏁伴噺鍦?3 椤典互鍐?
+      // 批量预取前 3 页，大部分设备的总 QSO 数量在 3 页以内
       const PREFETCH_PAGES = 3;
       const respExtract = (resp) => {
         const payload = resp.data;
@@ -1241,12 +1241,12 @@ const App = {
         )
       );
 
-      console.log('[FMO-DEBUG-QSO] prefetch 瀹屾垚锛宖irstBatch[0] 鐘舵€? ' +
-        (firstBatch.length > 0 && firstBatch[0] ? 'code=' + firstBatch[0].code + ' hasData=' + !!firstBatch[0].data : '绌?));
+      console.log('[FMO-DEBUG-QSO] prefetch 完成，firstBatch[0] 状态: ' +
+        (firstBatch.length > 0 && firstBatch[0] ? 'code=' + firstBatch[0].code + ' hasData=' + !!firstBatch[0].data : '空'));
       if (firstBatch.length > 0 && firstBatch[0] && firstBatch[0].data) {
         const firstList = respExtract(firstBatch[0]);
         if (firstList.length > 0) {
-          console.log('[FMO-DEBUG-QSO] 绗竴鏉?QSO 瀹屾暣瀛楁:', JSON.stringify(firstList[0]));
+          console.log('[FMO-DEBUG-QSO] 第一条 QSO 完整字段:', JSON.stringify(firstList[0]));
         }
       }
 
@@ -1260,7 +1260,7 @@ const App = {
         if (list.length < pageSize) { stoppedEarly = true; break; }
       }
 
-      // 濡傛灉杩樻湁鏇村椤碉紝缁х画椤哄簭鎷夊彇
+      // 如果还有更多页，继续顺序拉取
       if (!stoppedEarly) {
         for (let page = PREFETCH_PAGES; page < maxPages; page++) {
           const resp = await this.send({ type: 'qso', subType: 'getList', data: { page, pageSize } });
@@ -1271,9 +1271,9 @@ const App = {
           if (list.length < pageSize) break;
         }
       }
-    } catch (e) { console.warn('[FMO-DEBUG-QSO] fetchQsoListAll 寮傚父:', e.message); }
+    } catch (e) { console.warn('[FMO-DEBUG-QSO] fetchQsoListAll 异常:', e.message); }
 
-    console.log('[FMO-DEBUG-QSO] fetchQsoListAll 瀹屾垚锛屽叡 ' + all.length + ' 鏉?QSO');
+    console.log('[FMO-DEBUG-QSO] fetchQsoListAll 完成，共 ' + all.length + ' 条 QSO');
     this.qsoList = all;
     await this._enrichQsoDetails();
     this.renderQsoList();
@@ -1283,8 +1283,8 @@ const App = {
     this.renderPrevCard();
   },
 
-  /* 閫氳繃 qso.getDetail 琛ュ叏鍒楄〃涓?QSO 鐨勭暀瑷€/涓户瀛楁锛坓etList 鍙繑鍥炲熀纭€瀛楁锛?*/
-  /* 浠?QSO 鏁版嵁椤规彁鍙?memo/relay锛屽瓧娈甸摼涓?renderQsoList 瀹屽叏涓€鑷?*/
+  /* 通过 qso.getDetail 补全列表中 QSO 的留言/中继字段（getList 只返回基础字段） */
+  /* 从 QSO 数据项提取 memo/relay，字段链与 renderQsoList 完全一致 */
   _getQsoMemoRelay(item) {
     const memo = (item.toComment ?? item.memo ?? item.message ?? item.msg ?? item.text ?? item.content ?? '').trim();
     const relay = (item.relayName ?? item.serverName ?? item.stationName ?? item.relay ?? item.gateway ?? '').trim();
@@ -1317,9 +1317,9 @@ const App = {
           this._qsoDetailCache[batch[j].logId] = detail;
           Object.assign(batch[j], detail);
         } else if (r.status === 'fulfilled') {
-          console.warn('[FMO-DEBUG-QSO] getDetail 鍝嶅簲寮傚父:', JSON.stringify(r.value).slice(0, 200));
+          console.warn('[FMO-DEBUG-QSO] getDetail 响应异常:', JSON.stringify(r.value).slice(0, 200));
         } else {
-          console.warn('[FMO-DEBUG-QSO] getDetail 澶辫触:', r.reason?.message || r.reason);
+          console.warn('[FMO-DEBUG-QSO] getDetail 失败:', r.reason?.message || r.reason);
         }
       });
     }
@@ -1330,11 +1330,11 @@ const App = {
     if (!container) return;
 
     if (!this.qsoList.length) {
-      container.innerHTML = '<div class="list-empty">鏆傛棤閫氳仈璁板綍</div>';
+      container.innerHTML = '<div class="list-empty">暂无通联记录</div>';
       return;
     }
 
-    // 鏈€鏂扮殑 15 鏉?
+    // 最新的 15 条
     const items = this.qsoList.slice(0, 15);
     items.forEach(item => { if (item.grid || item.locator) this._resolveGridLocation(item.grid || item.locator); });
     container.innerHTML = items.map(item => {
@@ -1345,16 +1345,16 @@ const App = {
       const callsign = this._extractQsoCallsign(item) || '--';
       const grid = item.grid ?? item.locator ?? '';
 
-      // QTH锛氫紭鍏堢紦瀛樺懡涓紝鍚﹀垯鏄剧ず缃戞牸鐮併€俖resolveGridLocation 宸插湪娓叉煋鍓嶅紓姝ヨЕ鍙戙€?
+      // QTH：优先缓存命中，否则显示网格码。_resolveGridLocation 已在渲染前异步触发。
       const qth = this._gridLocationCache[grid] || grid || '--';
 
-      // QTH / 鐣欒█ / 涓户 鈥?涓夊垪鐙珛锛屾竻鏅板榻?
-      // 鍏煎 FMO V2 API 杩斿洖鐨勫绉嶅瓧娈靛悕锛歵oComment/memo/message/msg/text/content / relayName/serverName/stationName/relay/gateway
+      // QTH / 留言 / 中继 — 三列独立，清晰对齐
+      // 兼容 FMO V2 API 返回的多种字段名：toComment/memo/message/msg/text/content / relayName/serverName/stationName/relay/gateway
       const memo = (item.toComment ?? item.memo ?? item.message ?? item.msg ?? item.text ?? item.content ?? '').trim();
       const relay = (item.relayName ?? item.serverName ?? item.stationName ?? item.relay ?? item.gateway ?? '').trim();
 
       const gridHtml = grid
-        ? '<a class="qso-grid" href="javascript:void(0)" title="澶嶅埗鍛煎彿骞舵墦寮€鍦板浘 鈥?' + callsign + '" data-callsign="' + callsign + '">' + grid + '</a>'
+        ? '<a class="qso-grid" href="javascript:void(0)" title="复制呼号并打开地图 — ' + callsign + '" data-callsign="' + callsign + '">' + grid + '</a>'
         : '';
 
       return `<div class="qso-row">
@@ -1362,8 +1362,8 @@ const App = {
         <span class="qso-callsign">${callsign}</span>
         ${gridHtml ? '<span class="qso-grid-cell">' + gridHtml + '</span>' : '<span class="qso-grid-cell qso-cell-empty">--</span>'}
         <span class="qso-qth-cell" title="${qth}">${qth}</span>
-        <span class="qso-memo-cell ${memo ? '' : 'qso-cell-empty'}" title="${this._esc(memo) || '鏃犵暀瑷€'}">${memo || '鏃犵暀瑷€'}</span>
-        <span class="qso-relay-cell ${relay ? '' : 'qso-cell-empty'}" title="${this._esc(relay) || '鏃犱腑缁?}">${relay || '鏃犱腑缁?}</span>
+        <span class="qso-memo-cell ${memo ? '' : 'qso-cell-empty'}" title="${this._esc(memo) || '无留言'}">${memo || '无留言'}</span>
+        <span class="qso-relay-cell ${relay ? '' : 'qso-cell-empty'}" title="${this._esc(relay) || '无中继'}">${relay || '无中继'}</span>
         <span class="qso-time">${timeStr}</span>
       </div>`;
     }).join('');
@@ -1382,7 +1382,7 @@ const App = {
   _esc(str) { return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); },
 
   _extractQsoCallsign(item) {
-    // FMO 涓嶅悓鐗堟湰 API 杩斿洖鐨勫懠鍙峰瓧娈靛悕涓嶄竴鑷?
+    // FMO 不同版本 API 返回的呼号字段名不一致
     // toCallsign / callsign / operator / remoteCallsign / peer / fromCallsign
     return item.toCallsign
       ?? item.callsign
@@ -1401,13 +1401,13 @@ const App = {
     if (!contentEl) return;
 
     if (!this.qsoList.length) {
-      if (timeEl) timeEl.textContent = '鏆傛棤';
+      if (timeEl) timeEl.textContent = '暂无';
       contentEl.className = 'prev-empty';
       contentEl.innerHTML = `<div class="prev-info-grid">
-        <div class="prev-info-item"><span class="prev-info-label">鏂逛綅</span><span class="prev-info-value">--</span></div>
-        <div class="prev-info-item"><span class="prev-info-label">璺濈</span><span class="prev-info-value">--</span></div>
-        <div class="prev-info-item"><span class="prev-info-label">鍛煎彿</span><span class="prev-info-value">--</span></div>
-        <div class="prev-info-item"><span class="prev-info-label">閫氳仈</span><span class="prev-info-value">--</span></div>
+        <div class="prev-info-item"><span class="prev-info-label">方位</span><span class="prev-info-value">--</span></div>
+        <div class="prev-info-item"><span class="prev-info-label">距离</span><span class="prev-info-value">--</span></div>
+        <div class="prev-info-item"><span class="prev-info-label">呼号</span><span class="prev-info-value">--</span></div>
+        <div class="prev-info-item"><span class="prev-info-label">通联</span><span class="prev-info-value">--</span></div>
       </div>`;
       return;
     }
@@ -1415,7 +1415,7 @@ const App = {
     const last = this.qsoList[0];
     const callsign = this._extractQsoCallsign(last) || '--';
 
-    // 琛ョ畻锛歈SO API 鍙兘涓嶅惈 distance/azimuth锛屼絾浠?grid 鍙弽绠?
+    // 补算：QSO API 可能不含 distance/azimuth，但从 grid 可反算
     let distance = last.distance;
     let azimuth = last.azimuth;
     if ((distance === undefined || azimuth === undefined) && (last.grid || last.locator)) {
@@ -1426,29 +1426,29 @@ const App = {
       }
     }
 
-    const dist = distance !== undefined ? Number(distance).toFixed(0) + '鍏噷' : '--';
-    const azi = azimuth !== undefined ? Math.round(azimuth) + '掳' : '--';
+    const dist = distance !== undefined ? Number(distance).toFixed(0) + '公里' : '--';
+    const azi = azimuth !== undefined ? Math.round(azimuth) + '°' : '--';
     const dir = azimuth !== undefined ? this._azimuthToDirection(azimuth) + ' ' : '';
 
     if (timeEl && last.timestamp) {
       const diff = Date.now() - last.timestamp * 1000;
       const mins = Math.floor(diff / 60000);
-      if (mins < 1) timeEl.textContent = '鍒氬垰';
-      else if (mins < 60) timeEl.textContent = mins + '鍒嗛挓鍓?;
-      else { const hrs = Math.floor(mins / 60); timeEl.textContent = hrs + '灏忔椂鍓?; }
+      if (mins < 1) timeEl.textContent = '刚刚';
+      else if (mins < 60) timeEl.textContent = mins + '分钟前';
+      else { const hrs = Math.floor(mins / 60); timeEl.textContent = hrs + '小时前'; }
     }
 
-    // 璁＄畻涓庝笂涓€閫氳仈鍛煎彿鐨勯€氳仈娆℃暟
+    // 计算与上一通联呼号的通联次数
     const prevContactCount = this.qsoList.filter(q =>
       this.isSameOperator(this._extractQsoCallsign(q), callsign)
     ).length;
 
     contentEl.className = '';
     contentEl.innerHTML = `<div class="prev-info-grid">
-      <div class="prev-info-item"><span class="prev-info-label">鏂逛綅</span><span class="prev-info-value">${dir}${azi}</span></div>
-      <div class="prev-info-item"><span class="prev-info-label">璺濈</span><span class="prev-info-value">${dist}</span></div>
-      <div class="prev-info-item"><span class="prev-info-label">鍛煎彿</span><span class="prev-info-value">${callsign}</span></div>
-      <div class="prev-info-item"><span class="prev-info-label">閫氳仈</span><span class="prev-info-value">x${prevContactCount}</span></div>
+      <div class="prev-info-item"><span class="prev-info-label">方位</span><span class="prev-info-value">${dir}${azi}</span></div>
+      <div class="prev-info-item"><span class="prev-info-label">距离</span><span class="prev-info-value">${dist}</span></div>
+      <div class="prev-info-item"><span class="prev-info-label">呼号</span><span class="prev-info-value">${callsign}</span></div>
+      <div class="prev-info-item"><span class="prev-info-label">通联</span><span class="prev-info-value">x${prevContactCount}</span></div>
     </div>`;
   },
 
@@ -1472,7 +1472,7 @@ const App = {
   },
 
   async refreshStats() {
-    // 鎬婚€氳仈鏁?
+    // 总通联数
     try {
       const r = await this.send({ type: 'qso', subType: 'getTotalCount' });
       if ((r.code === 0 || r.code === undefined) && r.data != null) {
@@ -1480,7 +1480,7 @@ const App = {
         if (el) el.textContent = r.data.count ?? r.data.total ?? r.data.value ?? '--';
       }
     } catch (e) {}
-    // 浠婃棩閫氳仈
+    // 今日通联
     try {
       const r = await this.send({ type: 'qso', subType: 'getTodayCount' });
       if ((r.code === 0 || r.code === undefined) && r.data != null) {
@@ -1488,7 +1488,7 @@ const App = {
         if (el) el.textContent = r.data.count ?? r.data.today ?? r.data.value ?? '--';
       }
     } catch (e) {}
-    // 鍙嬪彴鏁?
+    // 友台数
     try {
       const r = await this.send({ type: 'qso', subType: 'getContactCount' });
       if ((r.code === 0 || r.code === undefined) && r.data != null) {
@@ -1502,7 +1502,7 @@ const App = {
 
   _azimuthToDirection(azimuth) {
     const a = ((azimuth % 360) + 360) % 360;
-    const dirs = ['鍖?, '涓滃寳', '涓?, '涓滃崡', '鍗?, '瑗垮崡', '瑗?, '瑗垮寳'];
+    const dirs = ['北', '东北', '东', '东南', '南', '西南', '西', '西北'];
     return dirs[Math.round(a / 45) % 8];
   },
 
@@ -1524,9 +1524,9 @@ const App = {
     const a = qso.azimuth ?? qso.az ?? qso.bearing;
     if (a !== undefined) result.azimuth = a;
     if (qso.altitude !== undefined) result.altitude = qso.altitude;
-    // 鎻愬彇棰戠巼锛圦SO 鍙兘甯︽湁 freq 鎴?frequency 瀛楁锛?
+    // 提取频率（QSO 可能带有 freq 或 frequency 字段）
     if (qso.freq !== undefined || qso.frequency !== undefined) result.freq = qso.freq || qso.frequency;
-    // 鎻愬彇楂樺害锛圦SO 鍙兘甯︽湁 height 鎴?antHeight 瀛楁锛?
+    // 提取高度（QSO 可能带有 height 或 antHeight 字段）
     if (qso.height !== undefined || qso.antHeight !== undefined) result.height = qso.height || qso.antHeight;
 
     if (result.grid && (result.distance === undefined || result.azimuth === undefined)) {
@@ -1585,7 +1585,7 @@ const App = {
     try {
       let state = '', city = '', district = '';
 
-      // Tier 1锛氶珮寰?REST API锛圕ORS *锛岀洿鎺?fetch锛屾棤 JSONP锛?
+      // Tier 1：高德 REST API（CORS *，直接 fetch，无 JSONP）
       try {
         const amapUrl = `https://restapi.amap.com/v3/geocode/regeo?key=${this._getAmapKey()}&location=${coords.lon},${coords.lat}&output=JSON`;
         const ctrl = new AbortController();
@@ -1602,7 +1602,7 @@ const App = {
       } catch (amapErr) {
         console.warn('[FMO] Amap failed, falling back to Nominatim:', amapErr.message || amapErr);
 
-        // Tier 2锛歂ominatim锛堝浗闄呯幆澧冨厹搴曪級
+        // Tier 2：Nominatim（国际环境兜底）
         try {
           const nomUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.lat}&lon=${coords.lon}&zoom=10&accept-language=zh`;
           const ctrl = new AbortController();
@@ -1621,14 +1621,14 @@ const App = {
             if (stateIdx >= 0 && districtIdx >= 0 && districtIdx < stateIdx) {
               for (let i = districtIdx + 1; i < stateIdx; i++) {
                 const part = displayParts[i];
-                if (part && !/^\d+$/.test(part) && !part.includes('鍥?)) { city = part; break; }
+                if (part && !/^\d+$/.test(part) && !part.includes('国')) { city = part; break; }
               }
             }
           }
           if (!state && !city) {
             for (let i = displayParts.length - 1; i >= 0; i--) {
               const part = displayParts[i];
-              if (part && (part.endsWith('甯?) || part.endsWith('鐪?))) { city = city || part; break; }
+              if (part && (part.endsWith('市') || part.endsWith('省'))) { city = city || part; break; }
             }
           }
         } catch (nomErr) {
@@ -1636,7 +1636,7 @@ const App = {
         }
       }
 
-      // 缁勮缁撴灉
+      // 组装结果
       const parts = [];
       if (state) parts.push(state);
       if (city && !parts.some(p => p.includes(city))) parts.push(city);
@@ -1647,12 +1647,12 @@ const App = {
         if (this._currentSpeaker && this._currentSpeaker.grid === grid) { this.renderSpeakingBar(); }
         this.renderQsoList();
       } else {
-        // 鎵€鏈夊湴鐞嗘湇鍔″潎澶辫触锛岀紦瀛樼綉鏍肩爜鏈韩閬垮厤閲嶅璇锋眰
+        // 所有地理服务均失败，缓存网格码本身避免重复请求
         this._gridLocationCache[grid] = grid;
       }
     } catch (e) {
       console.warn('[FMO] _resolveGridLocation failed for', grid, e.message || e);
-      this._gridLocationCache[grid] = grid; // 澶辫触鍒欑紦瀛樼綉鏍肩爜锛岄伩鍏嶆棤闄愰噸璇?
+      this._gridLocationCache[grid] = grid; // 失败则缓存网格码，避免无限重试
     } finally {
       this._gridLocationPending.delete(grid);
     }
@@ -1813,7 +1813,7 @@ const App = {
       if (sp.distance === undefined && derived.distance !== undefined) sp.distance = derived.distance;
       if (sp.azimuth === undefined && derived.azimuth !== undefined) sp.azimuth = derived.azimuth;
       if (sp.altitude === undefined && derived.altitude !== undefined) sp.altitude = derived.altitude;
-      // freq/height 鍏滃簳锛氳嫢浜嬩欢鏈彁渚涳紝浠?QSO 鎺ㄥ
+      // freq/height 兜底：若事件未提供，从 QSO 推导
       if (!sp.freq && derived.freq) sp.freq = derived.freq;
       if (!sp.height && derived.height) sp.height = derived.height;
     }
@@ -1844,23 +1844,23 @@ const App = {
       bar.classList.remove('active');
       bar.classList.add('idle');
     }
-    // 绌洪棽鏃朵繚鎸佹渶鍚庤璇濅汉鐨勪俊鎭笉鍙橈紝CSS 閫氳繃 .idle 鐏板害澶勭悊
+    // 空闲时保持最后说话人的信息不变，CSS 通过 .idle 灰度处理
     const ph = document.getElementById('sb-placeholder');
     if (ph) ph.style.display = 'none';
-    // 娓呴櫎 _enterSpeakingState 鍙兘鐣欎笅鐨?display:none 鍐呰仈鏍峰紡
+    // 清除 _enterSpeakingState 可能留下的 display:none 内联样式
     ['sb-callsign', 'sb-grid', 'sb-direction', 'sb-distance', 'sb-qth', 'sb-server', 'sb-contact-count', 'sb-elapsed'].forEach(id => {
       const el = document.getElementById(id);
       if (el && el.style.display === 'none') el.style.display = '';
     });
   },
 
-  /* 鏇存柊棰戠巼/楂樺害鍗＄墖鏄剧ず */
+  /* 更新频率/高度卡片显示 */
   _updateFreqDisplay(mhz, alt) {
     const el = document.getElementById('freq-line-text');
-    if (el) el.textContent = `${mhz} MHz 路 ${alt || '--'}`;
+    if (el) el.textContent = `${mhz} MHz · ${alt || '--'}`;
   },
 
-  /* 瑙ｆ瀽 APRS BEACON 閫楀彿鍒嗛殧杞借嵎锛圓PFMO4 鏍煎紡锛?*/
+  /* 解析 APRS BEACON 逗号分隔载荷（APFMO4 格式） */
   _parseBeaconPayload(payload) {
     if (!payload || typeof payload !== 'string') return;
     const parts = payload.split(',');
@@ -1883,13 +1883,13 @@ const App = {
       this._updateFreqDisplay(freq, this._currentAltitude || '--');
       const devFreqEl = document.getElementById('dev-user-freq');
       if (devFreqEl) devFreqEl.textContent = freq + ' MHz';
-      console.log('[FMO-DEBUG-FREQ] APRS BEACON 棰戠巼:', freq, '楂樺害:', height || '鏃?);
+      console.log('[FMO-DEBUG-FREQ] APRS BEACON 频率:', freq, '高度:', height || '无');
     }
   },
 
-  /* 浠庝簨浠跺璞′腑鎻愬彇棰戠巼/楂樺害锛堟敮鎸?APRS BEACON 鍜?JSON 瀛楁璺緞锛?*/
+  /* 从事件对象中提取频率/高度（支持 APRS BEACON 和 JSON 字段路径） */
   _extractFreqFromEvent(obj) {
-    // Tier 1: APRS BEACON 閫楀彿鍒嗛殧杞借嵎锛圓PFMO4 鏍煎紡锛?
+    // Tier 1: APRS BEACON 逗号分隔载荷（APFMO4 格式）
     const payload = obj.payload || obj.raw || obj.message || obj.text || obj.data?.payload || '';
     if (payload && typeof payload === 'string' && (payload.includes('FREQ:') || payload.includes('APFMO4'))) {
       const parts = payload.split(',');
@@ -1907,12 +1907,12 @@ const App = {
         }
       }
       if (freq) {
-        console.log('[FMO-DEBUG-FREQ] BEACON 杞借嵎鎻愬彇棰戠巼:', freq, '楂樺害:', height || '鏃?);
+        console.log('[FMO-DEBUG-FREQ] BEACON 载荷提取频率:', freq, '高度:', height || '无');
         return { mhz: parseFloat(freq), alt: height || '' };
       }
     }
 
-    // Tier 2: 閬嶅巻 JSON 瀛楁璺緞
+    // Tier 2: 遍历 JSON 字段路径
     const freqHz = obj.frequency
       ?? obj.rx_freq
       ?? obj.freq
@@ -1925,11 +1925,11 @@ const App = {
       ?? obj.payload?.rx_freq
       ?? obj.payload?.freq;
     if (freqHz == null || freqHz <= 0) {
-      console.log('[FMO-DEBUG-FREQ] 浜嬩欢涓湭鎵惧埌棰戠巼瀛楁, keys:', Object.keys(obj), 'data keys:', obj.data ? Object.keys(obj.data) : 'null');
+      console.log('[FMO-DEBUG-FREQ] 事件中未找到频率字段, keys:', Object.keys(obj), 'data keys:', obj.data ? Object.keys(obj.data) : 'null');
       return null;
     }
     const mhz = parseFloat((freqHz > 10000 ? freqHz / 1e6 : freqHz).toFixed(4));
-    // 鎻愬彇楂樺害锛堢背锛夛紝澶氫釜鍙兘瀛楁
+    // 提取高度（米），多个可能字段
     const alt = obj.altitude
       ?? obj.alt
       ?? obj.height
@@ -1939,14 +1939,14 @@ const App = {
       ?? obj.payload?.altitude
       ?? obj.payload?.alt;
     const altStr = alt != null && alt !== '' ? alt + 'm' : '';
-    console.log('[FMO-DEBUG-FREQ] 鎻愬彇鍒伴鐜?', mhz, 'MHz, 楂樺害:', altStr || '鏃?);
+    console.log('[FMO-DEBUG-FREQ] 提取到频率:', mhz, 'MHz, 高度:', altStr || '无');
     return { mhz: mhz, alt: altStr };
   },
 
   _addSpeakingRecord(callsign, grid, serverUid, serverName) {
     if (!callsign) return;
-    // memo/relay 鍦?renderRecentSpeakers 涓粠 this.qsoList 瀹炴椂鏌ユ壘
-    // speaking_start 浜嬩欢涓嶆惡甯﹁繖浜涘瓧娈碉紝涓旀鏃?qsoList 閫氬父灏氭湭鍔犺浇
+    // memo/relay 在 renderRecentSpeakers 中从 this.qsoList 实时查找
+    // speaking_start 事件不携带这些字段，且此时 qsoList 通常尚未加载
     const now = Date.now();
     this._speakingHistory.forEach(h => { if (!h.endTime) h.endTime = now; });
     const existing = this._speakingHistory.find(h => h.callsign === callsign);
@@ -2016,7 +2016,7 @@ const App = {
       const call = this.parseCallsignSsid(h.callsign).call;
       if (!seen.has(call)) {
         seen.add(call);
-        // 浠?qsoList 瀹炴椂鏌ユ壘 memo/relay
+        // 从 qsoList 实时查找 memo/relay
         let memo = h.memo || '';
         let relay = h.relay || '';
         const qsoMatch = this.qsoList.find(q => {
@@ -2068,7 +2068,7 @@ const App = {
     }
 
     if (!items.length) {
-      container.innerHTML = '<div class="list-empty">鏆傛棤鏈€杩戝彂瑷€</div>';
+      container.innerHTML = '<div class="list-empty">暂无最近发言</div>';
       return;
     }
 
@@ -2080,7 +2080,7 @@ const App = {
       const isActive = activeCallsigns.has(item.callsign);
       const isSelf = this.isSameOperator(item.callsign, this.myCallsign);
 
-      // 鏌ユ壘鍖归厤 QSO锛屾彁鍙?memo锛堢暀瑷€锛?
+      // 查找匹配 QSO，提取 memo（留言）
       let memo = '';
       const matchingQso = this.qsoList.find(q => {
         const qc = this._extractQsoCallsign(q);
@@ -2090,7 +2090,7 @@ const App = {
         memo = matchingQso.toComment || matchingQso.memo || matchingQso.message || matchingQso.msg || '';
       }
 
-      // 浠?_speakingHistory 鑾峰彇 serverName
+      // 从 _speakingHistory 获取 serverName
       let serverName = '';
       const sh = this._speakingHistory.find(h => h.callsign === item.callsign);
       if (sh?.serverName) {
@@ -2099,7 +2099,7 @@ const App = {
         serverName = matchingQso.serverName;
       }
 
-      // 鏋勫缓棰濆淇℃伅琛岋紙memo / serverName锛?
+      // 构建额外信息行（memo / serverName）
       let extraLine = '';
       if (memo) extraLine += '<span class="recent-memo">' + this._esc(memo) + '</span>';
       if (serverName) extraLine += '<span class="recent-server">[' + this._esc(serverName) + ']</span>';
@@ -2107,7 +2107,7 @@ const App = {
       return '<div class="recent-item' + (isActive ? ' is-speaking' : '') + (isSelf ? ' is-self' : '') + '" data-callsign="' + item.callsign + '">'
         + '<span class="recent-index-bg">' + (index + 1) + '</span>'
         + '<div class="recent-main">'
-        + '<div class="recent-callsign-line"><strong>' + item.callsign + '</strong>' + (isSelf ? '<span class="self-tag">鎮?/span>' : '') + '</div>'
+        + '<div class="recent-callsign-line"><strong>' + item.callsign + '</strong>' + (isSelf ? '<span class="self-tag">您</span>' : '') + '</div>'
         + (extraLine ? '<div class="recent-extra">' + extraLine + '</div>' : '')
         + '<span>' + timeStr + '</span>'
         + '</div>'
@@ -2142,7 +2142,7 @@ const App = {
     const elapsed = Date.now() - sp.startedAtMs;
     const elapsedStr = this.formatElapsed(elapsed);
 
-    // 琛ュ叏缂哄け鏁版嵁
+    // 补全缺失数据
     if (sp.distance === undefined || sp.azimuth === undefined || sp.altitude === undefined) {
       const derived = this._deriveStationInfo(sp.callsign);
       if (sp.distance === undefined && derived.distance !== undefined) sp.distance = derived.distance;
@@ -2175,7 +2175,7 @@ const App = {
     if (dirEl) {
       if (sp.azimuth !== undefined && sp.azimuth !== null) {
         const dir = this._azimuthToDirection(sp.azimuth);
-        dirEl.textContent = dir + ' ' + sp.azimuth + '掳';
+        dirEl.textContent = dir + ' ' + sp.azimuth + '°';
         dirEl.style.display = '';
       } else {
         dirEl.style.display = 'none';
@@ -2204,7 +2204,7 @@ const App = {
       qthEl.style.display = loc ? '' : 'none';
     }
 
-    // QTH 鍗＄墖 (freq-qth)
+    // QTH 卡片 (freq-qth)
     const qthCardEl = document.getElementById('freq-qth');
     if (qthCardEl) {
       const loc = this._gridLocationCache[sp?.grid] || sp?.grid || '--';
@@ -2218,7 +2218,7 @@ const App = {
       srvEl.style.display = sp.serverName ? '' : 'none';
     }
 
-    // 涓户/鏈嶅姟鍣ㄥ崱鐗囦富鏍囬锛坰erver-name-display锛?
+    // 中继/服务器卡片主标题（server-name-display）
     const relayNameEl = document.getElementById('server-name-display');
     if (relayNameEl) {
       relayNameEl.textContent = sp.serverName || this.currentServerName || '--';
@@ -2230,7 +2230,7 @@ const App = {
       const parts = [];
       if (sp.freq) parts.push(sp.freq + ' MHz');
       if (sp.height) parts.push(sp.height + 'm');
-      if (parts.length > 0) freqAltEl.textContent = parts.join(' 路 ');
+      if (parts.length > 0) freqAltEl.textContent = parts.join(' · ');
     }
 
     // Contact count
@@ -2249,10 +2249,10 @@ const App = {
       }
     }
 
-    // 鏂板懠鍙锋爣璁帮細浠庢湭閫氳仈杩?
+    // 新呼号标记：从未通联过
     const newBadgeEl = document.getElementById('ac-new-badge');
     if (newBadgeEl) {
-      // 闇€瑕?qsoList 宸插姞杞芥墠鍑嗙‘
+      // 需要 qsoList 已加载才准确
       if (this.qsoList.length > 0 && contactCount === 0) {
         newBadgeEl.style.display = '';
       } else {
@@ -2260,7 +2260,7 @@ const App = {
       }
     }
 
-    // 宸查€氳仈鏍囪
+    // 已通联标记
     const contactedTag = document.querySelector('.tag-contacted');
     if (contactedTag) {
       contactedTag.style.display = contactCount > 0 ? '' : 'none';
@@ -2271,7 +2271,7 @@ const App = {
     if (elEl) { elEl.textContent = elapsedStr; elEl.style.display = ''; }
   },
 
-  // ============ 闊抽 ============
+  // ============ 音频 ============
 
   initAudioCtx() {
     this._audioInitDone = false;
@@ -2328,7 +2328,7 @@ const App = {
     icon.style.opacity = 0.35 + (this.vuLevel / 100) * 0.65;
   },
 
-  // ============ 杞 ============
+  // ============ 轮询 ============
 
   startPolling() {
     this.stopPolling();
@@ -2344,7 +2344,7 @@ const App = {
     if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
   },
 
-  // ============ ADIF 瀵煎嚭 ============
+  // ============ ADIF 导出 ============
 
   _parseTimestamp(raw) {
     if (raw == null || raw === '') return null;
@@ -2388,7 +2388,7 @@ const App = {
 
   exportQso() {
     if (!this.qsoList.length) {
-      alert('鏆傛棤閫氳仈璁板綍鍙鍑?);
+      alert('暂无通联记录可导出');
       return;
     }
     const pad = (n, len) => String(n).padStart(len, '0');
@@ -2460,7 +2460,7 @@ const App = {
     URL.revokeObjectURL(url);
   },
 
-  // ============ 璁剧疆 ============
+  // ============ 设置 ============
 
   openSettings() {
     const overlay = document.getElementById('settings-overlay');
