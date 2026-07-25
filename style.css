@@ -143,7 +143,7 @@ body {
 .status-bar {
   display: flex;
   align-items: center;
-  height: 44px;
+  height: 56px;
   padding: 0 var(--space-5);
   gap: var(--space-3);
   background: var(--bg-card);
@@ -159,8 +159,8 @@ body {
 }
 
 .brand-marker {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 2px;
   background: var(--accent);
   flex-shrink: 0;
@@ -276,55 +276,60 @@ body {
 }
 
 /* ============================================================
-   2. DEVICE STRIP
+   2. KPI CARD ROW
    ============================================================ */
-.device-strip {
+.kpi-row {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: var(--bg-card);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
+  gap: var(--space-3);
+  width: 100%;
   flex-shrink: 0;
-  overflow-x: auto;
 }
 
-.device-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  padding: 5px 10px;
-  background: var(--bg-deepest);
-  border-radius: var(--radius-full);
-  color: var(--text-secondary);
-  white-space: nowrap;
-  font-feature-settings: "tnum";
-  box-shadow: 0 0 0 1px var(--border-divider);
+.kpi-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  flex: 1;
+  min-width: 0;
+  transition: background 200ms var(--ease-out), border-color 200ms var(--ease-out);
 }
-.device-tag .dt-label {
+
+.kpi-card:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-active);
+}
+
+.kpi-label {
+  display: block;
+  text-transform: uppercase;
   font-size: var(--text-xs);
   color: var(--text-muted);
-  letter-spacing: 0.08em;
-  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
 }
 
-.device-tag-server {
-  margin-left: auto;
-  color: var(--accent);
-  background: var(--accent-bg);
-  box-shadow: 0 0 0 1px rgba(215, 96, 18, 0.15);
-  gap: 6px;
+.kpi-value {
+  display: block;
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.device-tag-callsign {
-  color: var(--accent);
-  background: var(--accent-bg-strong);
-  box-shadow: 0 0 0 1px rgba(215, 96, 18, 0.2);
-  font-weight: 600;
-  letter-spacing: 0.06em;
+.kpi-server .kpi-value {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+#server-addr {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  font-weight: 400;
 }
 
 /* ============================================================
@@ -343,7 +348,7 @@ body {
 .active-contact-card {
   flex: 1;
   min-width: 0;
-  max-width: calc(100% - 288px);
+  max-width: calc(100% - 308px);
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -422,7 +427,7 @@ body {
 
 .ac-callsign {
   font-family: var(--font-mono);
-  font-size: 72px;
+  font-size: clamp(64px, 8vw, 96px);
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.01em;
@@ -722,7 +727,7 @@ body {
    4. SIDEBAR
    ============================================================ */
 .dashboard-side {
-  width: 280px;
+  width: 300px;
   flex-shrink: 0;
   height: 100%;
   display: flex;
@@ -746,8 +751,8 @@ body {
   flex: 0 0 auto;
 }
 .server-card {
-  height: 100px;
-  flex: 0 0 auto;
+  flex: 1;
+  min-height: 100px;
 }
 
 .server-card-header {
@@ -1037,24 +1042,38 @@ body {
   box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
-  flex: 0 0 auto;
-  max-height: 260px;
   overflow: hidden;
 }
 
 .bottom-split {
   display: flex;
-  gap: var(--space-2);
+  flex-direction: column;
+  gap: var(--space-3);
   flex-shrink: 0;
   width: 1200px;
-  height: 260px;
   margin-top: auto;
 }
-.bottom-split .live-panel,
-.bottom-split .qso-panel {
-  width: 596px;
-  height: 260px;
-  max-height: 260px;
+
+.qso-panel {
+  width: 100%;
+  flex: 1;
+  min-height: 180px;
+  max-height: 320px;
+}
+
+/* Bottom Row */
+.bottom-row {
+  display: flex;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.bottom-row .live-panel,
+.bottom-row .previous-card {
+  flex: 1;
+  min-width: 0;
+  height: 200px;
+  max-height: 200px;
 }
 
 .panel-header {
@@ -1628,9 +1647,8 @@ body {
   .status-desc { display: none; }
   .stat-pill { font-size: 11px; padding: 1px 6px; }
 
-  .device-strip { padding: 6px 8px; gap: 4px; flex-wrap: wrap; }
-  .device-tag { font-size: 10px; padding: 3px 6px; }
-  .device-tag-server { margin-left: 0; }
+  .kpi-row { flex-wrap: wrap; }
+  .kpi-card { flex: 1 1 calc(50% - 4px); padding: var(--space-2); }
 
   .dashboard-grid {
     flex-direction: column;
@@ -1693,13 +1711,13 @@ body {
     gap: 6px;
     max-height: 120px;
   }
-  .previous-card,
-  .server-card { flex: 1; min-width: 0; }
-  .previous-card { max-height: none; }
+  .server-card { flex: 1; min-width: 0; min-height: 80px; }
 
-  .bottom-split { flex-direction: column; gap: 6px; }
-  .bottom-split .live-panel,
-  .bottom-split .qso-panel { max-height: 90px; }
+  .bottom-split { gap: 6px; }
+  .qso-panel { max-height: 180px; min-height: 120px; }
+  .bottom-row { flex-direction: column; gap: 6px; }
+  .bottom-row .live-panel,
+  .bottom-row .previous-card { height: 100px; max-height: 100px; }
 
   .section-label { padding: 8px 12px 4px 12px; font-size: 10px; }
 }
@@ -1721,8 +1739,8 @@ body {
   .tool-btn { font-size: 11px; padding: 2px 6px; }
   .theme-btn { min-width: 24px; padding: 2px 6px; }
 
-  .device-strip { padding: 2px 4px; gap: 2px; }
-  .device-tag { font-size: 9px; padding: 2px 4px; }
+  .kpi-row { gap: 4px; flex-wrap: wrap; }
+  .kpi-card { flex: 1 1 45%; padding: var(--space-1) var(--space-2); }
 
   .dashboard-grid { gap: 4px; }
   .active-contact-card { padding: 6px 0 0 0; }
@@ -1818,7 +1836,7 @@ body {
   .app-wrapper { height: calc(100vh - 4px); }
 
   .status-bar { height: 28px; padding: 0 6px; }
-  .device-strip { display: none; }
+  .kpi-row { display: none; }
 
   .dashboard-grid {
     flex-direction: row;

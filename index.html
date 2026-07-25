@@ -7,17 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>FMO Secondary Dashboard</title>
-<<<<<<< HEAD
-  <link rel="stylesheet" href="style.css?v=0801i">
-  <style>
-    /* 设置面板 overlay — 内嵌确保 file:// 协议下生效 */
-    .overlay {
-      display: none;
-      position: fixed; inset: 0; z-index: 200;
-      background: rgba(0,0,0,0.3);
-      justify-content: center; align-items: center;
-=======
-  <link rel="stylesheet" href="style.css?v=0725a">
+  <link rel="stylesheet" href="style.css?v=0725b">
   <style>
     /* === 三层覆盖策略 Layer 1: head !important 全量按钮清零 === */
     button, [type="button"], [type="submit"] {
@@ -87,17 +77,9 @@
     }
     .overlay.open {
       display: flex;
->>>>>>> 4eb48d9 (v=0725a: CyberGuard暗色赛博主题UI美化 — 赛博青强调色/警示红/提亮背景/加大圆角/卡片左accent竖条)
     }
     .overlay.open { display: flex; }
     .overlay-box {
-<<<<<<< HEAD
-      width: 360px; max-width: 92vw;
-      background: var(--bg-card, #F7F7F7);
-      border-radius: var(--radius-lg, 16px);
-      box-shadow: var(--shadow-elevated, 0 8px 32px rgba(0,0,0,0.08));
-      padding: 24px; display: flex; flex-direction: column; gap: 16px;
-=======
       width: 360px;
       max-width: 92vw;
       background: var(--bg-elevated);
@@ -118,30 +100,9 @@
       display: flex;
       flex-direction: column;
       gap: 5px;
->>>>>>> 4eb48d9 (v=0725a: CyberGuard暗色赛博主题UI美化 — 赛博青强调色/警示红/提亮背景/加大圆角/卡片左accent竖条)
     }
-    .overlay-box h2 { font-size: var(--text-lg, 18px); font-weight: 700; color: var(--text-primary, #1A1A1A); }
     .settings-row { display: flex; flex-direction: column; gap: 5px; }
     .settings-row label {
-<<<<<<< HEAD
-      font-family: system-ui, sans-serif; font-size: 12px;
-      color: var(--text-muted, #9F9E9E); letter-spacing: 0.08em;
-      font-weight: 600; text-transform: uppercase;
-    }
-    .settings-row input, .settings-row select {
-      padding: 10px 14px; background: var(--bg-input, #FFFFFF);
-      border-radius: var(--radius-sm, 8px); border: 1px solid var(--border-card, #E8E8E8);
-      color: var(--text-primary, #1A1A1A); font-size: 14px; font-family: system-ui, sans-serif;
-      transition: background 0.2s ease;
-    }
-    .settings-row input:focus, .settings-row select:focus {
-      outline: none; border-color: rgba(215,96,18,0.25); box-shadow: 0 0 0 2px rgba(215,96,18,0.10);
-    }
-    .settings-row select {
-      cursor: pointer; appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239F9E9E'/%3E%3C/svg%3E");
-      background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px;
-=======
       font-family: var(--font-mono);
       font-size: 12px;
       color: var(--text-muted);
@@ -180,15 +141,9 @@
       gap: 8px;
       justify-content: flex-end;
       margin-top: 4px;
->>>>>>> 4eb48d9 (v=0725a: CyberGuard暗色赛博主题UI美化 — 赛博青强调色/警示红/提亮背景/加大圆角/卡片左accent竖条)
     }
     .overlay-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
     .btn-accent {
-<<<<<<< HEAD
-      padding: 10px 24px; background: var(--accent, #D76012); color: #fff; border: none;
-      border-radius: var(--radius-sm, 8px); font-size: 14px; cursor: pointer;
-      font-family: system-ui, sans-serif; font-weight: 600; transition: all 0.2s ease;
-=======
       padding: 9px 22px;
       background: var(--bg-hover);
       color: var(--text-secondary);
@@ -204,16 +159,8 @@
     .btn-accent:hover {
       background: var(--bg-card);
       color: var(--text-primary);
->>>>>>> 4eb48d9 (v=0725a: CyberGuard暗色赛博主题UI美化 — 赛博青强调色/警示红/提亮背景/加大圆角/卡片左accent竖条)
     }
-    .btn-accent:hover { background: var(--accent-hover, #E8701F); }
     .btn-muted {
-<<<<<<< HEAD
-      padding: 10px 24px; background: var(--bg-input, #FFFFFF);
-      color: var(--text-secondary, #5B5B5A); border: none;
-      border-radius: var(--radius-sm, 8px); font-size: 14px; font-family: system-ui, sans-serif;
-      cursor: pointer; transition: all 0.2s ease;
-=======
       padding: 9px 22px;
       background: var(--bg-elevated);
       color: var(--text-secondary);
@@ -228,9 +175,7 @@
     .btn-muted:hover {
       background: var(--bg-hover);
       color: var(--text-primary);
->>>>>>> 4eb48d9 (v=0725a: CyberGuard暗色赛博主题UI美化 — 赛博青强调色/警示红/提亮背景/加大圆角/卡片左accent竖条)
     }
-    .btn-muted:hover { background: var(--bg-hover, #EFEFEF); color: var(--text-primary, #1A1A1A); }
   </style>
 </head>
 <body>
@@ -266,19 +211,43 @@
     </div>
   </header>
 
-  <!-- ===== 2. 设备信息条 ===== -->
-  <div class="device-strip">
-    <span class="device-tag device-tag-callsign"><span class="dt-label">CALL</span><span id="dev-callsign">--</span></span>
-    <span class="device-tag"><span class="dt-label">UID</span><span id="dev-uid">--</span></span>
-    <span class="device-tag"><span class="dt-label">VER</span><span id="dev-version">--</span></span>
-    <span class="device-tag"><span class="dt-label">MAC</span><span id="dev-mac">--</span></span>
-    <span class="device-tag"><span class="dt-label">HW</span><span id="dev-hw">--</span></span>
-    <span class="device-tag"><span class="dt-label">ANT</span><span id="dev-ant">--</span></span>
-    <span class="device-tag"><span class="dt-label">FREQ</span><span id="dev-user-freq">--</span></span>
-    <span class="device-tag device-tag-server">
-      <span id="server-ping">--</span>
-      <span id="server-addr">--</span>
-    </span>
+  <!-- ===== 2. KPI 卡片行 ===== -->
+  <div class="kpi-row">
+    <div class="kpi-card kpi-callsign">
+      <span class="kpi-label">CALL</span>
+      <span class="kpi-value" id="dev-callsign">--</span>
+    </div>
+    <div class="kpi-card kpi-uid">
+      <span class="kpi-label">UID</span>
+      <span class="kpi-value" id="dev-uid">--</span>
+    </div>
+    <div class="kpi-card kpi-version">
+      <span class="kpi-label">VER</span>
+      <span class="kpi-value" id="dev-version">--</span>
+    </div>
+    <div class="kpi-card kpi-mac">
+      <span class="kpi-label">MAC</span>
+      <span class="kpi-value" id="dev-mac">--</span>
+    </div>
+    <div class="kpi-card kpi-hw">
+      <span class="kpi-label">HW</span>
+      <span class="kpi-value" id="dev-hw">--</span>
+    </div>
+    <div class="kpi-card kpi-ant">
+      <span class="kpi-label">ANT</span>
+      <span class="kpi-value" id="dev-ant">--</span>
+    </div>
+    <div class="kpi-card kpi-freq">
+      <span class="kpi-label">FREQ</span>
+      <span class="kpi-value" id="dev-user-freq">--</span>
+    </div>
+    <div class="kpi-card kpi-server">
+      <span class="kpi-label">服务器</span>
+      <span class="kpi-value">
+        <span id="server-ping">--</span>
+        <small id="server-addr">--</small>
+      </span>
+    </div>
   </div>
 
   <!-- ===== 3. 主区域双栏 ===== -->
@@ -350,29 +319,6 @@
     <!-- 右栏: 侧边栏 300px -->
     <aside class="dashboard-side">
 
-      <section class="previous-card" id="previous-card">
-        <div class="section-label">
-          <span>上个通联</span>
-          <span id="prev-time-ago">暂无</span>
-        </div>
-        <div id="prev-card-content" class="prev-empty">
-          <div class="prev-info-grid">
-            <div class="prev-info-item">
-              <span class="prev-info-label">方位</span>
-              <span class="prev-info-value">--</span>
-            </div>
-            <div class="prev-info-item">
-              <span class="prev-info-label">距离</span>
-              <span class="prev-info-value">--</span>
-            </div>
-            <div class="prev-info-item">
-              <span class="prev-info-label">呼号</span>
-              <span class="prev-info-value">--</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section class="server-card" id="server-card-sidebar">
         <div class="section-label server-card-header" id="server-card-header-btn">
           <span>收藏中继 / 服务器</span>
@@ -398,19 +344,8 @@
     </aside>
   </div>
 
-  <!-- ===== 4. 最近通联表格 ===== -->
+  <!-- ===== 4. 通联记录 + 最近发言 ===== -->
   <div class="bottom-split">
-    <section class="live-panel">
-      <div class="panel-header">
-        <span>最近发言</span>
-        <span class="panel-count" id="recent-count">0</span>
-      </div>
-      <div id="recent-speakers" class="live-table-wrap">
-        <div class="list-empty">暂无最近发言</div>
-      </div>
-    </section>
-
-    <!-- ===== 5. QSO 通联记录表格 ===== -->
     <section class="qso-panel">
       <div class="panel-header">
         <span>通联记录</span>
@@ -423,6 +358,39 @@
         <div class="list-empty">暂无通联记录</div>
       </div>
     </section>
+    <div class="bottom-row">
+      <section class="live-panel">
+        <div class="panel-header">
+          <span>最近发言</span>
+          <span class="panel-count" id="recent-count">0</span>
+        </div>
+        <div id="recent-speakers" class="live-table-wrap">
+          <div class="list-empty">暂无最近发言</div>
+        </div>
+      </section>
+      <section class="previous-card" id="previous-card">
+        <div class="section-label">
+          <span>上个通联</span>
+          <span id="prev-time-ago">暂无</span>
+        </div>
+        <div id="prev-card-content" class="prev-empty">
+          <div class="prev-info-grid">
+            <div class="prev-info-item">
+              <span class="prev-info-label">方位</span>
+              <span class="prev-info-value">--</span>
+            </div>
+            <div class="prev-info-item">
+              <span class="prev-info-label">距离</span>
+              <span class="prev-info-value">--</span>
+            </div>
+            <div class="prev-info-item">
+              <span class="prev-info-label">呼号</span>
+              <span class="prev-info-value">--</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
   </div>
 
   <!-- ===== 隐藏: 服务器列表 ===== -->
@@ -468,6 +436,6 @@
 
 </div>
 
-  <script src="app.js?v=0801c"></script>
+  <script src="app.js?v=0725b"></script>
 </body>
 </html>
