@@ -972,17 +972,33 @@ const App = {
   _showServerInfo() {
     const nameEl = document.getElementById('server-name-display');
     const pingEl = document.getElementById('server-ping');
+    const addrEl = document.getElementById('server-addr');
 
     if (nameEl) nameEl.textContent = this.currentServerName || '--';
 
-    // Ping show from cache
-    if (pingEl && this.hostPort) {
-      const lat = this._serverLatency[this.hostPort];
-      pingEl.textContent = lat === -1 ? '超时' : (lat !== undefined ? lat + 'ms' : '--');
+    // 获取当前服务器信息，显示其延迟和地址
+    const currentServer = this.serverList ? this.serverList.find(s => s.name === this.currentServerName) : null;
+    if (currentServer) {
+      const host = currentServer.host || currentServer.addr || currentServer.address || currentServer.url || '';
+      // Ping show from cache
+      if (pingEl && host) {
+        const lat = this._serverLatency[host];
+        pingEl.textContent = lat === -1 ? '超时' : (lat !== undefined ? lat + 'ms' : '--');
+      }
+      // 更新服务器IP地址
+      if (addrEl && host) {
+        addrEl.textContent = host;
+      }
+    } else {
+      // 无当前服务器信息时，回退显示FMO设备的连接信息
+      if (pingEl && this.hostPort) {
+        const host = this.hostPort.split(':')[0];
+        const lat = this._serverLatency[host];
+        pingEl.textContent = lat === -1 ? '超时' : (lat !== undefined ? lat + 'ms' : '--');
+      }
+      // 集中更新 FMO 设备 IP 作为兜底
+      this._updateServerAddr('_showServerInfo');
     }
-
-    // 集中更新服务器 IP
-    this._updateServerAddr('_showServerInfo');
   },
 
   /** 集中更新服务器 IP 显示，所有路径统一出口 */
@@ -1086,8 +1102,12 @@ const App = {
     });
     console.log('[FMO-DEBUG-SERVER] renderServerList 完成，渲染了 ' + filtered.length + ' 项');
 
-    // 每次重绘服务器列表都同步更新 KPI 在线人数，防止计数漂移
-    this._updateOnlineCount(filtered.length);
+    // 每次重绘服务器列表都同步更新 KPI 在线人数，显示当前服务器的在线用户数
+    const currentServer = this.serverList.find(s => s.name === this.currentServerName);
+    if (currentServer) {
+      const onlineCount = currentServer.onlineCount ?? currentServer.count ?? currentServer.users ?? currentServer.online ?? '--';
+      this._updateOnlineCount(onlineCount);
+    }
   },
 
   _pn(t) {
