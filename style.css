@@ -402,8 +402,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 1;
   height: auto;
+  flex: 0 0 auto;
 }
 
 .hero-main {
@@ -742,8 +742,8 @@ body {
 }
 
 .previous-card {
-  flex: 1;
   height: auto;
+  flex: 0 0 auto;
 }
 .server-card {
   height: 100px;
