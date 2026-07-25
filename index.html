@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>FMO Secondary Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=0725c">
+  <link rel="stylesheet" href="style.css?v=0725e">
   <style>
     /* === 三层覆盖策略 Layer 1: head !important 全量按钮清零 === */
     button, [type="button"], [type="submit"] {
@@ -181,77 +181,77 @@
 <body>
 <div class="app-wrapper">
 
-  <!-- ===== 1. 顶部状态条 (40px) ===== -->
+  <!-- ===== 1. 顶部状态条 + 内嵌 KPI 卡片行 ===== -->
   <header class="status-bar">
-    <div class="status-bar-left">
-      <span class="brand-marker"></span>
-      <span class="brand-label">FMO</span>
+    <div class="status-bar-top">
+      <div class="status-bar-left">
+        <span class="brand-marker"></span>
+        <span class="brand-label">FMO</span>
+      </div>
+      <div class="status-bar-center">
+        <span id="status-dot" class="status-dot"></span>
+        <span id="status-text" class="status-text">未连接</span>
+        <span class="status-desc" id="command-desc">-- 正在守听</span>
+      </div>
+      <div class="status-bar-right">
+        <span class="stat-pill" title="总通联 / 今日">
+          <span class="stat-icon">*</span>
+          <span id="stat-total">--</span><small>/</small><span id="stat-today">--</span>
+        </span>
+        <span class="stat-pill" title="友台数">
+          <span class="stat-icon">*</span>
+          <span id="stat-friends">--</span>
+        </span>
+        <div class="tool-btn-group">
+          <button class="tool-btn theme-btn" id="theme-dark" data-theme="dark" title="深色主题">暗</button>
+          <button class="tool-btn theme-btn" id="theme-light" data-theme="light" title="浅色主题">亮</button>
+          <button class="tool-btn theme-btn" id="theme-eink" data-theme="e-ink" title="水墨屏">墨</button>
+          <button class="tool-btn theme-btn orientation-toggle" id="orientation-toggle-btn" title="切换横竖屏">⇅</button>
+          <button class="tool-btn" id="cmd-settings-btn" title="设置">设置</button>
+        </div>
+      </div>
     </div>
-    <div class="status-bar-center">
-      <span id="status-dot" class="status-dot"></span>
-      <span id="status-text" class="status-text">未连接</span>
-      <span class="status-desc" id="command-desc">-- 正在守听</span>
-    </div>
-    <div class="status-bar-right">
-      <span class="stat-pill" title="总通联 / 今日">
-        <span class="stat-icon">*</span>
-        <span id="stat-total">--</span><small>/</small><span id="stat-today">--</span>
-      </span>
-      <span class="stat-pill" title="友台数">
-        <span class="stat-icon">*</span>
-        <span id="stat-friends">--</span>
-      </span>
-      <div class="tool-btn-group">
-        <button class="tool-btn theme-btn" id="theme-dark" data-theme="dark" title="深色主题">暗</button>
-        <button class="tool-btn theme-btn" id="theme-light" data-theme="light" title="浅色主题">亮</button>
-        <button class="tool-btn theme-btn" id="theme-eink" data-theme="e-ink" title="水墨屏">墨</button>
-        <button class="tool-btn theme-btn orientation-toggle" id="orientation-toggle-btn" title="切换横竖屏">⇅</button>
-        <button class="tool-btn" id="cmd-settings-btn" title="设置">设置</button>
+    <div class="kpi-row">
+      <div class="kpi-card kpi-callsign">
+        <span class="kpi-label">CALL</span>
+        <span class="kpi-value" id="dev-callsign">--</span>
+      </div>
+      <div class="kpi-card kpi-uid">
+        <span class="kpi-label">UID</span>
+        <span class="kpi-value" id="dev-uid">--</span>
+      </div>
+      <div class="kpi-card kpi-version">
+        <span class="kpi-label">VER</span>
+        <span class="kpi-value" id="dev-version">--</span>
+      </div>
+      <div class="kpi-card kpi-mac">
+        <span class="kpi-label">MAC</span>
+        <span class="kpi-value" id="dev-mac">--</span>
+      </div>
+      <div class="kpi-card kpi-hw">
+        <span class="kpi-label">HW</span>
+        <span class="kpi-value" id="dev-hw">--</span>
+      </div>
+      <div class="kpi-card kpi-ant">
+        <span class="kpi-label">ANT</span>
+        <span class="kpi-value" id="dev-ant">--</span>
+      </div>
+      <div class="kpi-card kpi-freq">
+        <span class="kpi-label">FREQ</span>
+        <span class="kpi-value" id="dev-user-freq">--</span>
+      </div>
+      <div class="kpi-card kpi-server">
+        <span class="kpi-label">服务器</span>
+        <span class="kpi-value">
+          <span id="server-ping">--</span>
+          <small id="server-addr">--</small>
+        </span>
       </div>
     </div>
   </header>
 
-  <!-- ===== 2. KPI 卡片行 ===== -->
-  <div class="kpi-row">
-    <div class="kpi-card kpi-callsign">
-      <span class="kpi-label">CALL</span>
-      <span class="kpi-value" id="dev-callsign">--</span>
-    </div>
-    <div class="kpi-card kpi-uid">
-      <span class="kpi-label">UID</span>
-      <span class="kpi-value" id="dev-uid">--</span>
-    </div>
-    <div class="kpi-card kpi-version">
-      <span class="kpi-label">VER</span>
-      <span class="kpi-value" id="dev-version">--</span>
-    </div>
-    <div class="kpi-card kpi-mac">
-      <span class="kpi-label">MAC</span>
-      <span class="kpi-value" id="dev-mac">--</span>
-    </div>
-    <div class="kpi-card kpi-hw">
-      <span class="kpi-label">HW</span>
-      <span class="kpi-value" id="dev-hw">--</span>
-    </div>
-    <div class="kpi-card kpi-ant">
-      <span class="kpi-label">ANT</span>
-      <span class="kpi-value" id="dev-ant">--</span>
-    </div>
-    <div class="kpi-card kpi-freq">
-      <span class="kpi-label">FREQ</span>
-      <span class="kpi-value" id="dev-user-freq">--</span>
-    </div>
-    <div class="kpi-card kpi-server">
-      <span class="kpi-label">服务器</span>
-      <span class="kpi-value">
-        <span id="server-ping">--</span>
-        <small id="server-addr">--</small>
-      </span>
-    </div>
-  </div>
-
-  <!-- ===== 3. 主区域双栏 ===== -->
-  <div class="dashboard-grid">
+  <!-- ===== 2. 中段：Speaking Bar（左） + 右侧列（上个通联 + 服务器） ===== -->
+  <div class="middle-split">
 
     <!-- 左栏: Active Contact Hero Card -->
     <section id="speaking-bar" class="active-contact-card idle">
@@ -316,58 +316,8 @@
       </div>
     </section>
 
-    <!-- 右栏: 侧边栏 300px -->
-    <aside class="dashboard-side">
-
-      <section class="server-card" id="server-card-sidebar">
-        <div class="section-label server-card-header" id="server-card-header-btn">
-          <span>收藏中继 / 服务器</span>
-          <span class="server-list-trigger" id="server-search-trigger">搜索</span>
-          <div class="server-search-popup" id="server-search-popup" style="display:none;">
-            <input type="text" class="server-search-input" id="server-search-input" placeholder="拼音/名称搜索..." autocomplete="off">
-            <div class="server-search-results" id="server-search-results"></div>
-          </div>
-        </div>
-        <div class="server-list-sidebar" id="server-list-sidebar">
-          <div class="side-loading">
-            <div class="loading-spinner"></div>
-            <span>正在获取服务器列表...</span>
-            <div class="skeleton-list">
-              <div class="skeleton-row"></div>
-              <div class="skeleton-row"></div>
-              <div class="skeleton-row"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-    </aside>
-  </div>
-
-  <!-- ===== 4. 通联记录 + 最近发言 ===== -->
-  <div class="bottom-split">
-    <section class="qso-panel">
-      <div class="panel-header">
-        <span>通联记录</span>
-        <div class="panel-header-actions">
-          <button id="panel-export-btn" class="panel-export-btn" title="导出 ADIF 日志">导出 ADIF</button>
-          <span class="panel-count" id="qso-count">0</span>
-        </div>
-      </div>
-      <div id="qso-container" class="live-table-wrap">
-        <div class="list-empty">暂无通联记录</div>
-      </div>
-    </section>
-    <div class="bottom-row">
-      <section class="live-panel">
-        <div class="panel-header">
-          <span>最近发言</span>
-          <span class="panel-count" id="recent-count">0</span>
-        </div>
-        <div id="recent-speakers" class="live-table-wrap">
-          <div class="list-empty">暂无最近发言</div>
-        </div>
-      </section>
+    <!-- 右栏: 上个通联 + 服务器 -->
+    <aside class="middle-sidebar">
       <section class="previous-card" id="previous-card">
         <div class="section-label">
           <span>上个通联</span>
@@ -390,7 +340,54 @@
           </div>
         </div>
       </section>
-    </div>
+
+      <section class="server-card" id="server-card-sidebar">
+        <div class="section-label server-card-header" id="server-card-header-btn">
+          <span>收藏中继 / 服务器</span>
+          <span class="server-list-trigger" id="server-search-trigger">搜索</span>
+          <div class="server-search-popup" id="server-search-popup" style="display:none;">
+            <input type="text" class="server-search-input" id="server-search-input" placeholder="拼音/名称搜索..." autocomplete="off">
+            <div class="server-search-results" id="server-search-results"></div>
+          </div>
+        </div>
+        <div class="server-list-sidebar" id="server-list-sidebar">
+          <div class="side-loading">
+            <div class="loading-spinner"></div>
+            <span>正在获取服务器列表...</span>
+            <div class="skeleton-list">
+              <div class="skeleton-row"></div>
+              <div class="skeleton-row"></div>
+              <div class="skeleton-row"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <!-- ===== 3. 底部：最近发言 + 通联记录 ===== -->
+  <div class="bottom-panels">
+    <section class="live-panel">
+      <div class="panel-header">
+        <span>最近发言</span>
+        <span class="panel-count" id="recent-count">0</span>
+      </div>
+      <div id="recent-speakers" class="live-table-wrap">
+        <div class="list-empty">暂无最近发言</div>
+      </div>
+    </section>
+    <section class="qso-panel">
+      <div class="panel-header">
+        <span>通联记录</span>
+        <div class="panel-header-actions">
+          <button id="panel-export-btn" class="panel-export-btn" title="导出 ADIF 日志">导出 ADIF</button>
+          <span class="panel-count" id="qso-count">0</span>
+        </div>
+      </div>
+      <div id="qso-container" class="live-table-wrap">
+        <div class="list-empty">暂无通联记录</div>
+      </div>
+    </section>
   </div>
 
   <!-- ===== 隐藏: 服务器列表 ===== -->
@@ -429,16 +426,20 @@
   </div>
 
   <footer class="site-footer">
-    <a href="https://github.com/Inliang/fmo-secondary" target="_blank" rel="noopener">FMO Secondary Dashboard on GitHub</a>
-    <span class="footer-sep">·</span>
-    <a href="https://inliang.github.io/envo/" target="_blank" rel="noopener">Envo — 信封打印助手</a>
+    <div class="footer-left">
+      <a target="_blank" title="51la网站统计" href="https://v6.51.la/land/3QfdwbkEAE8udblG"><img src="https://sdk.51.la/icon/2-4.png"></a>
+      <script charset="UTF-8" id="LA_COLLECT" src="//sdk.51.la/js-sdk-pro.min.js"></script>
+      <script>LA.init({id:"3QfdwbkEAE8udblG",ck:"3QfdwbkEAE8udblG",autoTrack:true,hashMode:true})</script>
+    </div>
+    <div class="footer-right">
+      <a href="https://github.com/Inliang/fmo-secondary" target="_blank" rel="noopener">FMO Secondary Dashboard on GitHub</a>
+      <span class="footer-sep">·</span>
+      <a href="https://inliang.github.io/envo/" target="_blank" rel="noopener">Envo — 信封打印助手</a>
+    </div>
   </footer>
 
 </div>
 
-  <script src="app.js?v=0725c"></script>
-  <a target="_blank" title="51la网站统计" href="https://v6.51.la/land/3QfdwbkEAE8udblG"><img src="https://sdk.51.la/icon/2-4.png"></a>
-  <script charset="UTF-8" id="LA_COLLECT" src="//sdk.51.la/js-sdk-pro.min.js"></script>
-  <script>LA.init({id:"3QfdwbkEAE8udblG",ck:"3QfdwbkEAE8udblG",autoTrack:true,hashMode:true})</script>
+  <script src="app.js?v=0725e"></script>
 </body>
 </html>
