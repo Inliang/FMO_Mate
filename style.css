@@ -192,6 +192,37 @@ body {
   min-width: 0;
 }
 
+.status-sep {
+  color: var(--border-divider);
+  font-size: 11px;
+  user-select: none;
+}
+
+.net-type-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.net-type-tag.wan {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.status-refresh {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 .status-dot {
   width: 8px;
   height: 8px;

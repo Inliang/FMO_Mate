@@ -118,6 +118,10 @@ const App = {
   // --- 定时器 ---
   pollTimer: null,
 
+  // --- 在线人数 ---
+  _onlineCount: 0,
+  _lastRefresh: 0,
+
   // --- 初始化 ---
   init() {
     this._queue = [];
@@ -344,6 +348,32 @@ const App = {
       const devCallsignEl = document.getElementById('dev-callsign');
       if (devCallsignEl) devCallsignEl.textContent = this.myCallsign || 'N0CALL';
     }
+    this._updateNetworkType();
+  },
+
+  /* 检测本机 / 外网访问 */
+  _updateNetworkType() {
+    const el = document.getElementById('net-type');
+    if (!el) return;
+    const host = (this.hostPort || '').split(':')[0];
+    const isLocal = !host
+      || host === 'localhost'
+      || host === '127.0.0.1'
+      || host.startsWith('192.168.')
+      || host.startsWith('10.')
+      || host.startsWith('172.');
+    el.textContent = isLocal ? '本机' : '外网';
+    el.className = 'net-type-tag' + (isLocal ? '' : ' wan');
+  },
+
+  /* 更新最后刷新时间 */
+  _updateRefreshTime() {
+    const el = document.getElementById('last-refresh');
+    if (!el) return;
+    this._lastRefresh = Date.now();
+    const dt = new Date(this._lastRefresh);
+    const pad = (n) => String(n).padStart(2, '0');
+    el.textContent = pad(dt.getHours()) + ':' + pad(dt.getMinutes()) + ':' + pad(dt.getSeconds());
   },
 
   // ============ 串行队列 ============
@@ -540,6 +570,11 @@ const App = {
       this.addQsoItem(d);
     } else if (evt.event === 'station_update' || evt.event === 'online_change') {
       this.fetchServerList();
+      const d = evt.data || evt;
+      const count = d.onlineCount ?? d.count ?? d.users ?? d.online;
+      if (count !== undefined && count !== null) {
+        this._updateOnlineCount(count);
+      }
     }
 
     // APRS BEACON 消息处理（APFMO4 频率/高度）
@@ -576,6 +611,7 @@ const App = {
     await this.fetchQsoListAll();
     // 如果以上都未能获取频率，额外尝试 radio API
     if (!this._currentFreq) await this.fetchRadioInfo();
+    this._updateRefreshTime();
     console.log('[FMO-DEBUG-SERVER] fetchAllData 全部完成');
   },
 
@@ -948,6 +984,9 @@ const App = {
         this.currentServerName = r.data.name || '';
         this._prevServer = this.currentServerName;
         this._showServerInfo();
+        // 提取在线人数
+        const count = r.data.onlineCount ?? r.data.count ?? r.data.users ?? r.data.online;
+        if (count !== undefined && count !== null) this._updateOnlineCount(count);
       }
     } catch (e) {}
 
@@ -976,6 +1015,13 @@ const App = {
       const lat = this._serverLatency[this.hostPort];
       pingEl.textContent = lat === -1 ? '超时' : (lat !== undefined ? lat + 'ms' : '--');
     }
+  },
+
+  _updateOnlineCount(count) {
+    if (count === undefined || count === null) return;
+    this._onlineCount = count;
+    const el = document.getElementById('dev-online-count');
+    if (el) el.textContent = count;
   },
 
   renderServerList() {
@@ -1336,6 +1382,7 @@ const App = {
         <div class="prev-info-item"><span class="prev-info-label">方位</span><span class="prev-info-value">--</span></div>
         <div class="prev-info-item"><span class="prev-info-label">距离</span><span class="prev-info-value">--</span></div>
         <div class="prev-info-item"><span class="prev-info-label">呼号</span><span class="prev-info-value">--</span></div>
+        <div class="prev-info-item"><span class="prev-info-label">通联</span><span class="prev-info-value">--</span></div>
       </div>`;
       return;
     }
@@ -1366,11 +1413,18 @@ const App = {
       else { const hrs = Math.floor(mins / 60); timeEl.textContent = hrs + '小时前'; }
     }
 
+    // 计算与上一通联呼号的通联次数
+    const prevContactCount = this.qsoList.filter(q => {
+      const toCall = q.toCallsign || q.callsign || '';
+      return this.isSameOperator(toCall, callsign);
+    }).length;
+
     contentEl.className = '';
     contentEl.innerHTML = `<div class="prev-info-grid">
       <div class="prev-info-item"><span class="prev-info-label">方位</span><span class="prev-info-value">${dir}${azi}</span></div>
       <div class="prev-info-item"><span class="prev-info-label">距离</span><span class="prev-info-value">${dist}</span></div>
       <div class="prev-info-item"><span class="prev-info-label">呼号</span><span class="prev-info-value">${callsign}</span></div>
+      <div class="prev-info-item"><span class="prev-info-label">通联</span><span class="prev-info-value">x${prevContactCount}</span></div>
     </div>`;
   },
 
@@ -2158,17 +2212,36 @@ const App = {
 
     // Contact count
     const cntEl = document.getElementById('sb-contact-count');
+    let contactCount = 0;
     if (cntEl) {
       const qsos = this.qsoList.filter(q => {
         const toCall = q.toCallsign || q.callsign || '';
         return this.isSameOperator(toCall, sp.callsign);
       });
-      if (qsos.length > 1) {
-        cntEl.textContent = 'x' + qsos.length;
+      contactCount = qsos.length;
+      if (contactCount > 1) {
+        cntEl.textContent = 'x' + contactCount;
         cntEl.style.display = '';
       } else {
         cntEl.style.display = 'none';
       }
+    }
+
+    // 新呼号标记：从未通联过
+    const newBadgeEl = document.getElementById('ac-new-badge');
+    if (newBadgeEl) {
+      // 需要 qsoList 已加载才准确
+      if (this.qsoList.length > 0 && contactCount === 0) {
+        newBadgeEl.style.display = '';
+      } else {
+        newBadgeEl.style.display = 'none';
+      }
+    }
+
+    // 已通联标记
+    const contactedTag = document.querySelector('.tag-contacted');
+    if (contactedTag) {
+      contactedTag.style.display = contactCount > 0 ? '' : 'none';
     }
 
     // Elapsed

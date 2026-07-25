@@ -191,7 +191,10 @@
       <div class="status-bar-center">
         <span id="status-dot" class="status-dot"></span>
         <span id="status-text" class="status-text">未连接</span>
+        <span class="status-sep">|</span>
+        <span id="net-type" class="net-type-tag" title="访问方式">本机</span>
         <span class="status-desc" id="command-desc">-- 正在守听</span>
+        <span class="status-refresh" id="last-refresh" title="最后刷新"></span>
       </div>
       <div class="status-bar-right">
         <span class="stat-pill" title="总通联 / 今日">
@@ -239,6 +242,10 @@
       <div class="kpi-card kpi-freq">
         <span class="kpi-label">FREQ</span>
         <span class="kpi-value" id="dev-user-freq">--</span>
+      </div>
+      <div class="kpi-card kpi-online">
+        <span class="kpi-label">在线</span>
+        <span class="kpi-value" id="dev-online-count">--</span>
       </div>
       <div class="kpi-card kpi-server">
         <span class="kpi-label">服务器</span>
@@ -329,6 +336,10 @@
             </div>
             <div class="prev-info-item">
               <span class="prev-info-label">呼号</span>
+              <span class="prev-info-value">--</span>
+            </div>
+            <div class="prev-info-item">
+              <span class="prev-info-label">通联</span>
               <span class="prev-info-value">--</span>
             </div>
           </div>
