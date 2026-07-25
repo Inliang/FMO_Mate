@@ -9,6 +9,11 @@
   --accent-hover: #FFB74D;
   --accent-aux: #8CA03F;
   --accent-dim: #E65100;
+
+  /* Top bar tier colors */
+  --top-bar-gold: #F59E0B;
+  --top-bar-mid: #FFB74D;
+  --top-bar-low: rgba(255, 152, 0, 0.22);
   --accent-glow: rgba(255, 152, 0, 0.12);
   --accent-bg: rgba(255, 152, 0, 0.06);
   --accent-bg-strong: rgba(255, 152, 0, 0.12);
@@ -1274,12 +1279,11 @@ body {
 }
 .top-bar {
   height: 100%;
-  background: var(--accent);
   border-radius: 3px;
   transition: width 0.6s var(--ease-out);
   min-width: 2px;
 }
-.top-item.is-self .top-bar { background: var(--accent-dim); }
+.top-item.is-self .top-bar { opacity: 0.65; }
 .top-count {
   width: 32px;
   text-align: right;
