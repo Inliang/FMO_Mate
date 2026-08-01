@@ -2279,8 +2279,10 @@ body {
   }
 }
 
-/* QSO panel – scrollable overflow */
-.bottom-panels .qso-panel {
+/* Bottom panels – scrollable overflow */
+.bottom-panels .live-panel,
+.bottom-panels .qso-panel,
+.top-panel {
   overflow-y: auto;
 }
 
