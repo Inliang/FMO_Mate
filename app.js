@@ -2202,6 +2202,9 @@ const App = {
       return;
     }
 
+    // 异步触发 QTH 解析
+    items.forEach(item => { if (item.grid) this._resolveGridLocation(item.grid); });
+
     const now = Date.now();
     container.innerHTML = items.map((item, index) => {
       const call = this.parseCallsignSsid(item.callsign).call;
@@ -2229,10 +2232,12 @@ const App = {
         serverName = matchingQso.serverName;
       }
 
-      // 构建额外信息行（memo / serverName）
+      // 构建额外信息行（memo / serverName / QTH）
       let extraLine = '';
       if (memo) extraLine += '<span class="recent-memo">' + this._esc(memo) + '</span>';
       if (serverName) extraLine += '<span class="recent-server">[' + this._esc(serverName) + ']</span>';
+      const qth = item.grid ? (this._gridLocationCache[item.grid] || item.grid) : '';
+      if (qth) extraLine += '<span class="recent-qth">' + this._esc(qth) + '</span>';
 
       return '<div class="recent-item' + (isActive ? ' is-speaking' : '') + (isSelf ? ' is-self' : '') + '" data-callsign="' + item.callsign + '">'
         + '<span class="recent-index-bg">' + (index + 1) + '</span>'
