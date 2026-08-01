@@ -386,7 +386,7 @@ body {
 .middle-split {
   display: flex;
   gap: var(--space-2);
-  flex: 1;
+  flex: 2;
   overflow: hidden;
 }
 
