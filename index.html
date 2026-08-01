@@ -7,14 +7,14 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>FMO Secondary Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=0725xa">  
+  <link rel="stylesheet" href="style.css?v=0725xb">  
   <style>
     /* === 三层覆盖策略 Layer 1: head !important 全量按钮清零 === */
     button, [type="button"], [type="submit"] {
       background-image: none !important;
     }
     .refresh-btn, .server-list-trigger, #ac-refresh-btn,
-    .server-card-header, .panel-export-btn, .export-adif-btn {
+    .server-card-header, .panel-export-btn, .export-adif-btn, .qrz-upload-btn {
       background: var(--bg-hover) !important;
       color: var(--text-secondary) !important;
       border: none !important;
@@ -27,7 +27,7 @@
       background-image: none !important;
     }
     .refresh-btn:hover, .server-list-trigger:hover, #ac-refresh-btn:hover,
-    .panel-export-btn:hover, .export-adif-btn:hover {
+    .panel-export-btn:hover, .export-adif-btn:hover, .qrz-upload-btn:hover {
       background: var(--bg-card) !important;
       color: var(--text-primary) !important;
       box-shadow: none !important;
@@ -386,6 +386,11 @@
       <div class="panel-header">
         <span>通联记录</span>
         <div class="panel-header-actions">
+          <div class="qrz-api-section">
+            <input type="password" id="qrz-key-input" class="qrz-key-input" placeholder="QRZ API Key" title="QRZ Logbook API 密钥">
+            <button id="panel-qrz-upload-btn" class="qrz-upload-btn" title="上传通联记录到 QRZ.com">上传 QRZ</button>
+            <span id="qrz-upload-status" class="qrz-status"></span>
+          </div>
           <button id="panel-export-btn" class="panel-export-btn" title="导出 ADIF 日志">导出 ADIF</button>
           <span class="panel-count" id="qso-count">0</span>
         </div>
@@ -459,6 +464,6 @@
 
 </div>
 
-  <script src="app.js?v=0725xa"></script>
+  <script src="app.js?v=0725xb"></script>
 </body>
 </html>

@@ -1757,6 +1757,70 @@ body {
   color: var(--text-primary);
 }
 
+/* QRZ Upload Section */
+.qrz-api-section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.qrz-key-input {
+  width: 130px;
+  padding: 4px 8px;
+  background: var(--bg-deepest);
+  color: var(--text-secondary);
+  border: none;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  box-shadow: 0 0 0 1px var(--border-divider);
+  transition: all 0.2s var(--ease-out);
+}
+.qrz-key-input:focus {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  outline: none;
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.qrz-key-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.qrz-upload-btn {
+  padding: 4px 12px;
+  background: var(--bg-deepest);
+  color: var(--text-secondary);
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  font-family: var(--font-sans);
+  transition: all 0.2s var(--ease-out);
+  box-shadow: 0 0 0 1px var(--border-divider);
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+.qrz-upload-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+.qrz-upload-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.qrz-status {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+.qrz-success { color: #4caf50; }
+.qrz-replace { color: #ff9800; }
+.qrz-fail { color: #f44336; }
+
 /* ============================================================
    9. ANIMATIONS
    ============================================================ */
