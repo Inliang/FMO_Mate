@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>FMO Secondary Dashboard</title>
-  <link rel="stylesheet" href="style.css?v=0725w7">  
+  <link rel="stylesheet" href="style.css?v=0725w6">  
   <style>
     /* === 三层覆盖策略 Layer 1: head !important 全量按钮清零 === */
     button, [type="button"], [type="submit"] {
@@ -65,7 +65,7 @@
       background-image: none !important;
     }
 
-    /* 设置面板 overlay �?内嵌确保 file:// 协议下生�?*/
+    /* 设置面板 overlay — 内嵌确保 file:// 协议下生效 */
     .overlay {
       display: none;
       position: fixed;
@@ -181,7 +181,7 @@
 <body>
 <div class="app-wrapper">
 
-  <!-- ===== 1. 顶部状态条 + 内嵌 KPI 卡片�?===== -->
+  <!-- ===== 1. 顶部状态条 + 内嵌 KPI 卡片行 ===== -->
   <header class="status-bar">
     <div class="status-bar-top">
       <div class="status-bar-left">
@@ -190,11 +190,11 @@
       </div>
       <div class="status-bar-center">
         <span id="status-dot" class="status-dot"></span>
-        <span id="status-text" class="status-text">未连�?/span>
+        <span id="status-text" class="status-text">未连接</span>
         <span class="status-sep">|</span>
         <span id="net-type" class="net-type-tag" title="访问方式">本机</span>
         <span class="status-desc" id="command-desc">-- 正在守听</span>
-        <span class="status-refresh" id="last-refresh" title="最后刷�?></span>
+        <span class="status-refresh" id="last-refresh" title="最后刷新"></span>
         <span id="live-clock" class="live-clock"></span>
       </div>
       <div class="status-bar-right">
@@ -202,15 +202,15 @@
           <span class="stat-icon">*</span>
           <span id="stat-total">--</span><small>/</small><span id="stat-today">--</span>
         </span>
-        <span class="stat-pill" title="友台�?>
+        <span class="stat-pill" title="友台数">
           <span class="stat-icon">*</span>
           <span id="stat-friends">--</span>
         </span>
         <div class="tool-btn-group">
-          <button class="tool-btn theme-btn" id="theme-dark" data-theme="dark" title="深色主题">�?/button>
-          <button class="tool-btn theme-btn" id="theme-light" data-theme="light" title="浅色主题">�?/button>
-          <button class="tool-btn theme-btn" id="theme-eink" data-theme="e-ink" title="水墨�?>�?/button>
-          <button class="tool-btn theme-btn orientation-toggle" id="orientation-toggle-btn" title="切换横竖�?>�?/button>
+          <button class="tool-btn theme-btn" id="theme-dark" data-theme="dark" title="深色主题">暗</button>
+          <button class="tool-btn theme-btn" id="theme-light" data-theme="light" title="浅色主题">亮</button>
+          <button class="tool-btn theme-btn" id="theme-eink" data-theme="e-ink" title="水墨屏">墨</button>
+          <button class="tool-btn theme-btn orientation-toggle" id="orientation-toggle-btn" title="切换横竖屏">⇅</button>
           <button class="tool-btn" id="cmd-settings-btn" title="设置">设置</button>
         </div>
       </div>
@@ -255,7 +255,7 @@
     </div>
   </header>
 
-  <!-- ===== 2. 中段：Speaking Bar（左�?+ 右侧列（上个通联 + 服务器） ===== -->
+  <!-- ===== 2. 中段：Speaking Bar（左） + 右侧列（上个通联 + 服务器） ===== -->
   <div class="middle-split">
 
     <!-- 左栏: Active Contact Hero Card -->
@@ -271,7 +271,7 @@
             <h1 id="sb-callsign" class="ac-callsign">--</h1>
             <span id="sb-contact-count" class="count-badge"></span>
             <span id="sb-grid" class="grid-pill"></span>
-            <span class="new-badge" id="ac-new-badge">�?/span>
+            <span class="new-badge" id="ac-new-badge">新</span>
           </div>
           <div id="sb-elapsed" class="ac-elapsed"></div>
           <div class="contact-tags">
@@ -284,7 +284,7 @@
         </div>
         <div class="bearing-panel">
           <div class="compass">
-            <span class="north-label">�?/span>
+            <span class="north-label">北</span>
             <svg class="compass-arrow" id="compass-arrow" viewBox="0 0 24 32" aria-hidden="true">
               <path d="M12 2 21 29 12 23 3 29Z"/>
             </svg>
@@ -298,7 +298,7 @@
 
       <div class="contact-details" id="contact-details-inline">
         <button class="detail-card relay-card" id="relay-detail-btn" type="button">
-          <span class="detail-label">中继 / 服务�?/span>
+          <span class="detail-label">中继 / 服务器</span>
           <strong id="server-name-display">--</strong>
           <small id="sb-server"></small>
         </button>
@@ -315,7 +315,7 @@
       <div id="sb-placeholder" class="ac-placeholder">等待通联...</div>
     </section>
 
-    <!-- 右栏: 上个通联 + 服务�?-->
+    <!-- 右栏: 上个通联 + 服务器 -->
     <aside class="middle-sidebar">
       <section class="previous-card" id="previous-card">
         <div class="section-label">
@@ -346,7 +346,7 @@
 
       <section class="server-card" id="server-card-sidebar">
         <div class="section-label server-card-header" id="server-card-header-btn">
-          <span>收藏中继 / 服务�?/span>
+          <span>收藏中继 / 服务器</span>
           <span class="server-list-trigger" id="server-search-trigger">搜索</span>
           <div class="server-search-popup" id="server-search-popup" style="display:none;">
             <input type="text" class="server-search-input" id="server-search-input" placeholder="拼音/名称搜索..." autocomplete="off">
@@ -356,7 +356,7 @@
         <div class="server-list-sidebar" id="server-list-sidebar">
           <div class="side-loading">
             <div class="loading-spinner"></div>
-            <span>正在获取服务器列�?..</span>
+            <span>正在获取服务器列表...</span>
             <div class="skeleton-list">
               <div class="skeleton-row"></div>
               <div class="skeleton-row"></div>
@@ -409,11 +409,11 @@
     </section>
   </div><!-- end .main-body -->
 
-  <!-- ===== 隐藏: 服务器列�?===== -->
+  <!-- ===== 隐藏: 服务器列表 ===== -->
   <div id="server-list-overlay" class="server-list-overlay">
     <div class="server-list-dropdown">
-      <div class="server-list-title">切换服务�?/div>
-      <input id="server-search" class="server-search" type="text" placeholder="搜索服务�?..">
+      <div class="server-list-title">切换服务器</div>
+      <input id="server-search" class="server-search" type="text" placeholder="搜索服务器...">
       <div id="server-list-container" class="server-list-scroll"></div>
     </div>
   </div>
@@ -438,7 +438,7 @@
         </select>
       </div>
       <div class="overlay-btns">
-        <button id="settings-save" class="btn-accent">保存并连�?/button>
+        <button id="settings-save" class="btn-accent">保存并连接</button>
         <button id="settings-close" class="btn-muted">取消</button>
       </div>
     </div>
@@ -453,7 +453,7 @@
     <div class="footer-right">
       <a href="https://github.com/Inliang/fmo-secondary" target="_blank" rel="noopener">FMO Secondary Dashboard on GitHub</a>
       <span class="footer-sep">·</span>
-      <a href="https://inliang.github.io/envo/" target="_blank" rel="noopener">Envo �?信封打印助手</a>
+      <a href="https://inliang.github.io/envo/" target="_blank" rel="noopener">Envo — 信封打印助手</a>
     </div>
   </footer>
 
