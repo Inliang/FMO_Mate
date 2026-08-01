@@ -2279,13 +2279,6 @@ body {
   }
 }
 
-/* Bottom panels – scrollable overflow */
-.bottom-panels .live-panel,
-.bottom-panels .qso-panel,
-.top-panel {
-  overflow-y: auto;
-}
-
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
   .compass-arrow { transition: none; }
