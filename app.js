@@ -2234,19 +2234,23 @@ const App = {
 
       // 构建额外信息行（memo / serverName / QTH）
       let extraLine = '';
-      if (memo) extraLine += '<span class="recent-memo">' + this._esc(memo) + '</span>';
-      if (serverName) extraLine += '<span class="recent-server">[' + this._esc(serverName) + ']</span>';
       const qth = item.grid ? (this._gridLocationCache[item.grid] || item.grid) : '';
       if (qth) extraLine += '<span class="recent-qth">' + this._esc(qth) + '</span>';
+      if (memo) extraLine += '<span class="recent-dot">·</span><span class="recent-memo">' + this._esc(memo) + '</span>';
+      if (serverName) extraLine += '<span class="recent-dot">·</span><span class="recent-server">' + this._esc(serverName) + '</span>';
 
       return '<div class="recent-item' + (isActive ? ' is-speaking' : '') + (isSelf ? ' is-self' : '') + '" data-callsign="' + item.callsign + '">'
         + '<span class="recent-index-bg">' + (index + 1) + '</span>'
-        + '<div class="recent-main">'
-        + '<div class="recent-callsign-line"><strong>' + item.callsign + '</strong>' + (isSelf ? '<span class="self-tag">您</span>' : '') + '</div>'
-        + (extraLine ? '<div class="recent-extra">' + extraLine + '</div>' : '')
-        + '<span>' + timeStr + '</span>'
-        + '</div>'
+        + '<div class="recent-body">'
+        + '<div class="recent-top">'
+        + '<span class="recent-callsign">' + item.callsign + '</span>'
+        + (isSelf ? '<span class="self-tag">您</span>' : '')
+        + '<span class="recent-spacer"></span>'
+        + '<span class="recent-time">' + timeStr + '</span>'
         + '<span class="recent-count">x' + count + '</span>'
+        + '</div>'
+        + (extraLine ? '<div class="recent-bottom">' + extraLine + '</div>' : '')
+        + '</div>'
         + '</div>';
     }).join('');
 
