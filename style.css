@@ -424,6 +424,29 @@ body {
   box-shadow: var(--shadow-card), var(--shadow-glow-accent);
 }
 
+/* Dynamic background glow when speaking */
+.active-contact-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(ellipse 80% 60% at 50% 35%, rgba(255,152,0,0.08), transparent);
+  opacity: 0;
+  transition: opacity 0.6s var(--ease-in-out);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.active-contact-card.active::before {
+  opacity: 1;
+  animation: ac-bg-pulse 3s var(--ease-in-out) infinite;
+}
+
+@keyframes ac-bg-pulse {
+  0%, 100% { background: radial-gradient(ellipse 80% 60% at 50% 35%, rgba(255,152,0,0.06), transparent); }
+  50% { background: radial-gradient(ellipse 80% 60% at 50% 35%, rgba(255,152,0,0.14), transparent); }
+}
+
 /* ---- Section Label ---- */
 .section-label {
   display: flex;
