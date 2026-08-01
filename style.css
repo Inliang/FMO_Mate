@@ -1127,6 +1127,7 @@ body {
   flex-direction: column;
   overflow: hidden;
   min-height: 0;
+  max-height: 280px;
 }
 
 .bottom-panels .live-panel,
