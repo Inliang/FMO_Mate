@@ -2255,6 +2255,11 @@ body {
   }
 }
 
+/* QSO panel – scrollable overflow */
+.bottom-panels .qso-panel {
+  overflow-y: auto;
+}
+
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
   .compass-arrow { transition: none; }
