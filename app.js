@@ -230,22 +230,6 @@ const App = {
       panelExportBtn.addEventListener('click', () => this.exportQso());
     }
 
-    // QRZ API Key 输入框：从 localStorage 恢复
-    const qrzKeyInput = $('qrz-key-input');
-    if (qrzKeyInput) {
-      const savedKey = localStorage.getItem('qrz_api_key') || '';
-      if (savedKey) qrzKeyInput.value = savedKey;
-      qrzKeyInput.addEventListener('change', () => {
-        localStorage.setItem('qrz_api_key', qrzKeyInput.value.trim());
-      });
-    }
-
-    // QRZ 上传按钮
-    const qrzUploadBtn = $('panel-qrz-upload-btn');
-    if (qrzUploadBtn) {
-      qrzUploadBtn.addEventListener('click', () => this.uploadToQrz());
-    }
-
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') this.closeSettings();
     });
@@ -2629,87 +2613,6 @@ const App = {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  },
-
-  // ============ QRZ.com 上传 ============
-
-  uploadToQrz() {
-    if (!this.qsoList.length) {
-      alert('暂无通联记录可上传');
-      return;
-    }
-
-    let apiKey = localStorage.getItem('qrz_api_key') || '';
-    apiKey = window.prompt('请输入 QRZ Logbook API 密钥：', apiKey);
-    if (!apiKey || !apiKey.trim()) return;
-    apiKey = apiKey.trim();
-    localStorage.setItem('qrz_api_key', apiKey);
-
-    const keyInput = document.getElementById('qrz-key-input');
-    if (keyInput) keyInput.value = apiKey;
-
-    const useReplace = window.confirm('是否启用 REPLACE 模式？\n（将自动覆写重复 QSO，包括已确认的 QSO）');
-
-    const statusEl = document.getElementById('qrz-upload-status');
-    const btn = document.getElementById('panel-qrz-upload-btn');
-    if (statusEl) statusEl.textContent = '上传中...';
-    if (btn) { btn.disabled = true; btn.textContent = '上传中...'; }
-
-    const adif = this._buildAdifString();
-    const callsign = this.myCallsign || 'N0CALL';
-
-    const body = new URLSearchParams();
-    body.append('KEY', apiKey);
-    body.append('ACTION', 'INSERT');
-    body.append('ADIF', adif);
-    if (useReplace) body.append('OPTION', 'REPLACE');
-
-    const QRZ_API = 'https://logbook.qrz.com/api';
-    const CORS_PROXY = 'https://corsproxy.io/?';
-
-    const doUpload = (url) => fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': `FMO-Secondary/1.0 (${callsign})`
-      },
-      body: body.toString()
-    }).then(r => {
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return r.text();
-    });
-
-    doUpload(QRZ_API)
-      .catch(() => doUpload(CORS_PROXY + QRZ_API))
-      .then(text => {
-        const params = new URLSearchParams(text);
-        const result = params.get('RESULT');
-        const reason = params.get('REASON');
-        const logid = params.get('LOGID');
-        const count = params.get('COUNT');
-
-        if (result === 'OK') {
-          const msg = `上传成功！LOGID: ${logid}, COUNT: ${count}`;
-          if (statusEl) { statusEl.textContent = '成功'; statusEl.className = 'qrz-status qrz-success'; }
-          alert(msg);
-        } else if (result === 'REPLACE') {
-          const msg = `已覆写重复 QSO。LOGID: ${logid}, COUNT: ${count}`;
-          if (statusEl) { statusEl.textContent = '已覆写'; statusEl.className = 'qrz-status qrz-replace'; }
-          alert(msg);
-        } else {
-          const msg = reason ? `上传失败: ${reason}` : '上传失败，请检查 API 密钥或确认已订阅 QRZ Logbook。';
-          if (statusEl) { statusEl.textContent = '失败'; statusEl.className = 'qrz-status qrz-fail'; }
-          alert(msg);
-        }
-      })
-      .catch(err => {
-        const msg = `网络错误: ${err.message}`;
-        if (statusEl) { statusEl.textContent = '错误'; statusEl.className = 'qrz-status qrz-fail'; }
-        alert(msg);
-      })
-      .finally(() => {
-        if (btn) { btn.disabled = false; btn.textContent = '上传 QRZ'; }
-      });
   },
 
   // ============ 设置 ============
