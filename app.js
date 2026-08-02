@@ -2664,44 +2664,52 @@ const App = {
     body.append('ADIF', adif);
     if (useReplace) body.append('OPTION', 'REPLACE');
 
-    fetch('https://logbook.qrz.com/api', {
+    const QRZ_API = 'https://logbook.qrz.com/api';
+    const CORS_PROXY = 'https://corsproxy.io/?';
+
+    const doUpload = (url) => fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         'User-Agent': `FMO-Secondary/1.0 (${callsign})`
       },
       body: body.toString()
-    })
-    .then(response => response.text())
-    .then(text => {
-      const params = new URLSearchParams(text);
-      const result = params.get('RESULT');
-      const reason = params.get('REASON');
-      const logid = params.get('LOGID');
-      const count = params.get('COUNT');
-
-      if (result === 'OK') {
-        const msg = `上传成功！LOGID: ${logid}, COUNT: ${count}`;
-        if (statusEl) { statusEl.textContent = '成功'; statusEl.className = 'qrz-status qrz-success'; }
-        alert(msg);
-      } else if (result === 'REPLACE') {
-        const msg = `已覆写重复 QSO。LOGID: ${logid}, COUNT: ${count}`;
-        if (statusEl) { statusEl.textContent = '已覆写'; statusEl.className = 'qrz-status qrz-replace'; }
-        alert(msg);
-      } else {
-        const msg = reason ? `上传失败: ${reason}` : '上传失败，请检查 API 密钥或确认已订阅 QRZ Logbook。';
-        if (statusEl) { statusEl.textContent = '失败'; statusEl.className = 'qrz-status qrz-fail'; }
-        alert(msg);
-      }
-    })
-    .catch(err => {
-      const msg = `网络错误: ${err.message}。QRZ API 可能存在跨域限制，请使用浏览器代理或 CORS 插件。`;
-      if (statusEl) { statusEl.textContent = '错误'; statusEl.className = 'qrz-status qrz-fail'; }
-      alert(msg);
-    })
-    .finally(() => {
-      if (btn) { btn.disabled = false; btn.textContent = '上传 QRZ'; }
+    }).then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.text();
     });
+
+    doUpload(QRZ_API)
+      .catch(() => doUpload(CORS_PROXY + QRZ_API))
+      .then(text => {
+        const params = new URLSearchParams(text);
+        const result = params.get('RESULT');
+        const reason = params.get('REASON');
+        const logid = params.get('LOGID');
+        const count = params.get('COUNT');
+
+        if (result === 'OK') {
+          const msg = `上传成功！LOGID: ${logid}, COUNT: ${count}`;
+          if (statusEl) { statusEl.textContent = '成功'; statusEl.className = 'qrz-status qrz-success'; }
+          alert(msg);
+        } else if (result === 'REPLACE') {
+          const msg = `已覆写重复 QSO。LOGID: ${logid}, COUNT: ${count}`;
+          if (statusEl) { statusEl.textContent = '已覆写'; statusEl.className = 'qrz-status qrz-replace'; }
+          alert(msg);
+        } else {
+          const msg = reason ? `上传失败: ${reason}` : '上传失败，请检查 API 密钥或确认已订阅 QRZ Logbook。';
+          if (statusEl) { statusEl.textContent = '失败'; statusEl.className = 'qrz-status qrz-fail'; }
+          alert(msg);
+        }
+      })
+      .catch(err => {
+        const msg = `网络错误: ${err.message}`;
+        if (statusEl) { statusEl.textContent = '错误'; statusEl.className = 'qrz-status qrz-fail'; }
+        alert(msg);
+      })
+      .finally(() => {
+        if (btn) { btn.disabled = false; btn.textContent = '上传 QRZ'; }
+      });
   },
 
   // ============ 设置 ============
