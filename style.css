@@ -2232,7 +2232,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 16px;
+  padding: 14px 20px;
   font-size: var(--text-sm);
   color: var(--text-muted);
   border-top: 1px solid var(--border-divider);
@@ -2253,19 +2253,39 @@ body {
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 0;
+  gap: 4px;
 }
-.site-footer a {
+
+/* Pill 风格链接 */
+.footer-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 14px;
   color: var(--text-secondary);
   text-decoration: none;
-  transition: color 0.15s;
+  font-size: var(--text-sm);
+  transition: color 0.2s, background-color 0.2s;
 }
-.site-footer a:hover {
+.footer-pill:hover {
   color: var(--accent);
+  background-color: rgba(255, 152, 0, 0.08);
 }
+.footer-pill svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+.footer-pill:hover svg {
+  opacity: 1;
+}
+
+/* 竖线分隔 */
 .footer-sep {
-  margin: 0 8px;
-  color: var(--text-muted);
+  width: 1px;
+  height: 14px;
+  background: var(--border-divider);
+  margin: 0 2px;
 }
 
 /* ---------- Orientation toggle (mobile only) ---------- */
