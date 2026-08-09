@@ -719,6 +719,20 @@ const App = {
       } catch (e) {}
     })());
 
+    // config.getFirmwareVersion → 固件版本（VER）
+    tasks.push((async () => {
+      try {
+        const r = await this.send({ type: 'config', subType: 'getFirmwareVersion' });
+        if ((r.code === 0 || r.code === undefined) && r.data) {
+          const ver = r.data.version || r.data.firmware || r.data.fw || '';
+          if (ver) {
+            const macEl = document.getElementById('dev-mac');
+            if (macEl) macEl.textContent = ver;
+          }
+        }
+      } catch (e) {}
+    })());
+
     // config.getUserPhyFreq → 用户物理频点设置
     tasks.push((async () => {
       try {
@@ -1555,6 +1569,16 @@ const App = {
 
     const todayEl = document.getElementById('stat-today');
     if (todayEl) todayEl.textContent = todayCount;
+
+    // 兜底：API 未返回时用本地 qsoList 计算总通联 / 友台数
+    const totalEl = document.getElementById('stat-total');
+    if (totalEl && (totalEl.textContent === '--' || totalEl.textContent === '')) {
+      totalEl.textContent = this.qsoList.length;
+    }
+    const friendsEl = document.getElementById('stat-friends');
+    if (friendsEl && (friendsEl.textContent === '--' || friendsEl.textContent === '')) {
+      friendsEl.textContent = uniqueCallers.size;
+    }
   },
 
   renderTopCallers() {
