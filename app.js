@@ -798,7 +798,16 @@ const App = {
         }
       } catch (e) {}
     })());
-    // 友台数不在此处通过 API 获取，由 updateQsoCount() 基于本地 qsoList 统一计算
+    // 友台数：从设备 API 获取
+    tasks.push((async () => {
+      try {
+        const r = await this.send({ type: 'qso', subType: 'getContactCount' });
+        if ((r.code === 0 || r.code === undefined) && r.data != null) {
+          const el = document.getElementById('stat-friends');
+          if (el) el.textContent = r.data.count ?? r.data.total ?? r.data.value ?? '--';
+        }
+      } catch (e) {}
+    })());
 
     await Promise.all(tasks);
     console.log('[FMO-DEBUG-DEVICE] fetchDeviceInfo 完成，共 ' + tasks.length + ' 个任务');
@@ -1544,14 +1553,8 @@ const App = {
       if (qc) uniqueCallers.add(this.parseCallsignSsid(qc).call);
     });
 
-    const totalEl = document.getElementById('stat-total');
-    if (totalEl) totalEl.textContent = this.qsoList.length;
-
     const todayEl = document.getElementById('stat-today');
     if (todayEl) todayEl.textContent = todayCount;
-
-    const friendsEl = document.getElementById('stat-friends');
-    if (friendsEl) friendsEl.textContent = uniqueCallers.size;
   },
 
   renderTopCallers() {
@@ -1614,7 +1617,17 @@ const App = {
         }
       }
     } catch (e) {}
-    // 友台数由 updateQsoCount() 基于本地 qsoList 统一计算，不依赖 API
+    // 友台数
+    try {
+      const r = await this.send({ type: 'qso', subType: 'getContactCount' });
+      if ((r.code === 0 || r.code === undefined) && r.data != null) {
+        const val = r.data.count ?? r.data.total ?? r.data.value;
+        if (val != null) {
+          const el = document.getElementById('stat-friends');
+          if (el) el.textContent = val;
+        }
+      }
+    } catch (e) {}
   },
 
   // ============ Speaking Bar ============
