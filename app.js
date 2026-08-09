@@ -1,7 +1,7 @@
 /* ============================================================
    FMO 副屏伴侣 — app.js v8
    v0.4.17: fetchDeviceInfo 加超时保护 + 首尾日志，防止 Phase 1 卡死阻塞 Phase 2 QSO 加载
-   v0.4.15: 填充所有 -- 占位参数 (设备IP/QSO统计/服务器在线数) + 新增 refreshStats
+   v0.4.16: fetchDeviceInfo 加超时保护 + 按fmo-show验证移除 getFirmwareVersion/getContactCount, QSO统计回归本地计算
    v0.4.13: 修复 V2 协议响应匹配 — isResponseLike 加入 event==='ok' 判别
    v0.4.12: 修复 RESPONSE_ALIASES (getListResponse) + 响应匹配兼容 V2 协议 event 字段
    v0.4.0: 推翻四象限布局，FMO-Dashboard 风格纵向信息流
@@ -719,20 +719,6 @@ const App = {
       } catch (e) {}
     })());
 
-    // config.getFirmwareVersion → 固件版本（VER）
-    tasks.push((async () => {
-      try {
-        const r = await this.send({ type: 'config', subType: 'getFirmwareVersion' });
-        if ((r.code === 0 || r.code === undefined) && r.data) {
-          const ver = r.data.version || r.data.firmware || r.data.fw || '';
-          if (ver) {
-            const macEl = document.getElementById('dev-mac');
-            if (macEl) macEl.textContent = ver;
-          }
-        }
-      } catch (e) {}
-    })());
-
     // config.getUserPhyFreq → 用户物理频点设置
     tasks.push((async () => {
       try {
@@ -812,17 +798,6 @@ const App = {
         }
       } catch (e) {}
     })());
-    // 友台数：从设备 API 获取
-    tasks.push((async () => {
-      try {
-        const r = await this.send({ type: 'qso', subType: 'getContactCount' });
-        if ((r.code === 0 || r.code === undefined) && r.data != null) {
-          const el = document.getElementById('stat-friends');
-          if (el) el.textContent = r.data.count ?? r.data.total ?? r.data.value ?? '--';
-        }
-      } catch (e) {}
-    })());
-
     await Promise.all(tasks);
     console.log('[FMO-DEBUG-DEVICE] fetchDeviceInfo 完成，共 ' + tasks.length + ' 个任务');
 
@@ -1548,16 +1523,11 @@ const App = {
     if (!el) return;
     el.textContent = this.qsoList.length;
 
-    // 本地计算今日通联 / 总通联 / 友台数（不依赖 API，作为基础兜底）
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayTs = Math.floor(today.getTime() / 1000);
-
+    // 本地计算今日通联 / 总通联 / 友台数（以本地 qsoList 为准，设备 API 不存在时可工作）
+    const todayTs = Math.floor(new Date().setHours(0, 0, 0, 0) / 1000);
     const todayCount = this.qsoList.filter(q => {
       const ts = q.timestamp ?? q.time ?? 0;
-      const t = typeof ts === 'number'
-        ? (ts > 1e10 ? Math.floor(ts / 1000) : ts)
-        : (new Date(ts).getTime() / 1000 | 0);
+      const t = typeof ts === 'number' ? (ts > 1e10 ? Math.floor(ts / 1000) : ts) : (new Date(ts).getTime() / 1000 | 0);
       return t >= todayTs;
     }).length;
 
@@ -1570,15 +1540,12 @@ const App = {
     const todayEl = document.getElementById('stat-today');
     if (todayEl) todayEl.textContent = todayCount;
 
-    // 兜底：API 未返回时用本地 qsoList 计算总通联 / 友台数
+    const totalCount = this.qsoList.length;
     const totalEl = document.getElementById('stat-total');
-    if (totalEl && (totalEl.textContent === '--' || totalEl.textContent === '')) {
-      totalEl.textContent = this.qsoList.length;
-    }
+    if (totalEl) totalEl.textContent = totalCount;
+
     const friendsEl = document.getElementById('stat-friends');
-    if (friendsEl && (friendsEl.textContent === '--' || friendsEl.textContent === '')) {
-      friendsEl.textContent = uniqueCallers.size;
-    }
+    if (friendsEl) friendsEl.textContent = uniqueCallers.size;
   },
 
   renderTopCallers() {
@@ -1637,17 +1604,6 @@ const App = {
         const val = r.data.count ?? r.data.today ?? r.data.value;
         if (val != null) {
           const el = document.getElementById('stat-today');
-          if (el) el.textContent = val;
-        }
-      }
-    } catch (e) {}
-    // 友台数
-    try {
-      const r = await this.send({ type: 'qso', subType: 'getContactCount' });
-      if ((r.code === 0 || r.code === undefined) && r.data != null) {
-        const val = r.data.count ?? r.data.total ?? r.data.value;
-        if (val != null) {
-          const el = document.getElementById('stat-friends');
           if (el) el.textContent = val;
         }
       }
