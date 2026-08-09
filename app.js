@@ -1622,17 +1622,7 @@ const App = {
         }
       }
     } catch (e) {}
-    // 友台数
-    try {
-      const r = await this.send({ type: 'qso', subType: 'getContactCount' });
-      if ((r.code === 0 || r.code === undefined) && r.data != null) {
-        const val = r.data.count ?? r.data.contacts ?? r.data.friends ?? r.data.value;
-        if (val != null) {
-          const el = document.getElementById('stat-friends');
-          if (el) el.textContent = val;
-        }
-      }
-    } catch (e) {}
+    // 友台数由 updateQsoCount() 基于本地 qsoList 统一计算，不依赖 API
   },
 
   // ============ Speaking Bar ============
