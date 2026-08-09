@@ -533,6 +533,13 @@ const App = {
         this._currentFreq = freqFields.mhz;
         this._currentAltitude = freqFields.alt;
         this._updateFreqDisplay(freqFields.mhz, freqFields.alt);
+        // AGL 兜底：若 API 未返回，从事件流 HEIGHT 填充
+        if (freqFields.alt) {
+          const aglEl = document.getElementById('dev-version');
+          if (aglEl && (aglEl.textContent === '--' || aglEl.textContent === '')) {
+            aglEl.textContent = freqFields.alt;
+          }
+        }
       }
       return;
     }
@@ -566,6 +573,13 @@ const App = {
           this._currentFreq = freqFields.mhz;
           this._currentAltitude = freqFields.alt;
           this._updateFreqDisplay(freqFields.mhz, freqFields.alt);
+          // AGL 兜底：若 API 未返回，从事件流 HEIGHT 填充
+          if (freqFields.alt) {
+            const aglEl = document.getElementById('dev-version');
+            if (aglEl && (aglEl.textContent === '--' || aglEl.textContent === '')) {
+              aglEl.textContent = freqFields.alt;
+            }
+          }
         }
       } else {
         this._finishSpeakingRecords();
@@ -681,38 +695,29 @@ const App = {
       } catch (e) {}
     })());
 
-    // config.getUserPhyAnt → 天线类型（仅名称）+ VER（高度）
+    // config.getUserPhyAnt → 天线类型（ANT）
     tasks.push((async () => {
       try {
         const r = await this.send({ type: 'config', subType: 'getUserPhyAnt' });
         if ((r.code === 0 || r.code === undefined) && r.data) {
-          const antEl = document.getElementById('dev-ant');
-          const antName = r.data.name || r.data.ant || r.data.antenna || '';
-          const antH = r.data.height || r.data.antHeight || '';
-          if (antEl) {
-            antEl.textContent = antName || '--';
-          }
-          // VER = 天线高度
-          if (antH) {
-            this._antHeight = antH;
-            const verEl = document.getElementById('dev-version');
-            if (verEl) verEl.textContent = antH + 'm';
+          const ant = r.data.type || r.data.antenna || r.data.name || r.data.model || '';
+          if (ant) {
+            const antEl = document.getElementById('dev-ant');
+            if (antEl) antEl.textContent = ant;
           }
         }
       } catch (e) {}
     })());
 
-    // config.getUserPhyAntHeight → VER 备用（天线高度独立 API）
+    // config.getUserPhyAntHeight → 天线高度（AGL）
     tasks.push((async () => {
       try {
         const r = await this.send({ type: 'config', subType: 'getUserPhyAntHeight' });
         if ((r.code === 0 || r.code === undefined) && r.data) {
-          const h = r.data.height || r.data.antHeight || r.data.value;
-          if (h != null) {
+          const h = r.data.height ?? r.data.value ?? r.data.agl ?? r.data.altitude ?? '';
+          if (h !== '') {
             const verEl = document.getElementById('dev-version');
-            if (verEl && verEl.textContent === '--') {
-              verEl.textContent = h + 'm';
-            }
+            if (verEl) verEl.textContent = (typeof h === 'number' ? h : parseInt(h, 10)) + 'm';
             if (!this._antHeight) this._antHeight = h;
           }
         }
@@ -723,81 +728,20 @@ const App = {
     tasks.push((async () => {
       try {
         const r = await this.send({ type: 'config', subType: 'getUserPhyFreq' });
-        console.log('[FMO-DEBUG-FREQ] getUserPhyFreq 原始响应:', JSON.stringify(r));
-        console.log('[FMO-DEBUG-FREQ] freq 值:', r?.data?.freq, '类型:', typeof r?.data?.freq);
         if ((r.code === 0 || r.code === undefined) && r.data) {
-          const freqEl = document.getElementById('dev-user-freq');
           const freq = r.data.frequency ?? r.data.freq ?? r.data.rx_freq;
-          if (freqEl && freq != null && freq > 0) {
-            const mhz = (freq > 10000 ? freq / 1e6 : freq).toFixed(4);
-            freqEl.textContent = mhz + ' MHz';
-            // 同步到说话面板频率显示
-            this._currentFreq = mhz;
-            const altVal = r.data.altitude ?? r.data.alt ?? r.data.height;
-            this._currentAltitude = altVal != null ? altVal + 'm' : '';
-            this._updateFreqDisplay(mhz, this._currentAltitude);
-          } else if (!freq || freq === 0) {
-            console.log('[FMO-DEBUG-FREQ] getUserPhyFreq 响应无 freq 字段或 freq=0, data keys:', Object.keys(r.data || {}));
-          }
-        }
-      } catch (e) {}
-    })());
-
-    // radio.getRxFrequency 频率回退（仅当 getUserPhyFreq 无频率时尝试）
-    tasks.push((async () => {
-      if (this._currentFreq) return;
-      try {
-        const r = await this.send({ type: 'radio', subType: 'getRxFrequency' });
-        if ((r.code === 0 || r.code === undefined) && r.data) {
-          const freq = r.data.frequency ?? r.data.rx_freq ?? r.data.freq;
           if (freq != null && freq > 0) {
             const mhz = (freq > 10000 ? freq / 1e6 : freq).toFixed(4);
-            this._currentFreq = mhz;
-            const el = document.getElementById('dev-user-freq');
-            if (el) el.textContent = mhz + ' MHz';
-            this._updateFreqDisplay(mhz, this._currentAltitude || '');
+            const devFreqEl = document.getElementById('dev-user-freq');
+            if (devFreqEl && !this._currentFreq) devFreqEl.textContent = mhz + ' MHz';
+            if (!this._currentFreq) { this._currentFreq = mhz; }
           }
         }
       } catch (e) {}
     })());
 
-    // radio.getStatus 频率兜底（部分旧固件）
-    tasks.push((async () => {
-      if (this._currentFreq) return;
-      try {
-        const r = await this.send({ type: 'radio', subType: 'getStatus' });
-        if ((r.code === 0 || r.code === undefined) && r.data) {
-          const rx = r.data.rx_freq ?? r.data.rxFrequency ?? r.data.frequency;
-          if (rx != null && rx > 0) {
-            const mhz = (rx > 10000 ? rx / 1e6 : rx).toFixed(4);
-            this._currentFreq = mhz;
-            const el = document.getElementById('dev-user-freq');
-            if (el) el.textContent = mhz + ' MHz';
-            this._updateFreqDisplay(mhz, this._currentAltitude || '');
-          }
-        }
-      } catch (e) {}
-    })());
-
-    // QSO 统计: 总通联 / 今日 / 友台数（与设备信息并行获取）
-    tasks.push((async () => {
-      try {
-        const r = await this.send({ type: 'qso', subType: 'getTotalCount' });
-        if ((r.code === 0 || r.code === undefined) && r.data != null) {
-          const el = document.getElementById('stat-total');
-          if (el) el.textContent = r.data.count ?? r.data.total ?? r.data.value ?? '--';
-        }
-      } catch (e) {}
-    })());
-    tasks.push((async () => {
-      try {
-        const r = await this.send({ type: 'qso', subType: 'getTodayCount' });
-        if ((r.code === 0 || r.code === undefined) && r.data != null) {
-          const el = document.getElementById('stat-today');
-          if (el) el.textContent = r.data.count ?? r.data.today ?? r.data.value ?? '--';
-        }
-      } catch (e) {}
-    })());
+    // 以上 6 个 API 均来自 FmoLogs 参考实现（BG5ESN 官方仓库），为设备固件支持的接口
+    // 注意：getFirmwareVersion / getContactCount / getRxFrequency / getStatus 不在 FmoLogs 列表中，不可用
     await Promise.all(tasks);
     console.log('[FMO-DEBUG-DEVICE] fetchDeviceInfo 完成，共 ' + tasks.length + ' 个任务');
 
@@ -812,39 +756,8 @@ const App = {
   },
 
   async fetchRadioInfo() {
-    // 频率获取：尝试 radio.getRxFrequency / radio.getStatus
-    // 注意：不覆盖 _currentAltitude，避免清除 getUserPhyFreq 已设置的高度
-    const setFreq = (freqHz) => {
-      if (freqHz == null || freqHz <= 0) return;
-      const mhz = (freqHz > 10000 ? freqHz / 1e6 : freqHz).toFixed(4);
-      const prevAlt = this._currentAltitude || '';
-      this._currentFreq = mhz;
-      this._updateFreqDisplay(mhz, prevAlt);
-    };
-
-    try {
-      const r = await this.send({ type: 'radio', subType: 'getRxFrequency' });
-      if ((r.code === 0 || r.code === undefined) && r.data) {
-        const freq = r.data.frequency ?? r.data.rx_freq ?? r.data.freq;
-        if (freq != null && freq > 0) {
-          setFreq(freq);
-          return;
-        }
-      }
-    } catch (e) {}
-
-    // 回退：尝试 radio.getStatus（部分固件版本）
-    try {
-      const r = await this.send({ type: 'radio', subType: 'getStatus' });
-      if ((r.code === 0 || r.code === undefined) && r.data) {
-        const rx = r.data.rx_freq ?? r.data.rxFrequency ?? r.data.frequency;
-        const tx = r.data.tx_freq ?? r.data.txFrequency;
-        if (rx != null && rx > 0) {
-          setFreq(rx);
-          return;
-        }
-      }
-    } catch (e) {}
+    // 频率由事件流填充（BEACON / speaking_start 事件携带频率信息），无需主动 API 查询
+    // 设备固件不提供 getRxFrequency / getStatus API（参考 FmoLogs / fmo-show）
   },
 
   latLonToGrid(lat, lon) {
@@ -1586,28 +1499,8 @@ const App = {
   },
 
   async refreshStats() {
-    // 总通联数
-    try {
-      const r = await this.send({ type: 'qso', subType: 'getTotalCount' });
-      if ((r.code === 0 || r.code === undefined) && r.data != null) {
-        const val = r.data.count ?? r.data.total ?? r.data.value;
-        if (val != null) {
-          const el = document.getElementById('stat-total');
-          if (el) el.textContent = val;
-        }
-      }
-    } catch (e) {}
-    // 今日通联
-    try {
-      const r = await this.send({ type: 'qso', subType: 'getTodayCount' });
-      if ((r.code === 0 || r.code === undefined) && r.data != null) {
-        const val = r.data.count ?? r.data.today ?? r.data.value;
-        if (val != null) {
-          const el = document.getElementById('stat-today');
-          if (el) el.textContent = val;
-        }
-      }
-    } catch (e) {}
+    // QSO 统计已由 updateQsoCount() 无条件本地计算，无需设备 API 查询
+    // getTotalCount / getTodayCount 在参考实现中不存在，固件不支持
   },
 
   // ============ Speaking Bar ============
@@ -1995,6 +1888,14 @@ const App = {
       this._updateFreqDisplay(freq, this._currentAltitude || '--');
       const devFreqEl = document.getElementById('dev-user-freq');
       if (devFreqEl) devFreqEl.textContent = freq + ' MHz';
+      // AGL（高度）兜底：若 API 未返回，从 BEACON HEIGHT 填充
+      if (height) {
+        const aglEl = document.getElementById('dev-version');
+        if (aglEl) {
+          const current = aglEl.textContent;
+          if (current === '--' || current === '') aglEl.textContent = height;
+        }
+      }
       console.log('[FMO-DEBUG-FREQ] APRS BEACON 频率:', freq, '高度:', height || '无');
     }
   },
