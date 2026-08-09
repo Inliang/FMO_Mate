@@ -798,15 +798,7 @@ const App = {
         }
       } catch (e) {}
     })());
-    tasks.push((async () => {
-      try {
-        const r = await this.send({ type: 'qso', subType: 'getContactCount' });
-        if ((r.code === 0 || r.code === undefined) && r.data != null) {
-          const el = document.getElementById('stat-friends');
-          if (el) el.textContent = r.data.count ?? r.data.contacts ?? r.data.friends ?? r.data.value ?? '--';
-        }
-      } catch (e) {}
-    })());
+    // 友台数不在此处通过 API 获取，由 updateQsoCount() 基于本地 qsoList 统一计算
 
     await Promise.all(tasks);
     console.log('[FMO-DEBUG-DEVICE] fetchDeviceInfo 完成，共 ' + tasks.length + ' 个任务');
