@@ -591,14 +591,14 @@ const App = {
       const d = evt.data || evt;
       this.addQsoItem(d);
     } else if (evt.event === 'station_update' || evt.event === 'online_change') {
-      // 从事件 data 中直接提取在线人数，不回退到重拉列表
-      if (evt.event === 'online_change') {
-        const evtCount = evt.data?.onlineCount ?? evt.data?.count ?? evt.onlineCount;
-        if (evtCount !== undefined && evtCount !== null) {
-          this._updateOnlineCount(evtCount);
-        }
+      // 从事件 data 中获取在线人数，station_update 和 online_change 均提取
+      const evtCount = evt.data?.onlineCount ?? evt.data?.count ?? evt.onlineCount;
+      if (evtCount !== undefined && evtCount !== null) {
+        this._updateOnlineCount(evtCount);
+        this._eventOnlineCount = evtCount;
+        this._eventOnlineTime = Date.now();
       }
-      // 同时刷新服务器列表（station_update 场景需要）
+      // 刷新服务器列表
       this.fetchServerList();
     }
 
@@ -1027,26 +1027,22 @@ const App = {
     if (el) el.textContent = count;
   },
 
-  /** 同步 KPI 在线人数：优先 getCurrent 提取，兜底从 serverList 匹配 */
+  /** 同步 KPI 在线人数：优先事件推送，其次 getCurrent，兜底汇总所有服务器 onlineCount */
   _syncKpiOnlineCount() {
+    // 近 3 秒内有事件推送的在线人数，不覆盖
+    if (this._eventOnlineTime && (Date.now() - this._eventOnlineTime < 3000)) {
+      return;
+    }
     if (!this.serverList.length) return;
-    
+
     // 尝试按名称匹配当前服务器
     let currentServer = null;
     if (this.currentServerName) {
       currentServer = this.serverList.find(s => s.name === this.currentServerName);
     }
-    // 兜底：按 UID 匹配（getCurrent 可能返回 uid）
     if (!currentServer && this._currentServerUid) {
       currentServer = this.serverList.find(s => s.uid === this._currentServerUid);
     }
-    // 再兜底：取第一个有在线人数的服务器
-    if (!currentServer) {
-      currentServer = this.serverList.find(s =>
-        (s.onlineCount ?? s.count ?? s.users ?? s.online ?? s.userCount) !== undefined
-      );
-    }
-    
     if (currentServer) {
       const count = currentServer.onlineCount
         ?? currentServer.count
@@ -1058,7 +1054,18 @@ const App = {
         return;
       }
     }
-    
+
+    // 兜底：汇总所有服务器的在线设备数（替代取随机服务器 onlineCount 的错误逻辑）
+    let total = 0;
+    for (const s of this.serverList) {
+      const c = s.onlineCount ?? s.count ?? s.users ?? s.online ?? s.userCount;
+      if (typeof c === 'number' && c > 0) total += c;
+    }
+    if (total > 0) {
+      this._updateOnlineCount(total);
+      return;
+    }
+
     console.log('[FMO-DEBUG-OC] _syncKpiOnlineCount: 未在任何 station 中找到在线人数字段。serverList.length=' + this.serverList.length + ', currentServerName=' + this.currentServerName);
     if (this.serverList.length > 0) {
       console.log('[FMO-DEBUG-OC] 首个 station keys:', Object.keys(this.serverList[0]).join(', '));
