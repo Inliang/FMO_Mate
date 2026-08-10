@@ -1483,6 +1483,8 @@ body {
   color: var(--text-muted);
   flex-shrink: 0;
   font-feature-settings: "tnum";
+  min-width: 64px;
+  text-align: right;
 }
 
 .recent-memo {
@@ -1505,14 +1507,17 @@ body {
   flex-shrink: 0;
 }
 
-.recent-qth {
+.recent-grid {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
   color: var(--accent-aux);
-  font-size: var(--text-sm);
+  background: var(--accent-bg);
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
   flex-shrink: 0;
-  max-width: 140px;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
+  font-feature-settings: "tnum";
+  margin-left: 4px;
 }
 
 .recent-count {

@@ -2082,20 +2082,20 @@ const App = {
         serverName = matchingQso.serverName;
       }
 
-      // 构建额外信息行（memo / serverName / QTH）
-      let extraLine = '';
+      // 网格(QTH)单独成列右对齐，与 时间/次数 对齐；memo/中继 放中间截断
       const qth = item.grid ? (this._gridLocationCache[item.grid] || item.grid) : '';
-      if (qth) extraLine += '<span class="recent-qth">' + this._esc(qth) + '</span>';
-      if (memo) extraLine += '<span class="recent-dot">·</span><span class="recent-memo">' + this._esc(memo) + '</span>';
-      if (serverName) extraLine += '<span class="recent-dot">·</span><span class="recent-server">' + this._esc(serverName) + '</span>';
+      let midLine = '';
+      if (memo) midLine += '<span class="recent-memo">' + this._esc(memo) + '</span>';
+      if (serverName) midLine += (midLine ? '<span class="recent-dot">·</span>' : '') + '<span class="recent-server">' + this._esc(serverName) + '</span>';
 
       return '<div class="recent-item' + (isActive ? ' is-speaking' : '') + (isSelf ? ' is-self' : '') + '" data-callsign="' + item.callsign + '">'
         + '<span class="recent-index-bg">' + (index + 1) + '</span>'
         + '<div class="recent-body">'
         + '<span class="recent-callsign">' + item.callsign + '</span>'
         + (isSelf ? '<span class="self-tag">您</span>' : '')
-        + (extraLine ? '<span class="recent-extra">' + extraLine + '</span>' : '')
+        + (midLine ? '<span class="recent-extra">' + midLine + '</span>' : '')
         + '<span class="recent-spacer"></span>'
+        + (qth ? '<span class="recent-grid" title="' + this._esc(item.grid || '') + '">' + this._esc(qth) + '</span>' : '')
         + '<span class="recent-time">' + timeStr + '</span>'
         + '<span class="recent-count">x' + count + '</span>'
         + '</div>'
