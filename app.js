@@ -1,5 +1,6 @@
 /* ============================================================
    FMO 副屏伴侣 — app.js v8
+   v0.4.21: 照搬 FmoLogs 响应匹配逻辑（剥离 Response 后缀直接比较），移除 RESPONSE_ALIASES 和 isResponseLike；ANT 失败加 debug 日志；移除在线人数 3s 新鲜度守卫
    v0.4.17: fetchDeviceInfo 加超时保护 + 首尾日志，防止 Phase 1 卡死阻塞 Phase 2 QSO 加载
    v0.4.16: fetchDeviceInfo 加超时保护 + 按fmo-show验证移除 getFirmwareVersion/getContactCount, QSO统计回归本地计算
    v0.4.13: 修复 V2 协议响应匹配 — isResponseLike 加入 event==='ok' 判别
@@ -14,11 +15,6 @@ function normalizeHost(addr) {
   if (!addr) return '';
   return addr.trim().replace(/^(https?|wss?):?\/\//, '').replace(/\/+$/, '');
 }
-
-const RESPONSE_ALIASES = {
-  station: { getListRange: 'getListResponse' },
-  qso: { getList: 'getListResponse', getDetail: 'getDetailResponse' }
-};
 
 class PcmTap {
   constructor(capacity) {
@@ -431,20 +427,18 @@ const App = {
     const dbg = (...args) => console.log('[FMO-DEBUG]', ...args);
     dbg('recv', msg.type, msg.event, msg.subType, msg.code, Object.keys(msg.data||{}));
 
-    // 响应匹配：V2 协议响应可能带 event:"ok"，故用 subType/code/event 辅助判别
-    const isResponseLike = msg.event === 'ok' || !msg.event || msg.subType !== undefined || msg.code !== undefined;
-    dbg('isResponseLike', isResponseLike, '_inFlight', !!this._inFlight);
-    if (isResponseLike && this._inFlight) {
+    // 响应匹配：FmoLogs 风格 — 剥离 Response 后缀后直接比较
+    if (this._inFlight) {
       const r = this._inFlight.req;
-      const expectedSubType =
-        RESPONSE_ALIASES[r.type]?.[r.subType] ?? `${r.subType}Response`;
-      dbg('matching', r.type, r.subType, 'expectedSubType', expectedSubType);
+      const respSubType = (msg.subType || '').replace('Response', '');
+      let effectiveSubType = respSubType;
+      if (r.type === 'station' && effectiveSubType === 'getList') {
+        effectiveSubType = 'getListRange';
+      }
+      dbg('matching', r.type, r.subType, 'respSubType', respSubType, 'effectiveSubType', effectiveSubType);
 
       let matched = false;
-      if (
-        msg.type === r.type &&
-        (msg.subType === expectedSubType || msg.subType === r.subType)
-      ) {
+      if (msg.type === r.type && effectiveSubType === r.subType) {
         matched = true;
         dbg('match', 'first');
       }
@@ -700,13 +694,19 @@ const App = {
       try {
         const r = await this.send({ type: 'config', subType: 'getUserPhyAnt' });
         if ((r.code === 0 || r.code === undefined) && r.data) {
-          const ant = r.data.type || r.data.antenna || r.data.name || r.data.model || '';
+          let ant = '';
+          if (Array.isArray(r.data) && r.data.length > 0) {
+            const d = r.data[0];
+            ant = d?.type || d?.antenna || d?.name || d?.model || d || '';
+          } else if (r.data && typeof r.data === 'object') {
+            ant = r.data.type || r.data.antenna || r.data.name || r.data.model || '';
+          }
           if (ant) {
             const antEl = document.getElementById('dev-ant');
             if (antEl) antEl.textContent = ant;
           }
         }
-      } catch (e) {}
+      } catch (e) { console.warn('[DEBUG] ANT API failed:', e.message || e); }
     })());
 
     // config.getUserPhyAntHeight → 天线高度（AGL）
