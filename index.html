@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ï»¿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -7,9 +7,9 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>FMO Mate</title>
-  <link rel="stylesheet" href="style.css?v=0812k">  
+  <link rel="stylesheet" href="style.css?v=0812m">  
   <style>
-    /* === Èý²ã¸²¸Ç²ßÂÔ Layer 1: head !important È«Á¿°´Å¥ÇåÁã === */
+    /* === ä¸‰å±‚è¦†ç›–ç­–ç•¥ Layer 1: head !important å…¨é‡æŒ‰é’®æ¸…é›¶ === */
     button, [type="button"], [type="submit"] {
       background-image: none !important;
     }
@@ -65,7 +65,7 @@
       background-image: none !important;
     }
 
-    /* ÉèÖÃÃæ°å overlay ¡ª ÄÚÇ¶È·±£ file:// Ð­ÒéÏÂÉúÐ§ */
+    /* è®¾ç½®é¢æ¿ overlay â€” å†…åµŒç¡®ä¿ file:// åè®®ä¸‹ç”Ÿæ•ˆ */
     .overlay {
       display: none;
       position: fixed;
@@ -181,7 +181,7 @@
 <body>
 <div class="app-wrapper">
 
-  <!-- ===== 1. ¶¥²¿×´Ì¬Ìõ + ÄÚÇ¶ KPI ¿¨Æ¬ÐÐ ===== -->
+  <!-- ===== 1. é¡¶éƒ¨çŠ¶æ€æ¡ + å†…åµŒ KPI å¡ç‰‡è¡Œ ===== -->
   <header class="status-bar">
     <div class="status-bar-top">
       <div class="status-bar-left">
@@ -190,27 +190,27 @@
       </div>
       <div class="status-bar-center">
         <span id="status-dot" class="status-dot"></span>
-        <span id="status-text" class="status-text">Î´Á¬½Ó</span>
+        <span id="status-text" class="status-text">æœªè¿žæŽ¥</span>
         <span class="status-sep">|</span>
-        <span id="net-type" class="net-type-tag" title="·ÃÎÊ·½Ê½">±¾»ú</span>
-        <span class="status-desc" id="command-desc">-- ÕýÔÚÊØÌý</span>
+        <span id="net-type" class="net-type-tag" title="è®¿é—®æ–¹å¼">æœ¬æœº</span>
+        <span class="status-desc" id="command-desc">-- æ­£åœ¨å®ˆå¬</span>
         <span id="live-clock" class="live-clock pill-clock"></span>
       </div>
       <div class="status-bar-right">
-        <span class="stat-pill" title="×ÜÍ¨Áª / ½ñÈÕ">
+        <span class="stat-pill" title="æ€»é€šè” / ä»Šæ—¥">
           <span class="stat-icon">*</span>
           <span id="stat-total">--</span><small>/</small><span id="stat-today">--</span>
         </span>
-        <span class="stat-pill" title="ÓÑÌ¨Êý">
+        <span class="stat-pill" title="å‹å°æ•°">
           <span class="stat-icon">*</span>
           <span id="stat-friends">--</span>
         </span>
         <div class="tool-btn-group">
-          <button class="tool-btn theme-btn" id="theme-dark" data-theme="dark" title="ÉîÉ«Ö÷Ìâ">°µ</button>
-          <button class="tool-btn theme-btn" id="theme-light" data-theme="light" title="Ç³É«Ö÷Ìâ">ÁÁ</button>
-          <button class="tool-btn theme-btn" id="theme-eink" data-theme="e-ink" title="Ë®Ä«ÆÁ">Ä«</button>
-          <button class="tool-btn theme-btn orientation-toggle" id="orientation-toggle-btn" title="ÇÐ»»ºáÊúÆÁ">?</button>
-          <button class="tool-btn" id="cmd-settings-btn" title="ÉèÖÃ">ÉèÖÃ</button>
+          <button class="tool-btn theme-btn" id="theme-dark" data-theme="dark" title="æ·±è‰²ä¸»é¢˜">æš—</button>
+          <button class="tool-btn theme-btn" id="theme-light" data-theme="light" title="æµ…è‰²ä¸»é¢˜">äº®</button>
+          <button class="tool-btn theme-btn" id="theme-eink" data-theme="e-ink" title="æ°´å¢¨å±">å¢¨</button>
+          <button class="tool-btn theme-btn orientation-toggle" id="orientation-toggle-btn" title="åˆ‡æ¢æ¨ªç«–å±">â‡…</button>
+          <button class="tool-btn" id="cmd-settings-btn" title="è®¾ç½®">è®¾ç½®</button>
         </div>
       </div>
     </div>
@@ -244,7 +244,7 @@
         <span class="kpi-value" id="dev-user-freq">--</span>
       </div>
       <div class="kpi-card kpi-online">
-        <span class="kpi-label">ÔÚÏß</span>
+        <span class="kpi-label">åœ¨çº¿</span>
         <span class="kpi-value" id="dev-online-count">--</span>
       </div>
       <div class="kpi-card kpi-server">
@@ -254,13 +254,13 @@
     </div>
   </header>
 
-  <!-- ===== 2. ÖÐ¶Î£ºSpeaking Bar£¨×ó£© + ÓÒ²àÁÐ£¨ÉÏ¸öÍ¨Áª + ·þÎñÆ÷£© ===== -->
+  <!-- ===== 2. ä¸­æ®µï¼šSpeaking Barï¼ˆå·¦ï¼‰ + å³ä¾§åˆ—ï¼ˆä¸Šä¸ªé€šè” + æœåŠ¡å™¨ï¼‰ ===== -->
   <div class="middle-split">
 
-    <!-- ×óÀ¸: Active Contact Hero Card -->
+    <!-- å·¦æ : Active Contact Hero Card -->
     <section id="speaking-bar" class="active-contact-card idle">
       <div class="section-label">
-        <span id="ac-label-title">µ±Ç°ºô½Ð</span>
+        <span id="ac-label-title">å½“å‰å‘¼å«</span>
         <span class="live-indicator" id="ac-label-live">LIVE</span>
       </div>
 
@@ -270,26 +270,26 @@
             <h1 id="sb-callsign" class="ac-callsign">--</h1>
             <span id="sb-contact-count" class="count-badge"></span>
             <span id="sb-grid" class="grid-pill"></span>
-            <span class="new-badge" id="ac-new-badge">ÐÂ</span>
+            <span class="new-badge" id="ac-new-badge">æ–°</span>
           </div>
           <div id="sb-elapsed" class="ac-elapsed"></div>
           <div class="contact-tags">
-            <span class="tag tag-contacted">ÒÑÍ¨Áª</span>
+            <span class="tag tag-contacted">å·²é€šè”</span>
             <span class="tag" id="sb-qth"></span>
           </div>
           <div class="ac-controls">
-            <button class="refresh-btn" id="ac-refresh-btn">Ë¢ÐÂÏÖ³¡</button>
+            <button class="refresh-btn" id="ac-refresh-btn">åˆ·æ–°çŽ°åœº</button>
           </div>
         </div>
         <div class="bearing-panel">
           <div class="compass">
-            <span class="north-label">±±</span>
+            <span class="north-label">åŒ—</span>
             <svg class="compass-arrow" id="compass-arrow" viewBox="0 0 24 32" aria-hidden="true">
               <path d="M12 2 21 29 12 23 3 29Z"/>
             </svg>
           </div>
           <div class="bearing-meta">
-            <strong id="sb-direction">·½Î»Î´Öª</strong>
+            <strong id="sb-direction">æ–¹ä½æœªçŸ¥</strong>
             <span id="sb-distance"></span>
           </div>
         </div>
@@ -297,46 +297,46 @@
 
       <div class="contact-details" id="contact-details-inline">
         <button class="detail-card relay-card" id="relay-detail-btn" type="button">
-          <span class="detail-label">ÖÐ¼Ì / ·þÎñÆ÷</span>
+          <span class="detail-label">ä¸­ç»§ / æœåŠ¡å™¨</span>
           <strong id="server-name-display">--</strong>
           <small id="sb-server"></small>
         </button>
         <button class="detail-card freq-card" id="freq-detail-btn" type="button">
-          <span class="detail-label">ÆµÂÊ / ¸ß¶È</span>
+          <span class="detail-label">é¢‘çŽ‡ / é«˜åº¦</span>
           <strong id="freq-line-text">--</strong>
         </button>
         <button class="detail-card qth-card" id="qth-detail-btn" type="button">
-          <span class="detail-label">QTH / Íø¸ñ</span>
+          <span class="detail-label">QTH / ç½‘æ ¼</span>
           <strong id="freq-qth">--</strong>
         </button>
       </div>
 
-      <div id="sb-placeholder" class="ac-placeholder">µÈ´ýÍ¨Áª...</div>
+      <div id="sb-placeholder" class="ac-placeholder">ç­‰å¾…é€šè”...</div>
     </section>
 
-    <!-- ÓÒÀ¸: ÉÏ¸öÍ¨Áª + ·þÎñÆ÷ -->
+    <!-- å³æ : ä¸Šä¸ªé€šè” + æœåŠ¡å™¨ -->
     <aside class="middle-sidebar">
       <section class="previous-card" id="previous-card">
         <div class="section-label">
-          <span>ÉÏ¸öÍ¨Áª</span>
-          <span id="prev-time-ago">ÔÝÎÞ</span>
+          <span>ä¸Šä¸ªé€šè”</span>
+          <span id="prev-time-ago">æš‚æ— </span>
         </div>
         <div id="prev-card-content" class="prev-empty">
           <div class="prev-info-grid">
             <div class="prev-info-item">
-              <span class="prev-info-label">·½Î»</span>
+              <span class="prev-info-label">æ–¹ä½</span>
               <span class="prev-info-value">--</span>
             </div>
             <div class="prev-info-item">
-              <span class="prev-info-label">¾àÀë</span>
+              <span class="prev-info-label">è·ç¦»</span>
               <span class="prev-info-value">--</span>
             </div>
             <div class="prev-info-item">
-              <span class="prev-info-label">ºôºÅ</span>
+              <span class="prev-info-label">å‘¼å·</span>
               <span class="prev-info-value">--</span>
             </div>
             <div class="prev-info-item">
-              <span class="prev-info-label">Í¨Áª</span>
+              <span class="prev-info-label">é€šè”</span>
               <span class="prev-info-value">--</span>
             </div>
           </div>
@@ -345,17 +345,17 @@
 
       <section class="server-card" id="server-card-sidebar">
         <div class="section-label server-card-header" id="server-card-header-btn">
-          <span>ÊÕ²ØÖÐ¼Ì / ·þÎñÆ÷</span>
-          <span class="server-list-trigger" id="server-search-trigger">ËÑË÷</span>
+          <span>æ”¶è—ä¸­ç»§ / æœåŠ¡å™¨</span>
+          <span class="server-list-trigger" id="server-search-trigger">æœç´¢</span>
           <div class="server-search-popup" id="server-search-popup" style="display:none;">
-            <input type="text" class="server-search-input" id="server-search-input" placeholder="Æ´Òô/Ãû³ÆËÑË÷..." autocomplete="off">
+            <input type="text" class="server-search-input" id="server-search-input" placeholder="æ‹¼éŸ³/åç§°æœç´¢..." autocomplete="off">
             <div class="server-search-results" id="server-search-results"></div>
           </div>
         </div>
         <div class="server-list-sidebar" id="server-list-sidebar">
           <div class="side-loading">
             <div class="loading-spinner"></div>
-            <span>ÕýÔÚ»ñÈ¡·þÎñÆ÷ÁÐ±í...</span>
+            <span>æ­£åœ¨èŽ·å–æœåŠ¡å™¨åˆ—è¡¨...</span>
             <div class="skeleton-list">
               <div class="skeleton-row"></div>
               <div class="skeleton-row"></div>
@@ -370,27 +370,27 @@
   <div class="main-body">
     <div class="content-column">
 
-  <!-- ===== 3. µ×²¿£º×î½ü·¢ÑÔ + Í¨Áª¼ÇÂ¼ ===== -->
+  <!-- ===== 3. åº•éƒ¨ï¼šæœ€è¿‘å‘è¨€ + é€šè”è®°å½• ===== -->
   <div class="bottom-panels">
     <section class="live-panel">
       <div class="panel-header">
-        <span>×î½ü·¢ÑÔ</span>
+        <span>æœ€è¿‘å‘è¨€</span>
         <span class="panel-count" id="recent-count">0</span>
       </div>
       <div id="recent-speakers" class="live-table-wrap">
-        <div class="list-empty">ÔÝÎÞ×î½ü·¢ÑÔ</div>
+        <div class="list-empty">æš‚æ— æœ€è¿‘å‘è¨€</div>
       </div>
     </section>
     <section class="qso-panel">
       <div class="panel-header">
-        <span>Í¨Áª¼ÇÂ¼</span>
+        <span>é€šè”è®°å½•</span>
         <div class="panel-header-actions">
-          <button id="panel-export-btn" class="panel-export-btn" title="µ¼³ö ADIF ÈÕÖ¾">µ¼³ö ADIF</button>
+          <button id="panel-export-btn" class="panel-export-btn" title="å¯¼å‡º ADIF æ—¥å¿—">å¯¼å‡º ADIF</button>
           <span class="panel-count" id="qso-count">0</span>
         </div>
       </div>
       <div id="qso-container" class="live-table-wrap">
-        <div class="list-empty">ÔÝÎÞÍ¨Áª¼ÇÂ¼</div>
+        <div class="list-empty">æš‚æ— é€šè”è®°å½•</div>
       </div>
     </section>
   </div>
@@ -399,53 +399,53 @@
 
     <section class="top-panel">
       <div class="panel-header">
-        <span>Í¨ÁªÅÅÐÐ TOP20</span>
+        <span>é€šè”æŽ’è¡Œ TOP20</span>
         <span class="panel-count" id="top-count">0</span>
       </div>
       <div id="top-callers" class="live-table-wrap">
-        <div class="list-empty">ÔÝÎÞÊý¾Ý</div>
+        <div class="list-empty">æš‚æ— æ•°æ®</div>
       </div>
     </section>
   </div><!-- end .main-body -->
 
-  <!-- ===== Òþ²Ø: ·þÎñÆ÷ÁÐ±í ===== -->
+  <!-- ===== éšè—: æœåŠ¡å™¨åˆ—è¡¨ ===== -->
   <div id="server-list-overlay" class="server-list-overlay">
     <div class="server-list-dropdown">
-      <div class="server-list-title">ÇÐ»»·þÎñÆ÷</div>
-      <input id="server-search" class="server-search" type="text" placeholder="ËÑË÷·þÎñÆ÷...">
+      <div class="server-list-title">åˆ‡æ¢æœåŠ¡å™¨</div>
+      <input id="server-search" class="server-search" type="text" placeholder="æœç´¢æœåŠ¡å™¨...">
       <div id="server-list-container" class="server-list-scroll"></div>
     </div>
   </div>
 
-  <!-- ===== Òþ²Ø: ÉèÖÃÃæ°å ===== -->
+  <!-- ===== éšè—: è®¾ç½®é¢æ¿ ===== -->
   <div id="settings-overlay" class="overlay">
     <div class="overlay-box">
-      <h2>ÉèÖÃ</h2>
+      <h2>è®¾ç½®</h2>
       <div class="settings-row">
-        <label>IP / Ö÷»ú</label>
+        <label>IP / ä¸»æœº</label>
         <input id="fmo-ip" type="text" placeholder="192.168.x.x">
       </div>
       <div class="settings-row">
-        <label>¶Ë¿Ú</label>
+        <label>ç«¯å£</label>
         <input id="fmo-port" type="text" value="80">
       </div>
       <div class="settings-row">
-        <label>Ð­Òé</label>
+        <label>åè®®</label>
         <select id="fmo-protocol">
           <option value="ws">ws</option>
           <option value="wss">wss</option>
         </select>
       </div>
       <div class="overlay-btns">
-        <button id="settings-save" class="btn-accent">±£´æ²¢Á¬½Ó</button>
-        <button id="settings-close" class="btn-muted">È¡Ïû</button>
+        <button id="settings-save" class="btn-accent">ä¿å­˜å¹¶è¿žæŽ¥</button>
+        <button id="settings-close" class="btn-muted">å–æ¶ˆ</button>
       </div>
     </div>
   </div>
 
   <footer class="site-footer">
     <div class="footer-left">
-      <a target="_blank" title="51laÍøÕ¾Í³¼Æ" href="https://v6.51.la/land/3QfdwbkEAE8udblG"><img src="https://sdk.51.la/icon/2-4.png"></a>
+      <a target="_blank" title="51laç½‘ç«™ç»Ÿè®¡" href="https://v6.51.la/land/3QfdwbkEAE8udblG"><img src="https://sdk.51.la/icon/2-4.png"></a>
       <script charset="UTF-8" id="LA_COLLECT" src="https://sdk.51.la/js-sdk-pro.min.js" async></script>
       <script>window.addEventListener('load',function(){try{if(typeof LA!=='undefined')LA.init({id:"3QfdwbkEAE8udblG",ck:"3QfdwbkEAE8udblG",autoTrack:true,hashMode:true})}catch(e){}})</script>
     </div>
@@ -473,7 +473,8 @@
   </footer>
 
 </div>
-  <script src="app.js?v=0812j"></script>
+
+  <script src="app.js?v=0812m"></script>
 </body>
 </html>
 
