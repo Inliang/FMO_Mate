@@ -398,8 +398,9 @@ body {
 
 .status-bar #server-addr {
   font-size: var(--text-md);
-  color: var(--text-secondary);
-  font-weight: 400;
+  color: var(--text-primary);
+  font-weight: 600;
+  font-family: var(--font-mono);
 }
 
 /* ============================================================
