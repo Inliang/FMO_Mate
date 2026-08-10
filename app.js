@@ -1624,6 +1624,7 @@ const App = {
         this._gridLocationCache[grid] = region;
         if (this._currentSpeaker && this._currentSpeaker.grid === grid) { this.renderSpeakingBar(); }
         this.renderQsoList();
+        this.renderRecentSpeakers();
       } else {
         // 所有地理服务均失败，缓存网格码本身避免重复请求
         this._gridLocationCache[grid] = grid;
@@ -2052,9 +2053,6 @@ const App = {
       return;
     }
 
-    // 异步触发 QTH 解析
-    items.forEach(item => { if (item.grid) this._resolveGridLocation(item.grid); });
-
     const now = Date.now();
     container.innerHTML = items.map((item, index) => {
       const call = this.parseCallsignSsid(item.callsign).call;
@@ -2082,8 +2080,10 @@ const App = {
         serverName = matchingQso.serverName;
       }
 
-      // 网格(QTH)单独成列右对齐，与 时间/次数 对齐；memo/中继 放中间截断
-      const qth = item.grid ? (this._gridLocationCache[item.grid] || item.grid) : '';
+      // 网格(QTH)：优先用发言自带网格；历史呼号回退到 QSO 记录的网格/定位码
+      const grid = (item.grid || (matchingQso && (matchingQso.grid || matchingQso.locator)) || '').trim();
+      if (grid) this._resolveGridLocation(grid);
+      const qth = grid ? (this._gridLocationCache[grid] || grid) : '';
       let midLine = '';
       if (memo) midLine += '<span class="recent-memo">' + this._esc(memo) + '</span>';
       if (serverName) midLine += (midLine ? '<span class="recent-dot">·</span>' : '') + '<span class="recent-server">' + this._esc(serverName) + '</span>';
@@ -2093,7 +2093,7 @@ const App = {
         + '<div class="recent-body">'
         + '<span class="recent-callsign">' + item.callsign + '</span>'
         + (isSelf ? '<span class="self-tag">您</span>' : '')
-        + (qth ? '<span class="recent-grid" title="' + this._esc(item.grid || '') + '">' + this._esc(qth) + '</span>' : '')
+        + (qth ? '<span class="recent-grid" title="' + this._esc(grid || '') + '">' + this._esc(qth) + '</span>' : '')
         + (midLine ? '<span class="recent-extra">' + midLine + '</span>' : '')
         + '<span class="recent-spacer"></span>'
         + '<span class="recent-time">' + timeStr + '</span>'
