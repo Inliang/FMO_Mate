@@ -1200,15 +1200,21 @@ const App = {
         return [];
       };
 
-      // 先试 page=1（某些固件 QSO 分页从 1 开始），若为空则回退 page=0
-      const testPage1 = await this.send({ type: 'qso', subType: 'getList', data: { page: 1, pageSize } }).catch(() => ({ code: -1 }));
-      const testList1 = testPage1.code === 0 ? respExtract(testPage1) : [];
-      const startPage = testList1.length > 0 ? 1 : 0;
-      console.log('[FMO-DEBUG-QSO] page=1 测试: length=' + testList1.length + ', 使用 startPage=' + startPage);
+      // 探测 API 类型：先试 getListRange（某些固件 QSO 与 station 一致用 Range），
+      // 再试 getList，哪个返回数据就用哪个
+      let qsoSubType = 'getListRange';
+      let probeResp = await this.send({ type: 'qso', subType: 'getListRange', data: { page: 0, pageSize } }).catch(() => ({ code: -1 }));
+      let probeList = probeResp.code === 0 ? respExtract(probeResp) : [];
+      if (probeList.length === 0) {
+        probeResp = await this.send({ type: 'qso', subType: 'getList', data: { page: 0, pageSize } }).catch(() => ({ code: -1 }));
+        probeList = probeResp.code === 0 ? respExtract(probeResp) : [];
+        qsoSubType = 'getList';
+      }
+      console.log('[FMO-DEBUG-QSO] API 探测: subType=' + qsoSubType + ', page=0 length=' + probeList.length);
 
       const firstBatch = await Promise.all(
         Array.from({ length: Math.min(PREFETCH_PAGES, maxPages) }, (_, i) =>
-          this.send({ type: 'qso', subType: 'getList', data: { page: startPage + i, pageSize } })
+          this.send({ type: 'qso', subType: qsoSubType, data: { page: i, pageSize } })
             .catch(() => ({ code: -1 }))
         )
       );
@@ -1244,7 +1250,7 @@ const App = {
       // 如果还有更多页，继续顺序拉取
       if (!stoppedEarly) {
         for (let page = PREFETCH_PAGES; page < maxPages; page++) {
-          const resp = await this.send({ type: 'qso', subType: 'getList', data: { page, pageSize } });
+          const resp = await this.send({ type: 'qso', subType: qsoSubType, data: { page, pageSize } });
           if (resp.code !== undefined && resp.code !== 0) break;
           const list = respExtract(resp);
           if (list.length === 0) break;
