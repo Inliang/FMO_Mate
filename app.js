@@ -1210,7 +1210,16 @@ const App = {
       console.log('[FMO-DEBUG-QSO] prefetch 完成，firstBatch[0] 状态: ' +
         (firstBatch.length > 0 && firstBatch[0] ? 'code=' + firstBatch[0].code + ' hasData=' + !!firstBatch[0].data : '空'));
       if (firstBatch.length > 0 && firstBatch[0] && firstBatch[0].data) {
+        const rawData = firstBatch[0].data;
+        console.log('[FMO-DEBUG-QSO] firstBatch[0].data 类型:', Array.isArray(rawData) ? 'array' : typeof rawData,
+          'keys:', rawData && typeof rawData === 'object' && !Array.isArray(rawData) ? Object.keys(rawData) : 'N/A');
+        if (rawData && typeof rawData === 'object' && !Array.isArray(rawData)) {
+          console.log('[FMO-DEBUG-QSO] data.list 类型:', rawData.list ? (Array.isArray(rawData.list) ? 'array' : typeof rawData.list) : 'undefined/null',
+            'length:', rawData.list ? rawData.list.length : 'N/A',
+            'count字段:', rawData.count !== undefined ? rawData.count : '不存在');
+        }
         const firstList = respExtract(firstBatch[0]);
+        console.log('[FMO-DEBUG-QSO] respExtract 返回长度:', firstList.length);
         if (firstList.length > 0) {
           console.log('[FMO-DEBUG-QSO] 第一条 QSO 完整字段:', JSON.stringify(firstList[0]));
         }
