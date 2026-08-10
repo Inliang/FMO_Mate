@@ -2241,12 +2241,12 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 20px;
-  font-size: var(--text-sm);
+  padding: 6px 20px;
+  font-size: var(--text-xs);
   color: var(--text-muted);
   border-top: 1px solid var(--border-divider);
   flex-shrink: 0;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 .footer-left {
   display: flex;
@@ -2255,7 +2255,7 @@ body {
 }
 .footer-left img {
   display: block;
-  height: 16px;
+  height: 12px;
 }
 .footer-right {
   display: flex;
@@ -2269,12 +2269,12 @@ body {
 .footer-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 12px;
-  border-radius: 14px;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 12px;
   color: var(--text-secondary);
   text-decoration: none;
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   transition: color 0.2s, background-color 0.2s;
 }
 .footer-pill:hover {
@@ -2292,9 +2292,9 @@ body {
 /* 竖线分隔 */
 .footer-sep {
   width: 1px;
-  height: 14px;
+  height: 10px;
   background: var(--border-divider);
-  margin: 0 2px;
+  margin: 0 1px;
 }
 
 /* ---------- Orientation toggle (mobile only) ---------- */
