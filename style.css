@@ -401,7 +401,7 @@ body {
 
 .main-body {
   display: flex;
-  gap: var(--space-2);
+  gap: 0;
   flex: 1;
   overflow: hidden;
 }
@@ -409,7 +409,7 @@ body {
 .content-column {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 0;
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -1126,10 +1126,9 @@ body {
 .bottom-panels {
   display: flex;
   gap: var(--space-2);
-  flex: 1.2;
+  flex: 0 0 auto;
   min-height: 0;
   overflow: hidden;
-  margin-top: 24px;
 }
 
 .bottom-panels .live-panel,
@@ -1140,6 +1139,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  height: 200px;
 }
 
 .bottom-panels .live-panel,
@@ -2351,6 +2351,7 @@ body {
   .status-dot.connecting { animation: none; }
   .qso-row.slide-in { animation: none; }
 }
+
 
 
 
