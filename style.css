@@ -439,7 +439,7 @@ body {
   box-shadow: var(--shadow-card), var(--shadow-glow-accent);
 }
 
-/* Dynamic background glow when speaking 鈥?breathing radial pulse */
+/* Dynamic background glow when speaking — breathing radial pulse */
 .active-contact-card::before {
   content: "";
   position: absolute;
@@ -824,7 +824,6 @@ body {
   flex-direction: column;
   gap: var(--space-2);
   overflow: hidden;
-  max-height: calc(100% - var(--card-unit-height) * 2 - var(--space-2));
 }
 
 .middle-sidebar .previous-card,
