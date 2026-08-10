@@ -233,14 +233,21 @@ body {
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   font-weight: 600;
-  color: #4ADE80;
-  background: rgba(74, 222, 128, 0.10);
+  color: var(--text-secondary);
+  background: var(--bg-deepest);
   padding: 3px 12px;
-  border-radius: 20px;
+  border-radius: var(--radius-full);
   white-space: nowrap;
   flex-shrink: 0;
   margin-left: auto;
-  box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.18);
+  box-shadow: 0 0 0 1px var(--border-divider);
+}
+[data-theme="dark"] .pill-clock {
+  background: var(--bg-hover);
+  box-shadow: none;
+}
+[data-theme="e-ink"] .pill-clock {
+  box-shadow: 0 0 0 1px #000000;
 }
 
 .status-dot {
