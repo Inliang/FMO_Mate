@@ -1210,6 +1210,12 @@ body {
   overflow-x: auto;
 }
 
+/* 最近发言 / 通联排行 TOP20：列表为单列纵向，去掉横向拖拽条 */
+#recent-speakers,
+#top-callers {
+  overflow-x: hidden;
+}
+
 .list-empty {
   padding: 24px 16px;
   text-align: center;
