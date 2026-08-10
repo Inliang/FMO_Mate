@@ -404,6 +404,7 @@ body {
   gap: 0;
   flex: 1;
   overflow: hidden;
+  align-items: flex-end;
 }
 
 .content-column {
@@ -413,6 +414,8 @@ body {
   flex: 1;
   min-width: 0;
   overflow: hidden;
+  align-self: stretch;
+  justify-content: flex-end;
 }
 
 /* ---- Active Contact Card (Speaking Bar) ---- */
