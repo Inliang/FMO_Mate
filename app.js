@@ -866,6 +866,7 @@ const App = {
     try {
       const r = await this.send({ type: 'station', subType: 'getCurrent' });
       if ((r.code === 0 || r.code === undefined) && r.data) {
+        console.log('[FMO-DEBUG-OC] getCurrent data keys:', Object.keys(r.data).join(', '));
         this.currentServerName = r.data.name || '';
         this._prevServer = this.currentServerName;
         this._currentServerUid = r.data.uid || '';
@@ -969,9 +970,10 @@ const App = {
       return;
     }
 
-    console.log('[FMO-DEBUG-OC] _syncKpiOnlineCount: 未在任何 station 中找到在线人数字段。serverList.length=' + this.serverList.length + ', currentServerName=' + this.currentServerName);
+    // API 层无在线人数时，用服务器总数兜底（122 台即 122 在线）
+    console.log('[FMO-DEBUG-OC] _syncKpiOnlineCount: 未在任何 station 中找到在线人数字段。serverList.length=' + this.serverList.length + ', 回退使用服务器总数');
     if (this.serverList.length > 0) {
-      console.log('[FMO-DEBUG-OC] 首个 station keys:', Object.keys(this.serverList[0]).join(', '));
+      this._updateOnlineCount(this.serverList.length);
     }
   },
 
