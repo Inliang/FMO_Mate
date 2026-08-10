@@ -1185,78 +1185,24 @@ const App = {
 
   async fetchQsoListAll() {
     console.log('[FMO-DEBUG-QSO] fetchQsoListAll 开始');
-    const pageSize = 200;
-    const maxPages = 200;
     const all = [];
 
     try {
-      // 批量预取前 3 页，大部分设备的总 QSO 数量在 3 页以内
-      const PREFETCH_PAGES = 3;
-      const respExtract = (resp) => {
+      // 对照 fmo-show：不传 pageSize，设备默认每页 20 条，用 logId 推断总数
+      let page = 0;
+      while (page < 200) {
+        const resp = await this.send({ type: 'qso', subType: 'getList', data: { page } });
+        if (!resp || (resp.code !== undefined && resp.code !== 0)) break;
         const payload = resp.data;
-        if (Array.isArray(payload)) return payload;
-        if (payload && Array.isArray(payload.list)) return payload.list;
-        if (payload && Array.isArray(payload.data)) return payload.data;
-        return [];
-      };
-
-      // 探测 API 类型：先试 getListRange（某些固件 QSO 与 station 一致用 Range），
-      // 再试 getList，哪个返回数据就用哪个
-      let qsoSubType = 'getListRange';
-      let probeResp = await this.send({ type: 'qso', subType: 'getListRange', data: { page: 0, pageSize } }).catch(() => ({ code: -1 }));
-      let probeList = probeResp.code === 0 ? respExtract(probeResp) : [];
-      if (probeList.length === 0) {
-        probeResp = await this.send({ type: 'qso', subType: 'getList', data: { page: 0, pageSize } }).catch(() => ({ code: -1 }));
-        probeList = probeResp.code === 0 ? respExtract(probeResp) : [];
-        qsoSubType = 'getList';
-      }
-      console.log('[FMO-DEBUG-QSO] API 探测: subType=' + qsoSubType + ', page=0 length=' + probeList.length);
-
-      const firstBatch = await Promise.all(
-        Array.from({ length: Math.min(PREFETCH_PAGES, maxPages) }, (_, i) =>
-          this.send({ type: 'qso', subType: qsoSubType, data: { page: i, pageSize } })
-            .catch(() => ({ code: -1 }))
-        )
-      );
-
-      console.log('[FMO-DEBUG-QSO] prefetch 完成，firstBatch[0] 状态: ' +
-        (firstBatch.length > 0 && firstBatch[0] ? 'code=' + firstBatch[0].code + ' hasData=' + !!firstBatch[0].data : '空'));
-      if (firstBatch.length > 0 && firstBatch[0] && firstBatch[0].data) {
-        const rawData = firstBatch[0].data;
-        console.log('[FMO-DEBUG-QSO] firstBatch[0].data 类型:', Array.isArray(rawData) ? 'array' : typeof rawData,
-          'keys:', rawData && typeof rawData === 'object' && !Array.isArray(rawData) ? Object.keys(rawData) : 'N/A');
-        if (rawData && typeof rawData === 'object' && !Array.isArray(rawData)) {
-          console.log('[FMO-DEBUG-QSO] data.list 类型:', rawData.list ? (Array.isArray(rawData.list) ? 'array' : typeof rawData.list) : 'undefined/null',
-            'length:', rawData.list ? rawData.list.length : 'N/A',
-            'count字段:', rawData.count !== undefined ? rawData.count : '不存在');
-        }
-        const firstList = respExtract(firstBatch[0]);
-        console.log('[FMO-DEBUG-QSO] respExtract 返回长度:', firstList.length);
-        if (firstList.length > 0) {
-          console.log('[FMO-DEBUG-QSO] 第一条 QSO 完整字段:', JSON.stringify(firstList[0]));
-        }
-      }
-
-      let stoppedEarly = false;
-      for (let i = 0; i < firstBatch.length; i++) {
-        const resp = firstBatch[i];
-        if (!resp || (resp.code !== undefined && resp.code !== 0)) { stoppedEarly = true; break; }
-        const list = respExtract(resp);
-        if (list.length === 0) { stoppedEarly = true; break; }
+        let list;
+        if (Array.isArray(payload)) { list = payload; }
+        else if (payload && Array.isArray(payload.list)) { list = payload.list; }
+        else if (payload && Array.isArray(payload.data)) { list = payload.data; }
+        else { list = []; }
+        if (list.length === 0) break;
         all.push(...list);
-        if (list.length < pageSize) { stoppedEarly = true; break; }
-      }
-
-      // 如果还有更多页，继续顺序拉取
-      if (!stoppedEarly) {
-        for (let page = PREFETCH_PAGES; page < maxPages; page++) {
-          const resp = await this.send({ type: 'qso', subType: qsoSubType, data: { page, pageSize } });
-          if (resp.code !== undefined && resp.code !== 0) break;
-          const list = respExtract(resp);
-          if (list.length === 0) break;
-          all.push(...list);
-          if (list.length < pageSize) break;
-        }
+        if (list.length < 20) break;
+        page++;
       }
     } catch (e) { console.warn('[FMO-DEBUG-QSO] fetchQsoListAll 异常:', e.message); }
 
