@@ -1200,9 +1200,15 @@ const App = {
         return [];
       };
 
+      // 先试 page=1（某些固件 QSO 分页从 1 开始），若为空则回退 page=0
+      const testPage1 = await this.send({ type: 'qso', subType: 'getList', data: { page: 1, pageSize } }).catch(() => ({ code: -1 }));
+      const testList1 = testPage1.code === 0 ? respExtract(testPage1) : [];
+      const startPage = testList1.length > 0 ? 1 : 0;
+      console.log('[FMO-DEBUG-QSO] page=1 测试: length=' + testList1.length + ', 使用 startPage=' + startPage);
+
       const firstBatch = await Promise.all(
         Array.from({ length: Math.min(PREFETCH_PAGES, maxPages) }, (_, i) =>
-          this.send({ type: 'qso', subType: 'getList', data: { page: i, pageSize } })
+          this.send({ type: 'qso', subType: 'getList', data: { page: startPage + i, pageSize } })
             .catch(() => ({ code: -1 }))
         )
       );
