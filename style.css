@@ -1481,7 +1481,9 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  flex-shrink: 1;
   min-width: 0;
+  max-width: 100%;
   overflow: hidden;
   color: var(--text-muted);
   font-size: var(--text-sm);
@@ -1538,7 +1540,11 @@ body {
   background: var(--accent-bg);
   padding: 1px 8px;
   border-radius: var(--radius-full);
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
   font-feature-settings: "tnum";
   margin-right: 4px;
