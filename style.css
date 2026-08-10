@@ -1509,7 +1509,7 @@ body {
 
 .recent-grid {
   font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-size: var(--text-base);
   color: var(--accent-aux);
   background: var(--accent-bg);
   padding: 1px 8px;
@@ -1517,7 +1517,7 @@ body {
   flex-shrink: 0;
   white-space: nowrap;
   font-feature-settings: "tnum";
-  margin-left: 4px;
+  margin-right: 4px;
 }
 
 .recent-count {

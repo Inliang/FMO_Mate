@@ -2093,9 +2093,9 @@ const App = {
         + '<div class="recent-body">'
         + '<span class="recent-callsign">' + item.callsign + '</span>'
         + (isSelf ? '<span class="self-tag">您</span>' : '')
+        + (qth ? '<span class="recent-grid" title="' + this._esc(item.grid || '') + '">' + this._esc(qth) + '</span>' : '')
         + (midLine ? '<span class="recent-extra">' + midLine + '</span>' : '')
         + '<span class="recent-spacer"></span>'
-        + (qth ? '<span class="recent-grid" title="' + this._esc(item.grid || '') + '">' + this._esc(qth) + '</span>' : '')
         + '<span class="recent-time">' + timeStr + '</span>'
         + '<span class="recent-count">x' + count + '</span>'
         + '</div>'
