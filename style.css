@@ -1183,7 +1183,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 18px;
+  position: relative;
+  padding: 12px 18px 12px 20px;
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   font-weight: 600;
@@ -1192,6 +1193,20 @@ body {
   text-transform: uppercase;
   flex-shrink: 0;
   border-bottom: 1px solid var(--border-divider);
+}
+
+/* 所有标题统一的左侧装饰竖条 */
+.section-label::before,
+.panel-header::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--accent);
 }
 
 .panel-count {
@@ -2607,7 +2622,7 @@ body {
   color: var(--text-secondary);
   font-weight: 600;
   letter-spacing: 0.1em;
-  padding-left: 4px;
+  padding-left: 20px;
 }
 
 /* ---- Panel header titles: a touch more present ---- */
