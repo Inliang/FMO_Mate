@@ -1295,7 +1295,7 @@ const App = {
         <span class="qso-callsign">${callsign}</span>
         ${gridHtml ? '<span class="qso-grid-cell">' + gridHtml + '</span>' : '<span class="qso-grid-cell qso-cell-empty">--</span>'}
         <span class="qso-qth-cell" title="${qth}">${qth}</span>
-        <span class="qso-memo-cell ${memo ? '' : 'qso-cell-empty'}" title="${this._esc(memo) || '无留言'}">${memo || '无留言'}</span>
+        <span class="qso-memo-cell ${memo ? 'qso-memo-clickable' : 'qso-cell-empty'}" title="${memo ? '点击复制留言' : '暂无留言'}" data-memo="${this._esc(memo)}">${memo || '暂无留言'}</span>
         <span class="qso-relay-cell ${relay ? '' : 'qso-cell-empty'}" title="${this._esc(relay) || '无中继'}">${relay || '无中继'}</span>
         <span class="qso-time">${timeStr}</span>
       </div>`;
@@ -1310,9 +1310,33 @@ const App = {
         }).catch(() => {});
       });
     });
+
+    container.querySelectorAll('.qso-memo-clickable').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        const memo = el.dataset.memo;
+        if (memo) {
+          navigator.clipboard.writeText(memo).then(() => {
+            this._showToast('已复制留言');
+          }).catch(() => {
+            this._showToast('复制失败');
+          });
+        } else {
+          this._showToast('暂无留言');
+        }
+      });
+    });
   },
 
   _esc(str) { return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); },
+
+  _showToast(msg) {
+    const el = document.createElement('div');
+    el.className = 'qso-toast';
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 1900);
+  },
 
   _extractQsoCallsign(item) {
     // FMO 不同版本 API 返回的呼号字段名不一致

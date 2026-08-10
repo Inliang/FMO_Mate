@@ -1276,6 +1276,36 @@ body {
   white-space: nowrap;
 }
 
+.qso-memo-cell.qso-memo-clickable {
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.qso-memo-cell.qso-memo-clickable:hover {
+  color: var(--accent-color, #4fc3f7);
+}
+
+/* toast */
+.qso-toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.78);
+  color: #fff;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  z-index: 9999;
+  pointer-events: none;
+  animation: toastFade 1.8s ease forwards;
+}
+@keyframes toastFade {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+  15% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  75% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 .qso-relay-cell {
   flex: 1 1 0;
   min-width: 0;
