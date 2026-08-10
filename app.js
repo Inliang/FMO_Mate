@@ -697,7 +697,7 @@ const App = {
           let ant = '';
           if (Array.isArray(r.data) && r.data.length > 0) {
             const d = r.data[0];
-            ant = d?.type || d?.antenna || d?.name || d?.model || d || '';
+            ant = d?.ant || d?.type || d?.antenna || d?.name || d?.model || d || '';
           } else if (r.data && typeof r.data === 'object') {
             ant = r.data.type || r.data.antenna || r.data.name || r.data.model || '';
           }
