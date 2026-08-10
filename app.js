@@ -2092,14 +2092,12 @@ const App = {
       return '<div class="recent-item' + (isActive ? ' is-speaking' : '') + (isSelf ? ' is-self' : '') + '" data-callsign="' + item.callsign + '">'
         + '<span class="recent-index-bg">' + (index + 1) + '</span>'
         + '<div class="recent-body">'
-        + '<div class="recent-top">'
         + '<span class="recent-callsign">' + item.callsign + '</span>'
         + (isSelf ? '<span class="self-tag">您</span>' : '')
+        + (extraLine ? '<span class="recent-extra">' + extraLine + '</span>' : '')
         + '<span class="recent-spacer"></span>'
         + '<span class="recent-time">' + timeStr + '</span>'
         + '<span class="recent-count">x' + count + '</span>'
-        + '</div>'
-        + (extraLine ? '<div class="recent-bottom">' + extraLine + '</div>' : '')
         + '</div>'
         + '</div>';
     }).join('');
