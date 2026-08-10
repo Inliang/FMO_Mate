@@ -402,9 +402,8 @@ body {
 .main-body {
   display: flex;
   gap: 0;
-  flex: 1;
+  flex: 0 0 auto;
   overflow: hidden;
-  align-items: flex-end;
 }
 
 .content-column {
