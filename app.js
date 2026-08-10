@@ -1295,7 +1295,7 @@ const App = {
         <span class="qso-callsign">${callsign}</span>
         ${gridHtml ? '<span class="qso-grid-cell">' + gridHtml + '</span>' : '<span class="qso-grid-cell qso-cell-empty">--</span>'}
         <span class="qso-qth-cell" title="${qth}">${qth}</span>
-        <span class="qso-memo-cell ${memo ? 'qso-memo-clickable' : 'qso-cell-empty'}" title="${memo ? '点击复制留言' : '暂无留言'}" data-memo="${this._esc(memo)}">${memo || '暂无留言'}</span>
+        <span class="qso-memo-cell ${memo ? 'qso-memo-clickable' : 'qso-cell-empty'}" title="${this._esc(memo) || '暂无留言'}" data-memo="${this._esc(memo)}">${memo || '暂无留言'}</span>
         <span class="qso-relay-cell ${relay ? '' : 'qso-cell-empty'}" title="${this._esc(relay) || '无中继'}">${relay || '无中继'}</span>
         <span class="qso-time">${timeStr}</span>
       </div>`;
