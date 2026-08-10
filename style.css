@@ -821,6 +821,7 @@ body {
   flex-direction: column;
   gap: var(--space-2);
   overflow: hidden;
+  max-height: calc(100% - 408px);
 }
 
 .middle-sidebar .previous-card,
