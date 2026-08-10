@@ -515,28 +515,16 @@ const App = {
         isHost: evt.isHost || false,
         distance: evt.distance !== undefined ? evt.distance : derived.distance,
         azimuth: evt.azimuth !== undefined ? evt.azimuth : derived.azimuth,
-        altitude: evt.altitude !== undefined ? evt.altitude : derived.altitude,
-        freq: evt.freq || derived.freq || '',
-        height: evt.height || derived.height || 0,
-        serverName: srv.name || evt.serverName || '',
-        serverUid: srv.uid || evt.serverUid || '',
-      });
-      // 从事件中提取呼叫人的频率/高度
-      const freqFields = this._extractFreqFromEvent(evt);
-      if (freqFields) {
-        this._currentFreq = freqFields.mhz;
-        this._currentAltitude = freqFields.alt;
-        this._updateFreqDisplay(freqFields.mhz, freqFields.alt);
-        // AGL 兜底：若 API 未返回，从事件流 HEIGHT 填充
-        if (freqFields.alt) {
-          const aglEl = document.getElementById('dev-version');
-          if (aglEl && (aglEl.textContent === '--' || aglEl.textContent === '')) {
-            aglEl.textContent = freqFields.alt;
-          }
-        }
+          altitude: evt.altitude !== undefined ? evt.altitude : derived.altitude,
+          freq: derived.freq || '',
+          height: derived.height || 0,
+          serverName: srv.name || evt.serverName || '',
+          serverUid: srv.uid || evt.serverUid || '',
+        });
+        // 频率/高度只来自发言人本人：其 QSO 记录（derived）或其 APRS 信标（见 _parseBeaconPayload）。
+        // 不再使用 speaking_start 事件里的 evt.freq / evt.data.frequency —— 那是中继/后台频点，并非发言人本人。
+        return;
       }
-      return;
-    }
     if (evt.event === 'speaking_stop') {
       this._finishSpeakingRecords();
       this.hideSpeaking();
@@ -556,25 +544,12 @@ const App = {
           distance: d.distance !== undefined ? d.distance : derived.distance,
           azimuth: d.azimuth !== undefined ? d.azimuth : derived.azimuth,
           altitude: d.altitude !== undefined ? d.altitude : derived.altitude,
-          freq: d.freq || derived.freq || '',
-          height: d.height || derived.height || 0,
+          freq: derived.freq || '',
+          height: derived.height || 0,
           serverName: srv.name || d.serverName || '',
           serverUid: srv.uid || d.serverUid || '',
         });
-        // 从 data 字段提取频率/高度
-        const freqFields = this._extractFreqFromEvent(d);
-        if (freqFields) {
-          this._currentFreq = freqFields.mhz;
-          this._currentAltitude = freqFields.alt;
-          this._updateFreqDisplay(freqFields.mhz, freqFields.alt);
-          // AGL 兜底：若 API 未返回，从事件流 HEIGHT 填充
-          if (freqFields.alt) {
-            const aglEl = document.getElementById('dev-version');
-            if (aglEl && (aglEl.textContent === '--' || aglEl.textContent === '')) {
-              aglEl.textContent = freqFields.alt;
-            }
-          }
-        }
+        // 频率/高度只来自发言人本人：其 QSO 记录（derived）或其 APRS 信标，不使用事件 data.frequency（后台频点）。
       } else {
         this._finishSpeakingRecords();
         this.hideSpeaking();
@@ -732,8 +707,8 @@ const App = {
           if (freq != null && freq > 0) {
             const mhz = (freq > 10000 ? freq / 1e6 : freq).toFixed(4);
             const devFreqEl = document.getElementById('dev-user-freq');
-            if (devFreqEl && !this._currentFreq) devFreqEl.textContent = mhz + ' MHz';
-            if (!this._currentFreq) { this._currentFreq = mhz; }
+            if (devFreqEl) devFreqEl.textContent = mhz + ' MHz';
+            // 注意：这是本机/后台物理频点，仅用于“设备信息”面板，不得混入“当前呼叫”发言人的频率/高度。
           }
         }
       } catch (e) {}
@@ -1069,24 +1044,30 @@ const App = {
     if (!popup) return;
 
     const q = (query || '').trim().toLowerCase();
+
+    // 列表尚未加载
     if (!this.serverList.length) {
       results.innerHTML = '<div class="server-search-empty">加载中...</div>';
       popup.style.display = 'flex';
       return;
     }
 
-    let filtered = this.serverList;
-    if (q) {
-      filtered = this.serverList.filter(s => {
-        const name = (s.name || '').toLowerCase();
-        if (name.includes(q)) return true;
-        const pinyin = this._toPinyinInitials(s.name || '');
-        if (pinyin.includes(q)) return true;
-        const uid = String(s.uid ?? s._id ?? s.id ?? '').toLowerCase();
-        if (uid.includes(q)) return true;
-        return false;
-      });
+    // 未输入关键词：只提示，不要把整张服务器列表又渲染一遍（避免与下方主列表重复显示）
+    if (!q) {
+      results.innerHTML = '<div class="server-search-empty">输入名称或拼音首字母搜索</div>';
+      popup.style.display = 'flex';
+      return;
     }
+
+    const filtered = this.serverList.filter(s => {
+      const name = (s.name || '').toLowerCase();
+      if (name.includes(q)) return true;
+      const pinyin = this._toPinyinInitials(s.name || '');
+      if (pinyin.includes(q)) return true;
+      const uid = String(s.uid ?? s._id ?? s.id ?? '').toLowerCase();
+      if (uid.includes(q)) return true;
+      return false;
+    });
 
     if (!filtered.length) {
       results.innerHTML = '<div class="server-search-empty">无匹配服务器</div>';
@@ -1860,6 +1841,9 @@ const App = {
   /* 解析 APRS BEACON 逗号分隔载荷（APFMO4 格式） */
   _parseBeaconPayload(payload) {
     if (!payload || typeof payload !== 'string') return;
+    // 仅当前正在发言人的信标才更新“当前呼叫”的频率/高度卡片。
+    // 信标里的 FREQ:/HEIGHT: 是发言人本人的发射参数，区别于本机/后台频点（getUserPhyFreq 等）。
+    if (!this._currentSpeaker) return;
     const parts = payload.split(',');
     let freq = null, height = null;
     for (const part of parts) {
@@ -1877,18 +1861,9 @@ const App = {
     if (freq) {
       this._currentFreq = freq;
       this._currentAltitude = height || this._currentAltitude || '';
+      // 仅更新“当前呼叫”卡片；设备信息面板由 getUserPhyFreq / getUserPhyAntHeight 提供，不在此写入。
       this._updateFreqDisplay(freq, this._currentAltitude || '--');
-      const devFreqEl = document.getElementById('dev-user-freq');
-      if (devFreqEl) devFreqEl.textContent = freq + ' MHz';
-      // AGL（高度）兜底：若 API 未返回，从 BEACON HEIGHT 填充
-      if (height) {
-        const aglEl = document.getElementById('dev-version');
-        if (aglEl) {
-          const current = aglEl.textContent;
-          if (current === '--' || current === '') aglEl.textContent = height;
-        }
-      }
-      console.log('[FMO-DEBUG-FREQ] APRS BEACON 频率:', freq, '高度:', height || '无');
+      console.log('[FMO-DEBUG-FREQ] APRS BEACON(发言人) 频率:', freq, '高度:', height || '无');
     }
   },
 
@@ -2248,13 +2223,13 @@ const App = {
       relayNameEl.textContent = sp.serverName || this.currentServerName || '--';
     }
 
-    // Freq & Height from speaker
+    // Freq & Height from speaker（仅发言人本人数据：QSO 推导 / APRS 信标）
     const freqAltEl = document.getElementById('freq-line-text');
     if (freqAltEl) {
       const parts = [];
       if (sp.freq) parts.push(sp.freq + ' MHz');
       if (sp.height) parts.push(sp.height + 'm');
-      if (parts.length > 0) freqAltEl.textContent = parts.join(' · ');
+      freqAltEl.textContent = parts.length > 0 ? parts.join(' · ') : '--';
     }
 
     // Contact count
