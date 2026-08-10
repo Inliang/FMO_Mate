@@ -220,12 +220,21 @@ body {
   color: var(--warning);
 }
 
-.status-refresh {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
+.pill-clock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: #4ADE80;
+  background: rgba(74, 222, 128, 0.10);
+  padding: 3px 12px;
+  border-radius: 20px;
   white-space: nowrap;
-  margin-left: auto;
   flex-shrink: 0;
+  margin-left: auto;
+  box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.18);
 }
 
 .status-dot {

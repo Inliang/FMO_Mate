@@ -644,7 +644,6 @@ const App = {
     await this.fetchQsoListAll();
     // 如果以上都未能获取频率，额外尝试 radio API
     if (!this._currentFreq) await this.fetchRadioInfo();
-    this._updateRefreshTime();
     console.log('[FMO-DEBUG-SERVER] fetchAllData 全部完成');
   },
 
