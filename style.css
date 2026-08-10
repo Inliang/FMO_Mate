@@ -1150,13 +1150,13 @@ body {
 .top-panel {
   width: 260px;
   flex-shrink: 0;
-  margin-top: 24px;
   background: var(--bg-card);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  max-height: 200px;
 }
 
 .panel-header {
