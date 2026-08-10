@@ -1142,11 +1142,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  max-height: 200px;
-}
-
-.bottom-panels .live-panel,
-.bottom-panels .qso-panel {
+  height: 200px;
   flex: 1;
 }
 
