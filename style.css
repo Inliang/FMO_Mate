@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    FMO Mate - World Clock Dashboard Style
    White / Warm Orange / Soft Card Design
    ============================================================ */
@@ -404,6 +404,7 @@ body {
   gap: var(--space-2);
   flex: 1;
   overflow: hidden;
+  padding-top: 12px;
 }
 
 .content-column {
@@ -434,7 +435,7 @@ body {
   box-shadow: var(--shadow-card), var(--shadow-glow-accent);
 }
 
-/* Dynamic background glow when speaking — breathing radial pulse */
+/* Dynamic background glow when speaking 鈥?breathing radial pulse */
 .active-contact-card::before {
   content: "";
   position: absolute;
@@ -1161,7 +1162,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 18px;
+  padding: 12px 18px;
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   font-weight: 600;
@@ -1822,7 +1823,7 @@ body {
    10. RESPONSIVE
    ============================================================ */
 
-/* Tablet & Small Desktop (≤1200px) */
+/* Tablet & Small Desktop (鈮?200px) */
 @media (max-width: 1200px) {
   .middle-sidebar {
     width: 240px;
@@ -1843,7 +1844,7 @@ body {
   .bearing-meta strong { font-size: var(--text-md); }
 }
 
-/* Tablet Portrait (≤900px) */
+/* Tablet Portrait (鈮?00px) */
 @media (max-width: 900px) {
   body { padding: 6px; }
   .app-wrapper {
@@ -1937,7 +1938,7 @@ body {
   .section-label { padding: 8px 12px 4px 12px; font-size: var(--text-xs); }
 }
 
-/* Mobile Portrait (≤480px) */
+/* Mobile Portrait (鈮?80px) */
 @media (max-width: 480px) {
   body { padding: 4px; }
   .app-wrapper { height: calc(100vh - 8px); }
@@ -2133,10 +2134,10 @@ body {
 }
 
 /* ============================================================
-   Theme: Light (Steel Industrial — inherits :root)
+   Theme: Light (Steel Industrial 鈥?inherits :root)
    ============================================================ */
 [data-theme="light"] {
-  /* All variables inherited from :root — no overrides needed */
+  /* All variables inherited from :root 鈥?no overrides needed */
 }
 
 /* ============================================================
@@ -2293,7 +2294,7 @@ body {
   gap: 4px;
 }
 
-/* Pill 风格链接 */
+/* Pill 椋庢牸閾炬帴 */
 .footer-pill {
   display: inline-flex;
   align-items: center;
@@ -2317,7 +2318,7 @@ body {
   opacity: 1;
 }
 
-/* 竖线分隔 */
+/* 绔栫嚎鍒嗛殧 */
 .footer-sep {
   width: 1px;
   height: 10px;
@@ -2349,3 +2350,4 @@ body {
   .status-dot.connecting { animation: none; }
   .qso-row.slide-in { animation: none; }
 }
+
