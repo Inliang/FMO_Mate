@@ -1227,7 +1227,7 @@ const App = {
   _enrichQsoDetails: async function () {
     if (!this._qsoDetailCache) this._qsoDetailCache = {};
     const toFetch = [];
-    for (let i = 0; i < Math.min(this.qsoList.length, 15); i++) {
+    for (let i = 0; i < this.qsoList.length; i++) {
       const item = this.qsoList[i];
       if (!item.logId) continue;
       if (this._qsoDetailCache[item.logId]) {
@@ -1268,7 +1268,7 @@ const App = {
     }
 
     // 最新的 15 条
-    const items = this.qsoList.slice(0, 15);
+    const items = [...this.qsoList];
     items.forEach(item => { if (item.grid || item.locator) this._resolveGridLocation(item.grid || item.locator); });
     container.innerHTML = items.map(item => {
       const ts = item.timestamp ? new Date(item.timestamp * 1000) : null;
