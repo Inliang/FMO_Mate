@@ -404,7 +404,6 @@ body {
   gap: var(--space-2);
   flex: 1;
   overflow: hidden;
-  padding-top: 48px;
 }
 
 .content-column {
@@ -1130,6 +1129,7 @@ body {
   flex: 1.2;
   min-height: 0;
   overflow: hidden;
+  margin-top: 24px;
 }
 
 .bottom-panels .live-panel,
@@ -1150,6 +1150,7 @@ body {
 .top-panel {
   width: 260px;
   flex-shrink: 0;
+  margin-top: 24px;
   background: var(--bg-card);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
