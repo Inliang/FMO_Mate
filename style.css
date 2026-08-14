@@ -1902,12 +1902,15 @@ body {
     height: auto;
   }
   .status-bar-top {
-    height: 34px;
-    padding: 0 8px;
-    gap: 6px;
+    height: auto;
+    padding: 5px 8px;
+    gap: 4px 8px;
+    flex-wrap: wrap;
   }
   .status-desc { display: none; }
   .stat-pill { font-size: var(--text-xs); padding: 1px 6px; }
+  .status-bar-right { flex-wrap: wrap; gap: 4px 6px; }
+  .tool-btn-group { flex-wrap: wrap; }
 
   .status-bar .kpi-row { flex-wrap: wrap; padding: 4px 8px 6px; }
   .status-bar .kpi-card { flex: 1 1 calc(50% - 4px); padding: 4px 6px; }
@@ -1986,34 +1989,52 @@ body {
   .section-label { padding: 8px 12px 4px 12px; font-size: var(--text-xs); }
 }
 
-/* Mobile Portrait (鈮?80px) */
+/* Mobile Portrait (≤480px) */
 @media (max-width: 480px) {
   body { padding: 4px; }
   .app-wrapper { height: calc(100vh - 8px); }
 
   .brand-marker { width: 6px; height: 6px; }
   .brand-label { font-size: var(--text-sm); }
-  .status-bar {
-    height: auto;
-  }
+
+  /* 顶部：状态+时钟占第一行，统计胶囊与主题按钮换行到第二行，
+     避免窄屏下被 overflow:hidden 裁切而消失 */
   .status-bar-top {
-    height: 30px;
-    padding: 0 6px;
-    gap: 4px;
+    height: auto;
+    padding: 5px 8px;
+    gap: 4px 8px;
+    flex-wrap: wrap;
+  }
+  .status-bar-center {
+    flex: 1 1 auto;
+    min-width: 0;
+    order: 1;
   }
   .status-text { font-size: var(--text-xs); }
-  .stat-pill { font-size: var(--text-xs); padding: 1px 4px; }
-  .tool-btn { font-size: var(--text-xs); padding: 2px 6px; }
-  .theme-btn { min-width: 24px; padding: 2px 6px; }
+  .status-bar-right {
+    flex: 1 1 100%;
+    width: 100%;
+    order: 2;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 4px 6px;
+  }
+  .tool-btn-group { flex-wrap: wrap; gap: 4px; }
+  .stat-pill { font-size: var(--text-xs); padding: 2px 6px; }
+  .tool-btn { font-size: var(--text-xs); padding: 4px 8px; min-height: 30px; }
+  .theme-btn { min-width: 28px; padding: 4px 8px; min-height: 30px; }
 
-  .status-bar .kpi-row { gap: 4px; flex-wrap: wrap; padding: 3px 6px 5px; }
-  .status-bar .kpi-card { flex: 1 1 45%; padding: 2px 4px; }
+  /* KPI 设备参数：3 个一行紧凑排列，不横向滚动 */
+  .status-bar .kpi-row { gap: 4px; flex-wrap: wrap; padding: 4px 8px 6px; }
+  .status-bar .kpi-card { flex: 1 1 calc(33.333% - 4px); min-width: 0; padding: 4px 4px; }
+  .status-bar .kpi-label { font-size: 9px; }
+  .status-bar .kpi-value { font-size: var(--text-sm); }
 
-  .middle-split { gap: 4px; }
+  .middle-split { gap: 6px; }
   .active-contact-card { padding: 6px 0 0 0; }
 
-  .ac-hero { padding: 0 8px 8px 8px; gap: 4px; }
-  .ac-callsign { font-size: 22px; }
+  .ac-hero { padding: 0 8px 8px 8px; gap: 6px; }
+  .ac-callsign { font-size: 24px; }
   .callsign-wrap { gap: 4px; margin-bottom: 2px; }
   .contact-tags { gap: 4px; margin-bottom: 4px; }
   .tag { font-size: var(--text-xs); padding: 2px 6px; }
@@ -2021,11 +2042,11 @@ body {
   .count-badge { font-size: var(--text-base); padding: 2px 8px; }
   .new-badge { font-size: var(--text-xs); padding: 2px 6px; }
   .ac-controls { gap: 6px; }
-  .refresh-btn { font-size: var(--text-xs); padding: 2px 8px; }
+  .refresh-btn { font-size: var(--text-xs); padding: 4px 10px; min-height: 30px; }
   .ac-elapsed { font-size: var(--text-md); }
 
   .bearing-panel { gap: 6px; padding: 0 4px; }
-  .compass { width: 32px; height: 32px; }
+  .compass { width: 34px; height: 34px; }
   .compass-arrow { width: 8px; height: 14px; }
   .north-label { font-size: 8px; }
   .bearing-meta strong { font-size: var(--text-base); }
@@ -2033,29 +2054,36 @@ body {
 
   #contact-details-inline {
     padding: 0 8px 8px 8px;
-    gap: 4px;
+    gap: 6px;
   }
-  #contact-details-inline .detail-card { padding: 6px 8px; }
+  #contact-details-inline .detail-card { flex: 1 1 45%; padding: 6px 8px; }
   .detail-card strong { font-size: var(--text-sm); }
   .detail-card small { font-size: var(--text-xs); }
   .detail-label { font-size: 9px; }
 
-  .middle-sidebar { max-height: 100px; gap: 4px; flex-direction: row; }
-  .middle-sidebar .server-card { flex: 1; }
-  .middle-sidebar .previous-card { flex: 0 0 auto; }
-  .section-label { padding: 6px 8px 2px 8px; font-size: 9px; }
-  .panel-header { padding: 6px 10px; font-size: var(--text-xs); }
+  /* 右栏：上个通联 + 收藏中继/服务器 改为竖向堆叠，避免窄屏并排拥挤 */
+  .middle-sidebar { flex-direction: column; max-height: none; gap: 6px; width: 100%; }
+  .middle-sidebar .previous-card { width: 100%; flex: 0 0 auto; }
+  .middle-sidebar .server-card { width: 100%; flex: 1 1 auto; min-height: 120px; max-height: 30vh; }
 
-  .bottom-panels { gap: 4px; }
+  .section-label { padding: 6px 10px 4px 10px; font-size: var(--text-xs); }
+  .panel-header { padding: 8px 12px; font-size: var(--text-xs); }
+
+  /* 列表类面板：竖向堆叠 + 放宽高度，内部按需滚动，不再被压成 100px 小窗 */
+  .bottom-panels { gap: 6px; flex-direction: column; }
   .bottom-panels .live-panel,
-  .bottom-panels .qso-panel { flex: 1 1 100%; max-height: 100px; min-height: 60px; }
+  .bottom-panels .qso-panel { flex: 1 1 100%; max-height: 34vh; min-height: 140px; }
 
-  .top-panel { max-height: 100px; min-height: 60px; }
+  .top-panel { width: 100%; max-height: 28vh; min-height: 120px; }
 
-  .qso-row { padding: 4px 8px; gap: 2px; }
-  .qso-callsign { font-size: var(--text-sm); max-width: 70px; }
-  .qso-grid-cell { font-size: var(--text-xs); width: 40px; }
-  .qso-time { width: 80px; font-size: var(--text-xs); }
+  .qso-row { padding: 6px 10px; gap: 4px; }
+  .qso-callsign { font-size: var(--text-sm); max-width: 90px; }
+  .qso-grid-cell { font-size: var(--text-xs); width: 44px; }
+  .qso-time { width: 84px; font-size: var(--text-xs); }
+
+  /* 底部链接：换行居中 */
+  .site-footer { flex-direction: column; gap: 6px; align-items: center; padding: 8px; }
+  .footer-right { flex-wrap: wrap; justify-content: center; gap: 6px; }
 }
 
 /* Mobile Landscape Mode (manual toggle) */
