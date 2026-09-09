@@ -1,475 +1,324 @@
 ﻿<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
+<html lang="zh-CN" data-page-node-id="L8jPNiU75CoDZHqN7S0Bhf">
+<head data-page-node-id="cBELiDkkFeBDsmHiTvzZ98">
+  <meta charset="UTF-8" data-page-node-id="BVcBm2iAtiwVOK8rpdm9Wg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="UZpiqkDcP4DGXrBENOUBi4">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0" data-page-node-id="85Q0yHHIj8Kxhm1WLbG6QY">
+  <meta http-equiv="Pragma" content="no-cache" data-page-node-id="psPwBN8Ufl94ISwKVL4R3F">
+  <meta http-equiv="Expires" content="0" data-page-node-id="Mzq7UEkXXB7DYSj996UUgL">
   <title>FMO Mate</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="style.css?v=0820p18">  
-  <style>
-    /* === 三层覆盖策略 Layer 1: head !important 全量按钮清零 === */
-    button, [type="button"], [type="submit"] {
-      background-image: none !important;
-    }
-    .refresh-btn, .server-list-trigger, #ac-refresh-btn,
-    .server-card-header, .panel-export-btn, .export-adif-btn {
-      background: var(--bg-hover) !important;
-      color: var(--text-secondary) !important;
-      border: none !important;
-      box-shadow: none !important;
-      outline: none !important;
-      appearance: none !important;
-      -webkit-appearance: none !important;
-      -moz-appearance: none !important;
-      text-decoration: none !important;
-      background-image: none !important;
-    }
-    .refresh-btn:hover, .server-list-trigger:hover, #ac-refresh-btn:hover,
-    .panel-export-btn:hover, .export-adif-btn:hover {
-      background: var(--bg-card) !important;
-      color: var(--text-primary) !important;
-      box-shadow: none !important;
-      background-image: none !important;
-    }
-    .server-card-header, .server-card-header:hover {
-      background: var(--bg-card) !important;
-      color: var(--text-secondary) !important;
-      border: none !important;
-      box-shadow: none !important;
-      background-image: none !important;
-    }
-    .server-card-header:hover {
-      background: var(--bg-hover) !important;
-    }
-    .tool-btn, .tool-btn:hover, #cmd-server-btn, #cmd-settings-btn,
-    .view-toggle-btn, .settings-btn {
-      background: var(--bg-hover) !important;
-      color: var(--text-secondary) !important;
-      border: none !important;
-      box-shadow: none !important;
-      outline: none !important;
-      appearance: none !important;
-      -webkit-appearance: none !important;
-      -moz-appearance: none !important;
-      text-decoration: none !important;
-      width: auto !important;
-      height: auto !important;
-      background-image: none !important;
-    }
-    .tool-btn:hover, #cmd-server-btn:hover, #cmd-settings-btn:hover,
-    .view-toggle-btn:hover, .settings-btn:hover {
-      background: var(--bg-card) !important;
-      color: var(--text-primary) !important;
-      background-image: none !important;
-    }
-
-    /* 设置面板 overlay — 内嵌确保 file:// 协议下生效 */
-    .overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 200;
-      background: rgba(0, 0, 0, 0.3);
-      justify-content: center;
-      align-items: center;
-    }
-    .overlay.open {
-      display: flex;
-    }
-    .overlay.open { display: flex; }
-    .overlay-box {
-      width: 360px;
-      max-width: 92vw;
-      background: var(--bg-elevated);
-      border-radius: var(--radius-md);
-      box-shadow: var(--shadow-elevated);
-      border: 1px solid var(--border-card);
-      padding: 22px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-    .overlay-box h2 {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text-primary);
-    }
-    .settings-row {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-    .settings-row { display: flex; flex-direction: column; gap: 5px; }
-    .settings-row label {
-      font-family: var(--font-mono);
-      font-size: 12px;
-      color: var(--text-muted);
-      letter-spacing: 0.1em;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-    .settings-row input,
-    .settings-row select {
-      padding: 9px 12px;
-      background: var(--bg-input);
-      border-radius: var(--radius-sm);
-      box-shadow: none;
-      border: none;
-      color: var(--text-primary);
-      font-size: 14px;
-      font-family: var(--font-mono);
-      transition: background 0.2s var(--ease-out);
-    }
-    .settings-row input:focus,
-    .settings-row select:focus {
-      background: var(--bg-hover);
-      outline: none;
-    }
-    .settings-row select {
-      cursor: pointer;
-      appearance: none;
-      -webkit-appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666666'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 12px center;
-      padding-right: 32px;
-    }
-    .overlay-btns {
-      display: flex;
-      gap: 8px;
-      justify-content: flex-end;
-      margin-top: 4px;
-    }
-    .overlay-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
-    .btn-accent {
-      padding: 9px 22px;
-      background: var(--bg-hover);
-      color: var(--text-secondary);
-      border: none;
-      border-radius: var(--radius-sm);
-      font-size: 14px;
-      cursor: pointer;
-      font-family: var(--font-mono);
-      box-shadow: none;
-      outline: none;
-      transition: all 0.2s var(--ease-out);
-    }
-    .btn-accent:hover {
-      background: var(--bg-card);
-      color: var(--text-primary);
-    }
-    .btn-muted {
-      padding: 9px 22px;
-      background: var(--bg-elevated);
-      color: var(--text-secondary);
-      border: none;
-      border-radius: var(--radius-sm);
-      font-size: 14px;
-      cursor: pointer;
-      font-family: var(--font-mono);
-      box-shadow: none;
-      transition: all 0.2s var(--ease-out);
-    }
-    .btn-muted:hover {
-      background: var(--bg-hover);
-      color: var(--text-primary);
-    }
-  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com" data-page-node-id="XhXhwhxqB397QaCGYC914u">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin data-page-node-id="a1Blyd2eBfByxb5WLWMDzr">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" data-page-node-id="IpPQGTu3BlviiZVEl9oYxl">
+  <link rel="stylesheet" href="style.css?v=0909n" data-page-node-id="ATWCsppPDIzcDQz3y7BDAF">
 </head>
-<body>
-<div class="app-wrapper">
+<body data-page-node-id="0eTqUaa7itPg7UuUXy0v5G">
+<div class="app-wrapper" data-page-node-id="RRCSHqXticB7YEC9y3Al8C">
 
   <!-- ===== 1. 顶部状态条 + 内嵌 KPI 卡片行 ===== -->
-  <header class="status-bar">
-    <div class="status-bar-top">
-      <div class="status-bar-left">
-        <span class="brand-marker"></span>
-        <span class="brand-label">FMO</span>
-      </div>
-      <div class="status-bar-center">
-        <span id="status-dot" class="status-dot"></span>
-        <span id="status-text" class="status-text">未连接</span>
-        <span class="status-sep">|</span>
-        <span id="net-type" class="net-type-tag" title="访问方式">本机</span>
-        <span class="status-desc" id="command-desc">-- 正在守听</span>
-        <span id="live-clock" class="live-clock pill-clock"></span>
-      </div>
-      <div class="status-bar-right">
-        <span class="stat-pill" title="总通联 / 今日">
-          <span class="stat-icon">*</span>
-          <span id="stat-total">--</span><small>/</small><span id="stat-today">--</span>
+  <header class="status-bar" data-page-node-id="V8iVzAgAI64bAKl0gLclvb">
+    <div class="status-bar-top" data-page-node-id="ly1TiyVBcj62SMzdoVDGkq">
+      <div class="status-bar-left" data-page-node-id="lMSbiWZNPO6BN26axYLrqy">
+        <span class="brand-marker" aria-hidden="true" data-page-node-id="YMoDi0y7lEAPvEyqlUwu9u">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" data-page-node-id="Y4jK2NSN4UGWNnhmr9TUgo">
+            <circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none" data-page-node-id="OmiE6MJLKg9bcoTSP0Lb0l"/>
+            <path d="M8.4 8.4a5.1 5.1 0 0 0 0 7.2M15.6 8.4a5.1 5.1 0 0 1 0 7.2" data-page-node-id="Fak1DqxhuXF6OZuWL0IoTJ"/>
+            <path d="M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8" data-page-node-id="vHRWBDT1zRy1rCeOaelMLO"/>
+          </svg>
         </span>
-        <span class="stat-pill" title="友台数">
-          <span class="stat-icon">*</span>
-          <span id="stat-friends">--</span>
+        <span class="brand-label" data-page-node-id="0l4uWMXK7iWBBKq7yGNOyD">FMO</span>
+      </div>
+
+      <div class="status-bar-center" data-page-node-id="tYAQHHv2BfcaAF6hUIduEi">
+        <span id="status-dot" class="status-dot" data-page-node-id="uXAUaHXIVBDKZp61pY8C4w"></span>
+        <span id="status-text" class="status-text" data-page-node-id="heQBErJb7lEJjp7um2PEki">未连接</span>
+        <span class="status-sep" aria-hidden="true" data-page-node-id="Izs8NW3LCMM5KJU4Cqqq6h">|</span>
+        <span id="live-clock" class="pill-clock" data-page-node-id="zpA6eXIqNdhxW0G1tPF4Nw"></span>
+        <span id="net-type" class="net-type-tag" title="访问方式" data-page-node-id="GRR5Sw5pbJY5Ulbm1TFNvg">本机</span>
+      </div>
+
+      <div class="status-bar-right" data-page-node-id="HP0BR7SdRDnAxxeERJhutc">
+        <span class="stat-pill" title="总通联 / 今日" data-page-node-id="BmC6q7PXwPZVj3HiSfExgR">
+          <span class="stat-icon" aria-hidden="true" data-page-node-id="MZZoHj71fRfZAY1OqcbO99">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="RynAktPPjMSV1z9WuOcnUM"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 20.5l1.5-4.6A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z" data-page-node-id="NBxwmeoIfK5iWURzrGEzbb"/></svg>
+          </span>
+          <span id="stat-total" data-page-node-id="WuidOGIjAu8DLpgVvjVsI2">--</span><small data-page-node-id="QFXjPAMc833AUqsi75Z10P">/</small><span id="stat-today" data-page-node-id="qlgHXLgGd3DgiWzh2cgF4D">--</span>
         </span>
-        <div class="tool-btn-group">
-          <button class="tool-btn theme-btn" id="theme-dark" data-theme="dark" title="深色主题">暗</button>
-          <button class="tool-btn theme-btn" id="theme-light" data-theme="light" title="浅色主题">亮</button>
-          <button class="tool-btn theme-btn" id="theme-eink" data-theme="e-ink" title="水墨屏">墨</button>
-          <button class="tool-btn theme-btn orientation-toggle" id="orientation-toggle-btn" title="切换横竖屏">⇅</button>
-          <button class="tool-btn" id="cmd-settings-btn" title="设置">设置</button>
+        <span class="stat-pill" title="友台数" data-page-node-id="EGZjO16elL62lfd13HXEY5">
+          <span class="stat-icon" aria-hidden="true" data-page-node-id="l1VxtlHqRMFYaQ6qnXNgEW">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="HvcDTBSkbJgKEm0K8CBrEL"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" data-page-node-id="qnXme89KuJ2KYFhb9hHN5e"/><circle cx="9" cy="7" r="4" data-page-node-id="8oS12aC3NPhABq2xe9n4Fv"/><path d="M22 21v-2a4 4 0 0 0-3-3.9" data-page-node-id="Kqi3mRQCSEhUfEhVtRujxA"/></svg>
+          </span>
+          <span id="stat-friends" data-page-node-id="vUfl11kTcHTXxYdiAoiKPN">--</span>
+        </span>
+        <div class="tool-btn-group" data-page-node-id="rt6RpyNg1O5f9HxTgLwvuE">
+          <button class="tool-btn theme-btn" id="theme-dark" data-theme="dark" title="深色主题" data-page-node-id="fCk7vBgf076MGLNennWEF4">暗</button>
+          <button class="tool-btn theme-btn" id="theme-light" data-theme="light" title="浅色主题" data-page-node-id="pWSdeutx1Oz1RQBz2Uw0F9">亮</button>
+          <button class="tool-btn theme-btn" id="theme-eink" data-theme="e-ink" title="水墨屏" data-page-node-id="7G9mivCsC1YojYawt6Ngwc">墨</button>
+          <button class="tool-btn theme-btn orientation-toggle" id="orientation-toggle-btn" title="切换横竖屏" data-page-node-id="ZizuNdGcc2BCHiP1Wp3vdD">⇅</button>
+          <button class="tool-btn" id="cmd-settings-btn" title="设置" data-page-node-id="r5tBooPLbFkrDmtirhoeWT">设置</button>
         </div>
       </div>
     </div>
-    <div class="kpi-row">
-      <div class="kpi-card kpi-callsign">
-        <span class="kpi-label">CALL</span>
-        <span class="kpi-value" id="dev-callsign">--</span>
+
+    <div class="kpi-row" data-page-node-id="Ls5Ibx1iCWwCgr1LKEAfs0">
+      <div class="kpi-card kpi-callsign" data-page-node-id="LGzciuATdk9uWBzOrZ8VRN">
+        <span class="kpi-label" data-page-node-id="OzrbkD6bs2ZDHEnoA13Zit">CALL</span>
+        <span class="kpi-value" id="dev-callsign" data-page-node-id="SXe7cXa4QtDqbrC9SDssIU">--</span>
       </div>
-      <div class="kpi-card kpi-uid">
-        <span class="kpi-label">UID</span>
-        <span class="kpi-value" id="dev-uid">--</span>
+      <div class="kpi-card kpi-uid" data-page-node-id="YQolqmqRsOMOvteN1BMgsI">
+        <span class="kpi-label" data-page-node-id="dBDQfntOO7TfMx3dduDnJH">UID</span>
+        <span class="kpi-value" id="dev-uid" data-page-node-id="e0vTXSyzYnZeNgg35TywkQ">--</span>
       </div>
-      <div class="kpi-card kpi-version">
-        <span class="kpi-label">AGL</span>
-        <span class="kpi-value" id="dev-version">--</span>
+      <div class="kpi-card kpi-version" data-page-node-id="qXrmGAkseGTlXpXIa58VTp">
+        <span class="kpi-label" data-page-node-id="ullHv6lr7TkAQugyGDPOh5">AGL</span>
+        <span class="kpi-value" id="dev-version" data-page-node-id="a63ipLZmi2kgXJn56s64PI">--</span>
       </div>
-      <div class="kpi-card kpi-mac">
-        <span class="kpi-label">VER</span>
-        <span class="kpi-value" id="dev-mac">--</span>
+      <div class="kpi-card kpi-mac" data-page-node-id="PoyEJlQWbR2DR5AXiYKTzQ">
+        <span class="kpi-label" data-page-node-id="mtkIFCbjzKudscj9KnbrCu">VER</span>
+        <span class="kpi-value" id="dev-mac" data-page-node-id="joEZxCqgl2gwTpaXkqizoO">--</span>
       </div>
-      <div class="kpi-card kpi-hw">
-        <span class="kpi-label">HW</span>
-        <span class="kpi-value" id="dev-hw">--</span>
+      <div class="kpi-card kpi-hw" data-page-node-id="r7QSCugkULi1PmCI5g4Oyw">
+        <span class="kpi-label" data-page-node-id="YKxX9x1M0qHlno4xfsOjyn">HW</span>
+        <span class="kpi-value" id="dev-hw" data-page-node-id="RhniDcpmo45T1Mq7AzIxdX">--</span>
       </div>
-      <div class="kpi-card kpi-ant">
-        <span class="kpi-label">ANT</span>
-        <span class="kpi-value" id="dev-ant">--</span>
+      <div class="kpi-card kpi-ant" data-page-node-id="ZI5EELMWUoEOI3FJvc9m7B">
+        <span class="kpi-label" data-page-node-id="A9mqvAmVeojnG5vuxF9R3H">ANT</span>
+        <span class="kpi-value" id="dev-ant" data-page-node-id="YUf4PKQRXPzhqOhS1dRGkW">--</span>
       </div>
-      <div class="kpi-card kpi-freq">
-        <span class="kpi-label">FREQ</span>
-        <span class="kpi-value" id="dev-user-freq">--</span>
+      <div class="kpi-card kpi-freq" data-page-node-id="aWNsiHMhOISx9yFujcWEuH">
+        <span class="kpi-label" data-page-node-id="ko5AGWYyz17GXXz06LE90n">FREQ</span>
+        <span class="kpi-value" id="dev-user-freq" data-page-node-id="U9I74Cs529wn27uPYbGtkC">--</span>
       </div>
-      <div class="kpi-card kpi-online">
-        <span class="kpi-label">在线</span>
-        <span class="kpi-value" id="dev-online-count">--</span>
+      <div class="kpi-card kpi-online" data-page-node-id="62RZ3Gie1KBEGiOnNR09ow">
+        <span class="kpi-label" data-page-node-id="0j8MPdJjaEhEB4t8OgcEWs">在线</span>
+        <span class="kpi-value" id="dev-online-count" data-page-node-id="6hDNJ6iHD4wFjoC4tshCZd">--</span>
       </div>
-      <div class="kpi-card kpi-server">
-        <span class="kpi-label">FMO IP</span>
-        <span class="kpi-value" id="server-addr">--</span>
+      <div class="kpi-card kpi-server" data-page-node-id="J8TfqBuekOhvSr34B4iFkD">
+        <span class="kpi-label" data-page-node-id="mBFLkrpIPQENeQkK26yQ99">FMO IP</span>
+        <span class="kpi-value" id="server-addr" data-page-node-id="Xue7TJKEKJoqeBiF8OwPOG">--</span>
       </div>
     </div>
   </header>
 
   <!-- ===== 2. 中段：Speaking Bar（左） + 右侧列（上个通联 + 服务器） ===== -->
-  <div class="middle-split">
+  <div class="middle-split" data-page-node-id="hSSDlluvOIkXks3jkdnHy9">
 
     <!-- 左栏: Active Contact Hero Card -->
-    <section id="speaking-bar" class="active-contact-card idle">
-      <div class="section-label">
-        <span id="ac-label-title">当前呼叫</span>
-        <span class="live-indicator" id="ac-label-live">LIVE</span>
+    <section id="speaking-bar" class="active-contact-card idle" data-page-node-id="IM2V6OzPpU98Q42NzwAivU">
+      <div class="section-label" data-page-node-id="RvGPMslA0oordXj3OMg7CP">
+        <span id="ac-label-title" data-page-node-id="j9F7YSSNavJYTinBcZ56kc">当前呼叫</span>
+        <span class="live-indicator" id="ac-label-live" data-page-node-id="36WqWnIDIVcFCUj87FTKIf">LIVE</span>
       </div>
 
-      <div class="ac-hero">
-        <div class="hero-main">
-          <div class="callsign-wrap">
-            <h1 id="sb-callsign" class="ac-callsign">--</h1>
-            <span id="sb-contact-count" class="count-badge"></span>
-            <span id="sb-grid" class="grid-pill"></span>
-            <span class="new-badge" id="ac-new-badge">新</span>
+      <div class="ac-hero" data-page-node-id="RU0pa8zYjrvwSmQNof3ZFG">
+        <div class="hero-main" data-page-node-id="W9blKI2P78DzZVz5ohHY3y">
+          <div class="callsign-wrap" data-page-node-id="DE1A0dHuiKRHkrwNHDmeVq">
+            <h1 id="sb-callsign" class="ac-callsign" data-page-node-id="c8K4Fj7CUdWrZODdkrXZ7M">--</h1>
+            <span id="sb-contact-count" class="count-badge" data-page-node-id="1LImXAEnVgFpRr0fkPYwZG"></span>
+            <span id="sb-grid" class="grid-pill" data-page-node-id="PmjVhSwkaMZSU01ALTjvPJ"></span>
+            <span class="new-badge" id="ac-new-badge" data-page-node-id="eIfsYUBNOoSptjErkAJDlM">新</span>
           </div>
-          <div id="sb-elapsed" class="ac-elapsed"></div>
-          <div class="contact-tags">
-            <span class="tag tag-contacted">已通联</span>
-            <span class="tag" id="sb-qth"></span>
+          <div class="ac-subline" data-page-node-id="e6HXe56tH5N17WrMXLFmjH">
+            <span id="sb-elapsed" class="ac-elapsed" data-page-node-id="e78b3jfEaYyyJaMwDZvGLS"></span>
+            <button class="refresh-icon-btn" id="ac-refresh-btn" title="刷新现场" aria-label="刷新现场" data-page-node-id="3V9k96v4jcfOar96JnqxUl">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-page-node-id="k4PttDyVYBXr0DCP05uqYY">
+                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" data-page-node-id="ATahLqHWfyJSb7x1sSeuvp"/><path d="M3 3v5h5" data-page-node-id="3z4rV6sK9zjz4TwDKGB9Xw"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" data-page-node-id="7Sq7Rx53gfo3whazaFi9so"/><path d="M16 16h5v5" data-page-node-id="7izxYNi2F8tf2cbAXuzxiL"/>
+              </svg>
+            </button>
+            <button class="audio-meter" id="audio-mute-btn" title="静音" aria-label="静音" data-page-node-id="3H73JQvSk06N8BCM2BpL0K">
+              <svg id="sb-audio-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-page-node-id="NafdZtRP5IbfxpcRNb5TUD">
+                <g class="audio-icon-unmuted" data-page-node-id="Uaai62zt8lSl2qJnlCDICx">
+                  <path d="M3 9.5h3.5l5-4v13l-5-4H3z" fill="currentColor" fill-opacity="0.18"/>
+                  <path d="M3 9.5h3.5l5-4v13l-5-4H3z"/>
+                  <path d="M15 9q3 3 0 6"/>
+                  <path d="M18 6q6 6 0 12"/>
+                </g>
+                <g class="audio-icon-muted" style="display:none" data-page-node-id="yP8VDCpHlHML5TMUNJMSoy">
+                  <path d="M3 9.5h3.5l5-4v13l-5-4H3z" fill="currentColor" fill-opacity="0.18"/>
+                  <path d="M3 9.5h3.5l5-4v13l-5-4H3z"/>
+                  <path d="M16 9l5 5"/>
+                  <path d="M21 9l-5 5"/>
+                </g>
+              </svg>
+            </button>
           </div>
-          <div class="ac-controls">
-            <button class="refresh-btn" id="ac-refresh-btn">刷新现场</button>
+          <div class="contact-tags" data-page-node-id="nDV8kIzlpjF5Fm5J89tR2k">
+            <span class="tag tag-contacted" data-page-node-id="QI5Z82UMd49EokzxPXWRul">已通联</span>
+            <span class="tag" id="sb-qth" data-page-node-id="UlfCbkAUQkKcjEo6DYM8qF"></span>
           </div>
         </div>
-        <div class="bearing-panel">
-          <div class="compass">
-            <span class="north-label">北</span>
-            <svg class="compass-arrow" id="compass-arrow" viewBox="0 0 24 32" aria-hidden="true">
-              <path d="M12 2 21 29 12 23 3 29Z"/>
+        <div class="bearing-panel" data-page-node-id="NXbT9J2cS8C7TaCs7ZymAX">
+          <div class="compass" data-page-node-id="6EboNhvFHdGSd2OIDS6OeZ">
+            <span class="north-label" data-page-node-id="HTEELebv3Ke9cyT1NpSIYC">北</span>
+            <svg class="compass-arrow" id="compass-arrow" viewBox="0 0 24 32" aria-hidden="true" data-page-node-id="Wg7r07zICUFZOWxqUFnEmL">
+              <path d="M12 2 21 29 12 23 3 29Z" data-page-node-id="7IdBRtlseFE9UZOa3Ligyz"/>
             </svg>
           </div>
-          <div class="bearing-meta">
-            <strong id="sb-direction">方位未知</strong>
-            <span id="sb-distance"></span>
+          <div class="bearing-meta" data-page-node-id="F4EPkW3AItQzzyAKbUf0e8">
+            <strong id="sb-direction" data-page-node-id="uQATz0GhBvDkWQf6oa3Cjw">方位未知</strong>
+            <span id="sb-distance" data-page-node-id="9tTyhybAdcLp4GqxK63xKu"></span>
           </div>
         </div>
       </div>
 
-      <div class="contact-details" id="contact-details-inline">
-        <button class="detail-card relay-card" id="relay-detail-btn" type="button">
-          <span class="detail-label">中继 / 服务器</span>
-          <strong id="server-name-display">--</strong>
-          <small id="sb-server"></small>
-        </button>
-        <button class="detail-card freq-card" id="freq-detail-btn" type="button">
-          <span class="detail-label">频率 / 高度</span>
-          <strong id="freq-line-text">--</strong>
-        </button>
-        <button class="detail-card qth-card" id="qth-detail-btn" type="button">
-          <span class="detail-label">QTH / 网格</span>
-          <strong id="freq-qth">--</strong>
-        </button>
-      </div>
-
-      <div id="sb-placeholder" class="ac-placeholder">等待通联...</div>
+      <div id="sb-placeholder" class="ac-placeholder" data-page-node-id="rgsr8MfGVOVkYO84JjkgI6">等待通联...</div>
     </section>
 
     <!-- 右栏: 上个通联 + 服务器 -->
-    <aside class="middle-sidebar">
-      <section class="previous-card" id="previous-card">
-        <div class="section-label">
-          <span>上个通联</span>
-          <span id="prev-time-ago">暂无</span>
+    <aside class="middle-sidebar" data-page-node-id="k7SCCOC8kZJzpoOcTI1dkc">
+      <section class="previous-card" id="previous-card" data-page-node-id="bCDlkAV9P6k3VBFPO25Agj">
+        <div class="section-label" data-page-node-id="Jw3L9mLjeryrCVH507J1RL">
+          <span data-page-node-id="DNBBDa1w20zVlGSdG1a973">上个通联</span>
+          <span id="prev-time-ago" data-page-node-id="k6Dk2ibAXnYXxHXIEXXCxH">暂无</span>
         </div>
-        <div id="prev-card-content" class="prev-empty">
-          <div class="prev-info-grid">
-            <div class="prev-info-item">
-              <span class="prev-info-label">方位</span>
-              <span class="prev-info-value">--</span>
+        <div id="prev-card-content" class="prev-empty" data-page-node-id="ZkigsLWcbumJ33jxFlUQA9">
+          <div class="prev-info-grid" data-page-node-id="uiFVq7fNZCi1PJHr0hmOmJ">
+            <div class="prev-info-item" data-page-node-id="layREnYHyCyg44xJHZ1dQJ">
+              <span class="prev-info-label" data-page-node-id="9a2xW2jhXFyFHBH2ohVNRH">方位</span>
+              <span class="prev-info-value" data-page-node-id="Ncp1yAcu5DH70cfTo9S16D">--</span>
             </div>
-            <div class="prev-info-item">
-              <span class="prev-info-label">距离</span>
-              <span class="prev-info-value">--</span>
+            <div class="prev-info-item" data-page-node-id="Rz8vmu90goQaS1m3GicneW">
+              <span class="prev-info-label" data-page-node-id="QA6msGaf6ICGAYePG5hufJ">距离</span>
+              <span class="prev-info-value" data-page-node-id="b6eicfD0AWDnfmpny2cpmD">--</span>
             </div>
-            <div class="prev-info-item">
-              <span class="prev-info-label">呼号</span>
-              <span class="prev-info-value">--</span>
+            <div class="prev-info-item" data-page-node-id="BcT23GPUg1CDqibwfPmone">
+              <span class="prev-info-label" data-page-node-id="WcHlTLabiPJQ3KIC3Ob9Nq">呼号</span>
+              <span class="prev-info-value" data-page-node-id="VcVZApPyAc5RSGkDYz2Wmp">--</span>
             </div>
-            <div class="prev-info-item">
-              <span class="prev-info-label">通联</span>
-              <span class="prev-info-value">--</span>
+            <div class="prev-info-item" data-page-node-id="caI8CPRnRjNWM8at0a7dAH">
+              <span class="prev-info-label" data-page-node-id="PzvfFkmGcNEVAkakp3xF3t">通联</span>
+              <span class="prev-info-value" data-page-node-id="gt3Fzdh2QkaJRFNR91guPp">--</span>
             </div>
           </div>
         </div>
       </section>
 
-      <section class="server-card" id="server-card-sidebar">
-        <div class="section-label server-card-header" id="server-card-header-btn">
-          <span>收藏中继 / 服务器</span>
-          <span class="server-list-trigger" id="server-search-trigger">搜索</span>
-          <div class="server-search-popup" id="server-search-popup" style="display:none;">
-            <input type="text" class="server-search-input" id="server-search-input" placeholder="拼音/名称搜索..." autocomplete="off">
-            <div class="server-search-results" id="server-search-results"></div>
+      <section class="server-card" id="server-card-sidebar" data-page-node-id="RHfpmLuKcDtWSBBlLzFyGR">
+        <div class="section-label server-card-header" id="server-card-header-btn" data-page-node-id="SDd5dyUslKNEXdx1hnxgdB">
+          <span data-page-node-id="nGJwLExZvNC1qZjd1TEgnj">收藏中继 / 服务器</span>
+          <span class="server-list-trigger" id="server-search-trigger" data-page-node-id="sCAZdRHxGkl3vagx5xTdNo">搜索</span>
+          <div class="server-search-popup" id="server-search-popup" style="display:none;" data-page-node-id="7qyU4D4pp1Bh8cEr8ri5VR">
+            <input type="text" class="server-search-input" id="server-search-input" placeholder="拼音/名称搜索..." autocomplete="off" data-page-node-id="oBDvMk3Q5x5MCvKxaKuwUV">
+            <div class="server-search-results" id="server-search-results" data-page-node-id="DNOk7iopsR7MiLP2criPcn"></div>
           </div>
         </div>
-        <div class="server-list-sidebar" id="server-list-sidebar">
-          <div class="side-loading">
-            <div class="loading-spinner"></div>
-            <span>正在获取服务器列表...</span>
-            <div class="skeleton-list">
-              <div class="skeleton-row"></div>
-              <div class="skeleton-row"></div>
-              <div class="skeleton-row"></div>
+        <div class="server-list-sidebar" id="server-list-sidebar" data-page-node-id="FNlqZfpUCxGvj4DHmYChgg">
+          <div class="side-loading" data-page-node-id="r5FMpACCPxzNaaHG4dxlBF">
+            <div class="loading-spinner" data-page-node-id="cVFIPWc77MXBPZ2CEABE7t"></div>
+            <span data-page-node-id="3um5L4KzVmxBupbKVmUu1K">正在获取服务器列表...</span>
+            <div class="skeleton-list" data-page-node-id="WMlrLGlaTFGuosbxJYD6GW">
+              <div class="skeleton-row" data-page-node-id="ApvTclTNxGfR4hopZ33i88"></div>
+              <div class="skeleton-row" data-page-node-id="l6LNDOxGhfFWfr52RLOUDy"></div>
+              <div class="skeleton-row" data-page-node-id="wLUvsqGUa3pUjPw8ZB7YxL"></div>
             </div>
           </div>
         </div>
+        <div class="server-list-footer" id="server-list-footer" data-page-node-id="EF9gswCQdLG1AgUxbwoLfQ"></div>
       </section>
     </aside>
   </div>
 
-  <div class="main-body">
-    <div class="content-column">
+  <div class="main-body" data-page-node-id="asokSEKbGrvSkQCi9J5aCD">
+    <div class="content-column" data-page-node-id="8qee8303CnHoLyQXH9rmO1">
 
   <!-- ===== 3. 底部：最近发言 + 通联记录 ===== -->
-  <div class="bottom-panels">
-    <section class="live-panel">
-      <div class="panel-header">
-        <span>最近发言</span>
-        <span class="panel-count" id="recent-count">0</span>
+  <div class="bottom-panels" data-page-node-id="q6C32B7qX0ngCXfKnFRIHY">
+    <section class="live-panel" data-page-node-id="h3JFB3kS41klIehgoD04A5">
+      <div class="panel-header" data-page-node-id="3QnWPnYvB1tbur7pYUd1E7">
+        <span data-page-node-id="8Dhx3GwEHqDWB5PDD6oJun">最近发言</span>
+        <span class="panel-count" id="recent-count" data-page-node-id="FWJ5Ar8HgiTRhxtSVgFECE">0</span>
       </div>
-      <div id="recent-speakers" class="live-table-wrap">
-        <div class="list-empty">暂无最近发言</div>
+      <div id="recent-speakers" class="live-table-wrap" data-page-node-id="aLTf2cJ1uDNIIDACPiPWsW">
+        <div class="list-empty" data-page-node-id="RZp1nWDbo7wVUgGK8ei5Bl">暂无最近发言</div>
       </div>
     </section>
-    <section class="qso-panel">
-      <div class="panel-header">
-        <span>通联记录</span>
-        <div class="panel-header-actions">
-          <button id="panel-export-btn" class="panel-export-btn" title="导出 ADIF 日志">导出 ADIF</button>
-          <span class="panel-count" id="qso-count">0</span>
+    <section class="qso-panel" data-page-node-id="e0OvEURrUXi7tAkrF38U8a">
+      <div class="panel-header" data-page-node-id="Fi7ddczolRxsI34Pt9FkUD">
+        <span data-page-node-id="8Fak5Ki0vNuziz7GQ1ehMV">通联记录</span>
+        <div class="panel-header-actions" data-page-node-id="6zQq0pxq57uGHyxfIRrP3K">
+          <button id="panel-export-btn" class="panel-export-btn" title="导出 ADIF 日志" data-page-node-id="9OmH12NYMAsObwMmmBOpRf">导出 ADIF</button>
+          <span class="panel-count" id="qso-count" data-page-node-id="bKODBnsz8Rscy89BTq1E9f">0</span>
         </div>
       </div>
-      <div id="qso-container" class="live-table-wrap">
-        <div class="list-empty">暂无通联记录</div>
+      <div id="qso-container" class="live-table-wrap" data-page-node-id="2pKx6N6FABQjxhNehWrsAR">
+        <div class="list-empty" data-page-node-id="1L3gjVwGbepg8BIAmYhzPw">暂无通联记录</div>
       </div>
     </section>
   </div>
 
     </div><!-- end .content-column -->
 
-    <section class="top-panel">
-      <div class="panel-header">
-        <span>通联排行 TOP20</span>
-        <span class="panel-count" id="top-count">0</span>
+    <section class="top-panel" data-page-node-id="ewfSygUHoqpG48DP8dEukt">
+      <div class="panel-header" data-page-node-id="dEsyjPJogH9MIgB41Jw7iD">
+        <span data-page-node-id="II77cixz1K1EIb7EJXo85g">通联排行 TOP20</span>
+        <span class="panel-count" id="top-count" data-page-node-id="IDv0VK1ZUh0Weh6gk0Wi8A">0</span>
       </div>
-      <div id="top-callers" class="live-table-wrap">
-        <div class="list-empty">暂无数据</div>
+      <div id="top-callers" class="live-table-wrap" data-page-node-id="uvZuHJT6qL6RiAM6LFOeaY">
+        <div class="list-empty" data-page-node-id="0gUhksmHweswnlS39QVj94">暂无数据</div>
       </div>
     </section>
   </div><!-- end .main-body -->
 
   <!-- ===== 隐藏: 服务器列表 ===== -->
-  <div id="server-list-overlay" class="server-list-overlay">
-    <div class="server-list-dropdown">
-      <div class="server-list-title">切换服务器</div>
-      <input id="server-search" class="server-search" type="text" placeholder="搜索服务器...">
-      <div id="server-list-container" class="server-list-scroll"></div>
+  <div id="server-list-overlay" class="server-list-overlay" data-page-node-id="HGBsVDL4L4PSi6NOgHgS8y">
+    <div class="server-list-dropdown" data-page-node-id="qtseSjpaoDicd1bTu28umD">
+      <div class="server-list-title" data-page-node-id="uZf8eOrHHGUl4vHoSHJMBn">切换服务器</div>
+      <input id="server-search" class="server-search" type="text" placeholder="搜索服务器..." data-page-node-id="51L4cdnxkmcPAkbqGeQZDQ">
+      <div id="server-list-container" class="server-list-scroll" data-page-node-id="gHeEAP4ZXHcBXmtyYtZW1I"></div>
     </div>
   </div>
 
   <!-- ===== 隐藏: 设置面板 ===== -->
-  <div id="settings-overlay" class="overlay">
-    <div class="overlay-box">
-      <h2>设置</h2>
-      <div class="settings-row">
-        <label>IP / 主机</label>
-        <input id="fmo-ip" type="text" placeholder="192.168.x.x">
+  <div id="settings-overlay" class="overlay" data-page-node-id="LUHErb7h9oNgsMfJMj47nI">
+    <div class="overlay-box" data-page-node-id="sjXthyxsxKAojofOoNlftz">
+      <h2 id="settings-heading" data-page-node-id="a4WI7kUipVNTdGjO7lovh8">设置</h2>
+      <div class="settings-row" data-page-node-id="OO7lmIoJMQel3P4BMh1A1j">
+        <label for="fmo-ip" data-page-node-id="Emf3LlD3SdeN6ci0pQ0g4F">IP / 主机</label>
+        <input id="fmo-ip" type="text" placeholder="192.168.x.x" data-page-node-id="AQ8YTf8u2G3LP8l3v6WUmY">
       </div>
-      <div class="settings-row">
-        <label>端口</label>
-        <input id="fmo-port" type="text" value="80">
+      <div class="settings-row" data-page-node-id="6f6wKol4UA372Dwe5TZeMn">
+        <label for="fmo-port" data-page-node-id="S8sX5FO43Fjm98YrOwC3ct">端口</label>
+        <input id="fmo-port" type="text" value="80" data-page-node-id="cbAHwSfH4o9DaaWZhUkDrU">
       </div>
-      <div class="settings-row">
-        <label>协议</label>
-        <select id="fmo-protocol">
-          <option value="ws">ws</option>
-          <option value="wss">wss</option>
+      <div class="settings-row" data-page-node-id="Vs5cti5sEf6WtDfm4UxkA2">
+        <label for="fmo-protocol" data-page-node-id="kqq8PCM8xpM0RmyPELtkkI">协议</label>
+        <select id="fmo-protocol" data-page-node-id="Tfc8vvvSbHPwuPc0Huz0B5">
+          <option value="ws" data-page-node-id="j8eFRijVFIvdxQdL3n9nIK">ws</option>
+          <option value="wss" data-page-node-id="gzDi4HHA5lbTLsOBBJBxy4">wss</option>
         </select>
       </div>
-      <div class="overlay-btns">
-        <button id="settings-save" class="btn-accent">保存并连接</button>
-        <button id="settings-close" class="btn-muted">取消</button>
+      <div class="overlay-btns" data-page-node-id="qTk2sIdzFHKDQNUghBMHhf">
+        <button id="settings-save" class="btn-accent" data-page-node-id="yez1GCfFoJkCm5H8R86GHo">保存并连接</button>
+        <button id="settings-close" class="btn-muted" data-page-node-id="OJleboEPxBozXBW7tHgQR6">取消</button>
       </div>
     </div>
   </div>
 
-  <footer class="site-footer">
-    <div class="footer-left">
-      <a target="_blank" title="51la网站统计" href="https://v6.51.la/land/3QfdwbkEAE8udblG"><img src="https://sdk.51.la/icon/2-4.png"></a>
+  <footer class="site-footer" data-page-node-id="HJ1ffC4GcPTNCE47yhn052">
+    <div class="footer-left" data-page-node-id="UXlfEmt7MTB8ZyXQJx1V6r">
+      <a target="_blank" title="51la网站统计" href="https://v6.51.la/land/3QfdwbkEAE8udblG" data-page-node-id="P0oPgP2hak9pbj0ZXUqDqK"><img src="https://sdk.51.la/icon/2-4.png" alt="51la" data-page-node-id="3Wjy1HlsgbLFnKHDOy44sZ"></a>
       <script charset="UTF-8" id="LA_COLLECT" src="https://sdk.51.la/js-sdk-pro.min.js" async></script>
       <script>window.addEventListener('load',function(){try{if(typeof LA!=='undefined')LA.init({id:"3QfdwbkEAE8udblG",ck:"3QfdwbkEAE8udblG",autoTrack:true,hashMode:true})}catch(e){}})</script>
+      <span class="footer-refresh" id="last-refresh" data-page-node-id="k5l6RHszHHXEJzQyFUq4at"></span>
     </div>
-    <div class="footer-right">
-      <a class="footer-pill" href="https://inliang.github.io/FMO_Mate/" target="_blank" rel="noopener">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18l7-5 7 5V3H5z"/><line x1="12" y1="8" x2="12" y2="14"/><polyline points="9 10 12 8 15 10"/></svg>
+    <div class="footer-right" data-page-node-id="7RYXJXtM7QrOl2cqG7b3RT">
+      <a class="footer-pill" href="https://inliang.github.io/FMO_Mate/" target="_blank" rel="noopener" data-page-node-id="TsSxDnZzkCzjLt9cqROvsr">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="xm5jh2YmsSU5prLWEpVBmT"><path d="M5 3v18l7-5 7 5V3H5z" data-page-node-id="2GpnhV6zWjsxkmNjlgF9lP"/><line x1="12" y1="8" x2="12" y2="14" data-page-node-id="G6kj4d8FAnsKUH7mEaLW0Z"/><polyline points="9 10 12 8 15 10" data-page-node-id="1o2rSaZ2P9cGqYMpQHZWiM"/></svg>
         FMO Mate
       </a>
-      <span class="footer-sep"></span>
-      <a class="footer-pill" href="https://github.com/Inliang/FMO_Mate" target="_blank" rel="noopener">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+      <span class="footer-sep" aria-hidden="true" data-page-node-id="IgETzyjoWpEYiqyJ0qmomY"></span>
+      <a class="footer-pill" href="https://github.com/Inliang/FMO_Mate" target="_blank" rel="noopener" data-page-node-id="H8em5agIckzWSM75lDD252">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" data-page-node-id="yE7tjtq4aZfZRp0CXLDasL"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" data-page-node-id="9IOVgxO7M3SwMc1mg61lJQ"/></svg>
         GitHub
       </a>
-      <span class="footer-sep"></span>
-      <a class="footer-pill" href="https://inliang.github.io/envo/" target="_blank" rel="noopener">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+      <span class="footer-sep" aria-hidden="true" data-page-node-id="J1DMjmDR9Bl9TyBHRQfA9z"></span>
+      <a class="footer-pill" href="https://inliang.github.io/envo/" target="_blank" rel="noopener" data-page-node-id="JJWwAwPN0shnzhheofK5tr">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="YfmvyxO8O0M6QmXfeouWt2"><rect x="2" y="4" width="20" height="16" rx="2" data-page-node-id="vfskCyZ76dOvWv8oYYXlVC"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" data-page-node-id="NbrNBV1PNw8ggM7t2hdp9o"/></svg>
         Envo
       </a>
-      <span class="footer-sep"></span>
-      <a class="footer-pill" href="https://qsl.jdbot.top/" target="_blank" rel="noopener">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      <span class="footer-sep" aria-hidden="true" data-page-node-id="ucHa3ldJPLtULPlwxZ55gt"></span>
+      <a class="footer-pill" href="https://qsl.jdbot.top/" target="_blank" rel="noopener" data-page-node-id="GGlGtVhfWYtI78TxUV2D3h">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="aY4Zt7g4NCDCtrZDZBvQAY"><rect x="2" y="3" width="20" height="14" rx="2" data-page-node-id="sPs3UryWnlp0TxWhBjWLu0"/><line x1="8" y1="21" x2="16" y2="21" data-page-node-id="KmvAnIxBDaVXVOfFLuiwK8"/><line x1="12" y1="17" x2="12" y2="21" data-page-node-id="FEhl9tU44NkNGKX2p4Ljio"/></svg>
         QSL
       </a>
     </div>
@@ -477,17 +326,6 @@
 
 </div>
 
-  <script src="app.js?v=0820s6"></script>
+  <script src="app.js?v=0909h"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-

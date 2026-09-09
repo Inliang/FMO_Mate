@@ -82,6 +82,7 @@ const App = {
   currentServerName: '',
   _prevServer: '',
   serverSearch: '',
+  _serverExpanded: false,
 
   // --- 音频 ---
   audioCtx: null,
@@ -128,6 +129,7 @@ const App = {
     this.loadSettings();
     this.updateConnectionUI(false);
     this.initAudioCtx();
+    this.updateVU();
     this._startClock();
   },
 
@@ -224,6 +226,24 @@ const App = {
     const panelExportBtn = $('panel-export-btn');
     if (panelExportBtn) {
       panelExportBtn.addEventListener('click', () => this.exportQso());
+    }
+
+    // 静音/放音按钮
+    const muteBtn = $('audio-mute-btn');
+    if (muteBtn) {
+      muteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.toggleMute();
+      });
+    }
+
+    // 刷新按钮：点击刷新页面
+    const refreshBtn = $('ac-refresh-btn');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.location.reload();
+      });
     }
 
     document.addEventListener('keydown', (e) => {
@@ -348,9 +368,6 @@ const App = {
     } else {
       dot.className = 'status-dot';
       text.textContent = '未连接';
-      // 断连时恢复自身呼号显示
-      const cmdDescEl = document.getElementById('command-desc');
-      if (cmdDescEl) cmdDescEl.textContent = (this.myCallsign || 'N0CALL') + ' 正在守听';
       const devCallsignEl = document.getElementById('dev-callsign');
       if (devCallsignEl) devCallsignEl.textContent = this.myCallsign || 'N0CALL';
     }
@@ -722,11 +739,9 @@ const App = {
     // 自身呼号显示（FMO 规范：界面元素4 - 未认证显示 N0CALL，已认证显示真实呼号）
     const devCallsignEl = document.getElementById('dev-callsign');
     const devUidEl = document.getElementById('dev-uid');
-    const cmdDescEl = document.getElementById('command-desc');
     const cs = this.myCallsign || 'N0CALL';
     if (devCallsignEl) devCallsignEl.textContent = cs;
     if (devUidEl) devUidEl.textContent = this.myUid || '--';
-    if (cmdDescEl) cmdDescEl.textContent = cs + ' 正在守听';
   },
 
   async fetchRadioInfo() {
@@ -1098,9 +1113,20 @@ const App = {
       return;
     }
 
-    const items = this.serverList;
-    sidebar.innerHTML = items.map(s => {
-      const uid = s.uid || s.id || '';
+    // 折叠态只保留前 COLLAPSE_LIMIT 条，当前服务器始终置顶，避免折叠后看不到正在用的中继
+    const LIMIT = 5;
+    const expanded = !!this._serverExpanded;
+    const showToggle = this.serverList.length > LIMIT;
+
+    let items = this.serverList;
+    if (!expanded) {
+      const cur = this.currentServerName;
+      items = [...this.serverList]
+        .sort((a, b) => (a.name === cur ? 0 : 1) - (b.name === cur ? 0 : 1))
+        .slice(0, LIMIT);
+    }
+
+    const html = items.map(s => {
       const name = s.name || '--';
       const count = s.onlineCount ?? s.count ?? s.users ?? s.online ?? s.onlineCount ?? '--';
       const activeClass = name === this.currentServerName ? ' active' : '';
@@ -1110,9 +1136,27 @@ const App = {
       </div>`;
     }).join('');
 
+    sidebar.innerHTML = html;
+
+    const footer = document.getElementById('server-list-footer');
+    if (footer) {
+      footer.innerHTML = showToggle
+        ? `<button class="server-toggle" id="server-toggle-btn" type="button">`
+          + (expanded ? '收起' : '展开全部 ' + this.serverList.length) + '</button>'
+        : '';
+    }
+
     sidebar.querySelectorAll('.server-item-side').forEach(el => {
       el.addEventListener('click', () => this.switchServer(el.dataset.serverName));
     });
+
+    const toggle = document.getElementById('server-toggle-btn');
+    if (toggle) {
+      toggle.addEventListener('click', () => {
+        this._serverExpanded = !this._serverExpanded;
+        this.renderServerSidebar();
+      });
+    }
   },
 
   async switchServer(name) {
@@ -1461,7 +1505,7 @@ const App = {
     container.innerHTML = sorted.map(([call, count], i) => {
       const barPct = Math.round((count / maxCount) * 100);
       const isSelf = this.isSameOperator(call, this.myCallsign);
-      const barColor = i < 3 ? '#F59E0B' : i < 10 ? '#FFB74D' : 'rgba(255,152,0,0.22)';
+      const barColor = i < 3 ? 'var(--accent)' : i < 10 ? 'var(--accent-soft)' : 'var(--accent-line)';
       return `<div class="top-item${isSelf ? ' is-self' : ''}">
         <span class="top-rank">${i + 1}</span>
         <span class="top-call">${call}</span>
@@ -2150,11 +2194,14 @@ const App = {
     const csEl = document.getElementById('sb-callsign');
     if (csEl) { csEl.textContent = sp.callsign || '--'; csEl.style.display = ''; }
 
-    // Grid tag
+    // Grid tag：优先显示网格转换后的 QTH 地名，保留网格码作为 title 提示
     const gridEl = document.getElementById('sb-grid');
     if (gridEl) {
-      gridEl.textContent = sp.grid || '';
-      gridEl.style.display = sp.grid ? '' : 'none';
+      const raw = sp.grid || '';
+      const loc = raw ? (this._gridLocationCache[raw] || raw) : '';
+      gridEl.textContent = loc;
+      gridEl.title = raw ? ('网格：' + raw) : '';
+      gridEl.style.display = loc ? '' : 'none';
     }
 
     // Direction + azimuth
@@ -2322,7 +2369,28 @@ const App = {
   updateVU() {
     const icon = document.getElementById('sb-audio-icon');
     if (!icon) return;
-    icon.style.opacity = 0.35 + (this.vuLevel / 100) * 0.65;
+    const muted = this.isMuted;
+    // 图标保持高亮，颜色变化即可；静音时满亮、放音时随电平提亮（0.85 → 1.05）
+    icon.style.opacity = muted ? 1 : 0.85 + (this.vuLevel / 100) * 0.2;
+    const unmutedGroup = icon.querySelector('.audio-icon-unmuted');
+    const mutedGroup = icon.querySelector('.audio-icon-muted');
+    if (unmutedGroup) unmutedGroup.style.display = muted ? 'none' : '';
+    if (mutedGroup) mutedGroup.style.display = muted ? '' : 'none';
+
+    const btn = document.getElementById('audio-mute-btn');
+    if (btn) {
+      btn.classList.toggle('muted', muted);
+      btn.title = muted ? '已静音，点击放音' : '静音';
+      btn.setAttribute('aria-label', btn.title);
+    }
+  },
+
+  toggleMute() {
+    this.isMuted = !this.isMuted;
+    if (this.gainNode) {
+      this.gainNode.gain.value = this.isMuted ? 0 : (this.volume || 80) / 100;
+    }
+    this.updateVU();
   },
 
   // ============ 轮询 ============
