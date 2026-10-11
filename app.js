@@ -858,7 +858,7 @@ const App = {
         console.log('[FMO-DEBUG-OC] getCurrent data keys:', Object.keys(r.data).join(', '));
         this.currentServerName = r.data.name || '';
         this._prevServer = this.currentServerName;
-        this._currentServerUid = r.data.uid || '';
+        this._currentServerUid = r.data.uid ?? r.data._id ?? r.data.id ?? '';
         // 从 getCurrent 响应直接提取在线人数
         const oc = r.data.onlineCount ?? r.data.count ?? r.data.users ?? r.data.online ?? r.data.userCount;
         if (oc !== undefined && oc !== null) {
@@ -996,9 +996,13 @@ const App = {
     if (this._currentServerUid !== undefined && this._currentServerUid !== null && this._currentServerUid !== ''
         && suid !== undefined && suid !== null) {
       if (String(suid) === String(this._currentServerUid)) return true;
+      // ID 已知时不等即不为当前服务器——即使名称相同（存在同名服务器）
+      if (suid !== undefined) return false;
     }
-    // 兜底：ID 缺失时才退回名称匹配
-    return !!this.currentServerName && s.name === this.currentServerName;
+    // 兜底：ID 未知时才按名称匹配，且仅当该名称在列表中唯一，避免同名服务器全部高亮
+    if (!this.currentServerName || s.name !== this.currentServerName) return false;
+    const sameNameCount = this.serverList.filter(x => (x.name || '') === this.currentServerName).length;
+    return sameNameCount === 1;
   },
 
   renderServerList() {
