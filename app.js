@@ -874,6 +874,11 @@ const App = {
     // 显式同步 KPI 在线人数（renderServerList 中也做，此处双保险）
     this._syncKpiOnlineCount();
     setTimeout(() => this._probeAllServerLatency(), 500);
+
+    // URL 带 ?probe=fav 时自动探测设备是否提供收藏服务器接口
+    if (location.search.includes('probe=fav')) {
+      setTimeout(() => this.probeFavoriteApi(), 800);
+    }
   },
 
   async fetchServerList() {
@@ -987,6 +992,46 @@ const App = {
     // 无布尔/状态字段时，用 onlineCount > 0 作为在线判断
     const count = s.onlineCount ?? s.count ?? s.users ?? 0;
     return count > 0;
+  },
+
+  /**
+   * 探测设备是否提供「收藏服务器」接口（协议文档未记载，需实测）。
+   * 用法：页面 URL 加 ?probe=fav 后连接设备自动运行，或在控制台执行 FMO.probeFavoriteApi()
+   */
+  async probeFavoriteApi() {
+    const log = (...a) => console.log('[FMO-PROBE]', ...a);
+    log('=== 收藏服务器接口探测开始 ===');
+
+    // 1) 先看已拉取的中继数据里有没有收藏相关字段
+    if (this.serverList.length) {
+      const sample = this.serverList[0];
+      log('服务器列表样本字段:', Object.keys(sample).join(', '));
+      log('样本内容:', JSON.stringify(sample));
+      const favKeys = Object.keys(sample).filter(k => /fav|star|collect|collect|top|mark|bookmark/i.test(k));
+      log('疑似收藏相关字段:', favKeys.length ? favKeys.join(', ') : '（无）');
+    } else {
+      log('服务器列表为空，先等设备数据加载完成再试');
+    }
+
+    // 2) 逐个尝试可能的收藏接口（不认识的接口会超时，属正常）
+    const candidates = [
+      'getFavoriteList', 'getFavorites', 'getFavList', 'getFav',
+      'getCollectList', 'getCollect', 'getStarList', 'getStar',
+      'getMarkList', 'getBookmarkList', 'getCommonList', 'getTopList'
+    ];
+    for (const sub of candidates) {
+      try {
+        const resp = await this.send({ type: 'station', subType: sub });
+        if (resp && (resp.code === 0 || resp.code === undefined)) {
+          log('✅ 命中接口 station.' + sub + ' →', JSON.stringify(resp).slice(0, 600));
+        } else {
+          log('✗ station.' + sub + ' 返回 code=' + (resp && resp.code));
+        }
+      } catch (e) {
+        log('✗ station.' + sub + ' 无响应/超时:', e.message);
+      }
+    }
+    log('=== 探测结束：控制台中带 ✅ 的即为可用收藏接口 ===');
   },
 
   /** 判断服务器是否为当前服务器：优先按 ID（uid）匹配，名称可能重复不可靠 */
@@ -2587,3 +2632,6 @@ const App = {
 };
 
 document.addEventListener('DOMContentLoaded', () => App.init());
+
+// 暴露到 window，便于控制台调用（如 FMO.probeFavoriteApi()）
+window.FMO = App;
