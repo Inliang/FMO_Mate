@@ -83,9 +83,6 @@ const App = {
   _prevServer: '',
   serverSearch: '',
   _serverExpanded: false,
-  // 本地收藏的服务器 uid 列表（设备端无收藏接口，收藏保存在浏览器 localStorage）
-  favServers: [],
-  _favOnly: false,
 
   // --- 音频 ---
   audioCtx: null,
@@ -129,7 +126,6 @@ const App = {
     // 预填服务器IP：直接从 localStorage 提取 IP，不等待任何异步流程
     this._updateServerAddr('init');
     this.bindEvents();
-    this.loadFavServers();
     this.loadSettings();
     this.updateConnectionUI(false);
     this.initAudioCtx();
@@ -240,12 +236,6 @@ const App = {
         this.toggleMute();
       });
     }
-
-    // 服务器筛选：全部 / 收藏
-    const favAllBtn = $('fav-filter-all');
-    const favOnlyBtn = $('fav-filter-fav');
-    if (favAllBtn) favAllBtn.addEventListener('click', (e) => { e.stopPropagation(); this.setFavFilter(false); });
-    if (favOnlyBtn) favOnlyBtn.addEventListener('click', (e) => { e.stopPropagation(); this.setFavFilter(true); });
 
     // 刷新按钮：点击刷新页面
     const refreshBtn = $('ac-refresh-btn');
@@ -1044,42 +1034,8 @@ const App = {
     log('=== 探测结束：控制台中带 ✅ 的即为可用收藏接口 ===');
   },
 
-  // ============ 本地收藏（设备端无收藏接口，收藏存在浏览器） ============
-
-  loadFavServers() {
-    try {
-      const raw = localStorage.getItem('fmo-fav-servers');
-      const arr = raw ? JSON.parse(raw) : [];
-      this.favServers = Array.isArray(arr) ? arr.map(String) : [];
-    } catch (e) { this.favServers = []; }
-  },
-
-  saveFavServers() {
-    try { localStorage.setItem('fmo-fav-servers', JSON.stringify(this.favServers)); } catch (e) {}
-  },
-
-  isFavServer(uid) {
-    return uid !== undefined && uid !== null && this.favServers.includes(String(uid));
-  },
-
-  toggleFavServer(uid, e) {
-    if (e) { e.stopPropagation(); e.preventDefault(); }
-    const key = String(uid);
-    const i = this.favServers.indexOf(key);
-    if (i >= 0) this.favServers.splice(i, 1);
-    else this.favServers.push(key);
-    this.saveFavServers();
-    this.renderServerSidebar();
-  },
-
-  setFavFilter(favOnly) {
-    this._favOnly = !!favOnly;
-    const allBtn = document.getElementById('fav-filter-all');
-    const favBtn = document.getElementById('fav-filter-fav');
-    if (allBtn) allBtn.classList.toggle('active', !this._favOnly);
-    if (favBtn) favBtn.classList.toggle('active', this._favOnly);
-    this.renderServerSidebar();
-  },
+  // 注：收藏功能已移除。FMO 协议无收藏接口（见 PROTOCOL.md station 域方法表），
+  // 本地收藏无法与设备同步、多端还会不一致，故不再提供。
 
   /** 判断服务器是否为当前服务器：优先按 ID（uid）匹配，名称可能重复不可靠 */
   _isCurrentServer(s) {
@@ -1227,29 +1183,16 @@ const App = {
     // 全量渲染所有服务器：列表容器自带滚动，滚轮即可查看全部，不再需要折叠/展开按钮
     // 当前服务器始终置顶，便于一眼看到正在用的中继
     const cur = this.currentServerName;
-    let items = [...this.serverList]
+    const items = [...this.serverList]
       .sort((a, b) => (a.name === cur ? 0 : 1) - (b.name === cur ? 0 : 1));
-
-    // 收藏筛选模式：只显示已收藏的中继
-    if (this._favOnly) {
-      items = items.filter(s => this.isFavServer(s.uid ?? s._id ?? s.id));
-      if (!items.length) {
-        sidebar.innerHTML = '<div class="side-loading"><span>还没有收藏，点列表里的 ☆ 添加</span></div>';
-        const footer = document.getElementById('server-list-footer');
-        if (footer) footer.innerHTML = '';
-        return;
-      }
-    }
 
     const html = items.map(s => {
       const name = s.name || '--';
       const uid = s.uid ?? s._id ?? s.id ?? '--';
       const count = s.onlineCount ?? s.count ?? s.users ?? s.online ?? '';
       const activeClass = this._isCurrentServer(s) ? ' active' : '';
-      const fav = this.isFavServer(uid);
       const countTip = count !== '' ? ` · U${count} 在线` : '';
       return `<div class="server-item-side${activeClass}" data-server-uid="${uid}">
-        <button class="fav-star${fav ? ' on' : ''}" data-fav-uid="${uid}" title="${fav ? '取消收藏' : '收藏此中继'}" aria-label="${fav ? '取消收藏' : '收藏此中继'}">${fav ? '★' : '☆'}</button>
         <span class="station-name">${name}</span>
         <span class="server-sidebar-count" title="${name} · ID #${uid}${countTip}">#${uid}</span>
       </div>`;
@@ -1263,9 +1206,6 @@ const App = {
 
     sidebar.querySelectorAll('.server-item-side').forEach(el => {
       el.addEventListener('click', () => this.switchServer(el.dataset.serverUid));
-    });
-    sidebar.querySelectorAll('.fav-star').forEach(el => {
-      el.addEventListener('click', (e) => this.toggleFavServer(el.dataset.favUid, e));
     });
   },
 

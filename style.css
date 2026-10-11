@@ -1166,54 +1166,8 @@ button { font: inherit; color: inherit; }
   flex: 1;
 }
 
-/* 收藏星标：点击切换收藏，不影响整行的“切换服务器”点击 */
-.fav-star {
-  flex-shrink: 0;
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  border: none;
-  border-radius: var(--r-xs);
-  background: transparent;
-  color: var(--ink-3);
-  font-size: 13px;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: color var(--dur-1) var(--ease-std), background var(--dur-1) var(--ease-std);
-}
-.fav-star:hover { color: var(--accent); background: var(--accent-wash); }
-.fav-star.on { color: var(--accent); }
-
-/* 服务器卡片头部：全部 / 收藏 筛选组 */
-.fav-filter-group {
-  display: inline-flex;
-  gap: 2px;
-  padding: 2px;
-  margin-left: auto;
-  background: var(--sunken);
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  flex-shrink: 0;
-}
-.fav-filter-btn {
-  height: 18px;
-  padding: 0 8px;
-  border: none;
-  border-radius: var(--r-xs);
-  background: transparent;
-  color: var(--ink-3);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  cursor: pointer;
-  transition: background var(--dur-1) var(--ease-std), color var(--dur-1) var(--ease-std);
-}
-.fav-filter-btn:hover { color: var(--ink); }
-.fav-filter-btn.active { background: var(--accent-wash); color: var(--accent-ink); }
+/* 注：收藏功能已移除——FMO 设备协议无收藏接口，收藏无法与设备同步，
+   本地收藏反而造成多端不一致，故不再提供（详见 PROTOCOL.md）。 */
 .server-item-side.active .station-name { color: var(--accent-ink); font-weight: 600; }
 .server-sidebar-count {
   font-family: var(--font-mono);
