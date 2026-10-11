@@ -1298,7 +1298,10 @@ const App = {
     this.renderServerSidebar();
 
     try {
-      const data = { name, uid: targetUid };
+      // 官方 API v2 文档：station.setCurrent 参数为 { uid: number }
+      // 只发 uid，避免设备端按名称匹配导致同名服务器切错
+      const uidNum = Number(targetUid);
+      const data = (targetUid !== '' && Number.isFinite(uidNum)) ? { uid: uidNum } : { name };
       const resp = await this.send({ type: 'station', subType: 'setCurrent', data });
       if (resp.code === 0 || resp.code === undefined) {
         this._showServerInfo();
