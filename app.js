@@ -928,13 +928,16 @@ const App = {
     }
     if (!this.serverList.length) return;
 
-    // 尝试按名称匹配当前服务器
+    // 尝试匹配当前服务器：优先按 ID（名称可能重复），名称兜底
     let currentServer = null;
-    if (this.currentServerName) {
-      currentServer = this.serverList.find(s => s.name === this.currentServerName);
+    if (this._currentServerUid) {
+      currentServer = this.serverList.find(s => {
+        const suid = s.uid ?? s._id ?? s.id;
+        return suid !== undefined && String(suid) === String(this._currentServerUid);
+      });
     }
-    if (!currentServer && this._currentServerUid) {
-      currentServer = this.serverList.find(s => s.uid === this._currentServerUid);
+    if (!currentServer && this.currentServerName) {
+      currentServer = this.serverList.find(s => s.name === this.currentServerName);
     }
     if (currentServer) {
       const count = currentServer.onlineCount
@@ -975,8 +978,8 @@ const App = {
   },
 
   _isOnlineServer(s) {
-    // 当前连接的服务器必定在线
-    if (s.name === this.currentServerName) return true;
+    // 当前连接的服务器必定在线（优先按 ID 匹配，名称可能重复）
+    if (this._isCurrentServer(s)) return true;
     // 优先判断布尔字段
     if (s.online !== undefined) return s.online === true;
     if (s.connected !== undefined) return s.connected === true;
@@ -984,6 +987,18 @@ const App = {
     // 无布尔/状态字段时，用 onlineCount > 0 作为在线判断
     const count = s.onlineCount ?? s.count ?? s.users ?? 0;
     return count > 0;
+  },
+
+  /** 判断服务器是否为当前服务器：优先按 ID（uid）匹配，名称可能重复不可靠 */
+  _isCurrentServer(s) {
+    if (!s) return false;
+    const suid = s.uid ?? s._id ?? s.id;
+    if (this._currentServerUid !== undefined && this._currentServerUid !== null && this._currentServerUid !== ''
+        && suid !== undefined && suid !== null) {
+      if (String(suid) === String(this._currentServerUid)) return true;
+    }
+    // 兜底：ID 缺失时才退回名称匹配
+    return !!this.currentServerName && s.name === this.currentServerName;
   },
 
   renderServerList() {
@@ -1015,11 +1030,11 @@ const App = {
 
     container.innerHTML = filtered.map(s => {
       const uid = s.uid ?? s._id ?? s.id ?? '--';
-      const active = s.name === this.currentServerName;
+      const active = this._isCurrentServer(s);
       const host = s.host || s.addr || s.address || s.url || '';
       const lat = this._serverLatency[host];
       const latStr = lat === -1 ? '超时' : (lat !== undefined ? lat + 'ms' : '...');
-      return `<div class="server-item${active ? ' active' : ''}" data-server-name="${s.name}" data-server-key="${host || s.name}">
+      return `<div class="server-item${active ? ' active' : ''}" data-server-uid="${uid}" data-server-key="${host || s.name}">
         <span class="server-item-uid">#${uid}</span>
         <span class="server-item-name">${s.name || '--'}</span>
         <span>
@@ -1031,7 +1046,7 @@ const App = {
     }).join('');
 
     container.querySelectorAll('.server-item').forEach(el => {
-      el.addEventListener('click', () => this.switchServer(el.dataset.serverName));
+      el.addEventListener('click', () => this.switchServer(el.dataset.serverUid));
     });
     console.log('[FMO-DEBUG-SERVER] renderServerList 完成，渲染了 ' + filtered.length + ' 项');
 
@@ -1089,7 +1104,7 @@ const App = {
     } else {
       results.innerHTML = filtered.map(s => {
         const uid = s.uid ?? s._id ?? s.id ?? '--';
-        return `<div class="server-search-item" data-server-name="${s.name}">
+        return `<div class="server-search-item" data-server-uid="${uid}">
           <span class="server-search-item-name">${s.name || '--'}</span>
           <span class="server-search-item-uid">#${uid}</span>
         </div>`;
@@ -1097,7 +1112,7 @@ const App = {
       results.querySelectorAll('.server-search-item').forEach(el => {
         el.addEventListener('click', () => {
           popup.style.display = 'none';
-          this.switchServer(el.dataset.serverName);
+          this.switchServer(el.dataset.serverUid);
         });
       });
     }
@@ -1123,9 +1138,9 @@ const App = {
       const name = s.name || '--';
       const uid = s.uid ?? s._id ?? s.id ?? '--';
       const count = s.onlineCount ?? s.count ?? s.users ?? s.online ?? '';
-      const activeClass = name === this.currentServerName ? ' active' : '';
+      const activeClass = this._isCurrentServer(s) ? ' active' : '';
       const countTip = count !== '' ? ` · U${count} 在线` : '';
-      return `<div class="server-item-side${activeClass}" data-server-name="${name}">
+      return `<div class="server-item-side${activeClass}" data-server-uid="${uid}">
         <span class="station-name">${name}</span>
         <span class="server-sidebar-count" title="${name} · ID #${uid}${countTip}">#${uid}</span>
       </div>`;
@@ -1138,32 +1153,40 @@ const App = {
     if (footer) footer.innerHTML = '';
 
     sidebar.querySelectorAll('.server-item-side').forEach(el => {
-      el.addEventListener('click', () => this.switchServer(el.dataset.serverName));
+      el.addEventListener('click', () => this.switchServer(el.dataset.serverUid));
     });
   },
 
-  async switchServer(name) {
-    if (name === this.currentServerName) return;
+  async switchServer(uid) {
+    if (uid === undefined || uid === null || uid === '') return;
+    // 按 ID 定位目标服务器：名称可能重复（如两个同名 "46351"），不可靠
+    const target = this.serverList.find(s => {
+      const suid = s.uid ?? s._id ?? s.id;
+      return suid !== undefined && String(suid) === String(uid);
+    });
+    if (!target) { console.warn('switchServer: 未找到 ID 为', uid, '的服务器'); return; }
+    if (this._isCurrentServer(target)) return;
+
+    const name = target.name || '--';
+    const targetUid = target.uid ?? target._id ?? target.id ?? '';
 
     this.serverSearch = '';
     const si = document.getElementById('server-search');
     if (si) si.value = '';
 
     this._prevServer = this.currentServerName;
+    this._prevServerUid = this._currentServerUid;
 
     // Update server display to show switching state
     const nameEl = document.getElementById('server-name-display');
     if (nameEl) nameEl.textContent = name + ' …';
     this.currentServerName = name;
+    this._currentServerUid = targetUid;
     this.renderServerList();
     this.renderServerSidebar();
 
     try {
-      const target = this.serverList.find(s => s.name === name);
-      const uid = target ? (target.uid ?? target._id ?? target.id) : undefined;
-      const data = { name };
-      if (uid !== undefined) data.uid = uid;
-
+      const data = { name, uid: targetUid };
       const resp = await this.send({ type: 'station', subType: 'setCurrent', data });
       if (resp.code === 0 || resp.code === undefined) {
         this._showServerInfo();
@@ -1172,6 +1195,7 @@ const App = {
       } else {
         if (nameEl) nameEl.textContent = this._prevServer || '--';
         this.currentServerName = this._prevServer || '';
+        this._currentServerUid = this._prevServerUid || '';
         this.renderServerList();
         this.renderServerSidebar();
         return;
@@ -1180,6 +1204,7 @@ const App = {
       console.warn('switchServer:', e.message);
       if (nameEl) nameEl.textContent = this._prevServer || '--';
       this.currentServerName = this._prevServer || '';
+      this._currentServerUid = this._prevServerUid || '';
       this.renderServerList();
       this.renderServerSidebar();
       return;
