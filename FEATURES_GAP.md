@@ -33,16 +33,16 @@
 
 ### A 级：协议已支持，纯前端加 UI 即可，成本低、收益明显
 
-| # | 缺失功能 | 接口 / 依据 | 说明 |
+| # | 缺失功能 | 接口 / 依据 | 状态 |
 |---|---------|-----------|------|
-| A1 | **上一台 / 下一台快速切换** | `station.next` / `station.prev`（官方 v2 §2.3） | 我们只实现了 `setCurrent`。加两个按钮即可，改台不用展开列表。FMO-Dashboard、FmoLogs 都有 |
-| A2 | **显示当前服务器 UID** | `station.getCurrent` 返回 `{uid, name}` | FMO-Dashboard 显示"控制地址 + 中继 UID"，同名服务器靠 UID 区分 |
-| A3 | **最近活跃服务器切换入口** | 本地记录最近使用过的 uid（localStorage） | FMO-Dashboard V2 主打功能。设备端无"最近使用"接口，只能前端记 |
-| A4 | **点击 QSO 记录里的中继名直接切换** | `station.getListRange` + `setCurrent` | FMO-Dashboard 已实现（按名称匹配后取 uid）。注意同名中继要提示 |
-| A5 | **呼号点击跳转 QRZ** | `https://www.qrz.com/db/<CALL>` | FMO-Dashboard 有。一个 `<a target="_blank">` 的事 |
-| A6 | **QSO 按呼号搜索/筛选** | 前端过滤已有数据 | FmoLogs、FMO-Dashboard 都有。我们三面板都无搜索框 |
-| A7 | **QSO 详情弹窗** | `qso.getDetail`（已在用） | 我们只拿它补全留言/中继列，没有详情弹窗（频率、模式、时间、双方呼号全字段） |
-| A8 | **今日已联 ⭐ 标记** | 前端比对今日日期 | FmoDeck v0.1.8 引入。TOP20 / QSO 表 / 老朋友都能标 |
+| A1 | **上一台 / 下一台快速切换** | `station.next` / `station.prev`（官方 v2 §2.3） | 待做。我们只实现了 `setCurrent`。加两个按钮即可，改台不用展开列表 |
+| A2 | **显示当前服务器 UID** | `station.getCurrent` 返回 `{uid, name}` | 待做。同名服务器靠 UID 区分 |
+| A3 | **最近活跃服务器切换入口** | 本地记录最近使用过的 uid（localStorage） | 待做。设备端无"最近使用"接口，只能前端记 |
+| A4 | **点击 QSO 记录里的中继名直接切换** | `station.getListRange` + `setCurrent` | 待做。注意同名中继要提示 |
+| A5 | **呼号点击跳转 QRZ** | `https://www.qrz.com/db/<CALL>` | ✅ **已实现**（2026-10-11）：通联记录 / 最近发言 / TOP20 呼号可点，当前呼叫卡片新增 QRZ 图标按钮 |
+| A6 | **QSO 按呼号搜索/筛选** | 前端过滤已有数据 | ✅ **已实现**（2026-10-11）：通联记录面板搜索框，匹配呼号 / 网格 / QTH / 中继 / 留言，Esc 清空 |
+| A7 | **QSO 详情弹窗** | `qso.getDetail`（已在用） | 待做 |
+| A8 | **今日已联 ⭐ 标记** | 前端比对今日日期 | ✅ **已实现**（2026-10-11）：通联记录 / 最近发言 / TOP20 的今日已联呼号带 ★ 徽标 |
 
 ### B 级：设备配置读写（`config` 命名空间，官方 v2 完整列出 30 个方法，我们只用了 5 个 get）
 
@@ -54,7 +54,7 @@
 | B1 | **修改设备/服务器名称** | `config.setServerName` | ≤31 字符 |
 | B2 | **APRS 备注 / 图标 / Passcode** | `setAprsRemark`(≤63字节) / `setAprsType`(1-15) / `setPasscode`(5位或-1) | 可加 `restartAprsService` 生效 |
 | B3 | **黑名单管理** | `setBlacklist` | 大写字母+数字+逗号+空格，≤511 字符 |
-| B4 | **设备坐标设置** | `setCordinate {latitude, longitude}` | 直接影响我们的方位/距离计算 |
+| B4 | **设备坐标设置** | `setCordinate {latitude, longitude}` | ✅ **已实现**（2026-10-11）：KPI 行新增独立「坐标 / GRID」卡片，点击弹窗写入设备并实时预览网格 |
 | B5 | **天线描述 / 高度 / 物理频率** | `setUserPhyAnt`(≤15) / `setUserPhyAntHeight`(0-100000m) / `setUserPhyFreq`(0-1000MHz) | |
 | B6 | **QSO 祝福语 / 登录公告** | `setQsoBestWish`(≤64字节) / `setServerLoginAnnouncement`(≤127字节) | |
 | B7 | **服务器过滤器** | `setServerFilter` (0-8) | 控制台可见列表范围 |
@@ -89,7 +89,7 @@
 | E2 | **排行榜多维度** | FmoLogs：接收方呼号 / 网格 / 中继三组 TOP20；我们只有呼号 TOP20 |
 | E3 | **多 FMO 地址管理** | FMO-Dashboard / FmoLogs 都支持多个地址切换（含 `fmo.local` mDNS） |
 | E4 | **地图视图**（外链版） | FmoDeck 有全屏地图 + 我↔对方连线 + 距离标签。真地图要引库，折中方案：网格点击跳 `https://maidenmap.wh0am1i.com/` 或 aprs.fi |
-| E5 | **UTC / 本地双时钟** | FmoDeck 有；我们只有本地时钟 |
+| E5 | **UTC / 本地双时钟** | ✅ **已实现**（2026-10-11）：状态栏并排显示本地时间与 UTC，点击 UTC 可复制 |
 | E6 | **移动端长列表回到顶部** | FmoLogs 有 |
 
 ### F 级：平台化（与我们「单文件零依赖」定位冲突，优先级最低）
@@ -114,10 +114,10 @@
 
 ## 三、建议实施顺序
 
-1. **第一批（小改动、当天可完成）**：A1 上一台/下一台、A2 当前 UID、A5 QRZ 跳转、A6 QSO 搜索、A8 今日已联标记
-2. **第二批**：A3 最近活跃服务器、A4 点击中继切换、A7 QSO 详情弹窗、E1 老朋友页、E5 双时钟
-3. **第三批**：C1 日志备份下载、C2 IndexedDB 持久化、B 组设备配置面板
-4. **第四批**：D 组语音播报、E2 多维排行榜
+1. ~~**第一批**：A1 / A2 / A5 / A6 / A8~~ → A5、A6、A8 已完成（2026-10-11）
+2. **下一步可做**：A1 上一台/下一台、A2 当前 UID、A3 最近活跃服务器、A4 点击中继切换、A7 QSO 详情弹窗、E1 老朋友页
+3. **第三批**：C1 日志备份下载、C2 IndexedDB 持久化、B 组其余设备配置（B1/B2/B3/B5/B6/B7/B8/B9）
+4. **第四批**：D 组语音播报、E2 多维排行榜、E3 多地址、E4 地图外链
 5. **暂缓**：F 平台化、G 不做项
 
 ---

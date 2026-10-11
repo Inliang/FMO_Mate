@@ -373,6 +373,22 @@ button { font: inherit; color: inherit; }
   letter-spacing: 0.02em;
 }
 
+/* UTC 双时钟 */
+.utc-clock {
+  gap: 5px;
+  color: var(--accent-ink);
+  background: var(--accent-wash);
+  border-color: var(--accent-line);
+  cursor: pointer;
+}
+.utc-clock::before {
+  content: "UTC";
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--ink-3);
+}
+
 .net-type-tag.wan {
   background: var(--warn-wash);
   border-color: var(--accent-line);
@@ -689,6 +705,27 @@ button { font: inherit; color: inherit; }
 .kpi-freq .kpi-value,
 .kpi-online .kpi-value { color: var(--ink); }
 
+/* 坐标卡片（B4）：独立位置显示，可点击写入设备坐标 */
+.kpi-coord {
+  cursor: pointer;
+  background: var(--accent-wash);
+}
+.kpi-coord:hover { background: var(--accent-wash); }
+.kpi-coord .kpi-label { color: var(--accent-ink); }
+.kpi-coord .kpi-value {
+  color: var(--accent-ink);
+  font-size: var(--fs-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.kpi-coord .kpi-value::after {
+  content: "✎";
+  font-size: var(--fs-2xs);
+  color: var(--ink-3);
+  opacity: 0.8;
+}
+
 /* ============================================================
    4. MIDDLE SPLIT
    ============================================================ */
@@ -895,6 +932,12 @@ button { font: inherit; color: inherit; }
 }
 .refresh-icon-btn:hover { color: var(--accent); background: var(--accent-wash); }
 .refresh-icon-btn svg { width: 14px; height: 14px; }
+
+/* QRZ 查询按钮（复用 refresh-icon-btn 尺寸） */
+.qrz-icon-btn { color: var(--ink-2); }
+.qrz-icon-btn:hover { color: var(--accent-ink); background: var(--accent-wash); }
+.qrz-icon-btn[disabled] { opacity: 0.35; cursor: default; }
+.qrz-icon-btn[disabled]:hover { color: var(--ink-2); background: transparent; }
 
 .audio-meter {
   display: inline-flex;
@@ -1255,6 +1298,60 @@ button { font: inherit; color: inherit; }
 }
 .panel-export-btn { height: 24px; padding: 0 10px; font-size: var(--fs-xs); }
 
+/* ---- 面板内搜索框（A6）---- */
+.panel-search-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+}
+.panel-search-icon {
+  position: absolute;
+  left: 7px;
+  width: 12px;
+  height: 12px;
+  color: var(--ink-3);
+  pointer-events: none;
+}
+.panel-search {
+  width: 118px;
+  height: 24px;
+  padding: 0 22px 0 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-full);
+  background: var(--sunken);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  outline: none;
+  transition: border-color var(--dur-1) var(--ease-std), background var(--dur-1) var(--ease-std), width var(--dur-2) var(--ease-out);
+}
+.panel-search::placeholder { color: var(--ink-3); }
+.panel-search:focus {
+  width: 150px;
+  border-color: var(--accent);
+  background: var(--surface);
+}
+.panel-search-clear {
+  position: absolute;
+  right: 4px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-3);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+.panel-search-clear:hover { color: var(--warn); background: var(--warn-wash); }
+.panel-search-wrap.has-value .panel-search-clear { display: inline-flex; }
+
 /* ---- Recent speakers ---- */
 .recent-item {
   display: flex;
@@ -1404,6 +1501,16 @@ button { font: inherit; color: inherit; }
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* A5/A8：内部放 QRZ 链接 + 今日已联徽标 */
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.qso-callsign .callsign-link {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .qso-grid-cell,
@@ -1459,6 +1566,60 @@ button { font: inherit; color: inherit; }
 }
 
 /* ============================================================
+   5b. 呼号 QRZ 链接（A5） + 今日已联标记（A8）
+   ============================================================ */
+.callsign-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  border-bottom: 1px dashed transparent;
+  transition: color var(--dur-1) var(--ease-std), border-color var(--dur-1) var(--ease-std);
+}
+.callsign-link:hover {
+  color: var(--accent-ink);
+  border-bottom-color: var(--accent);
+}
+
+/* 迷你 QRZ 图标按钮（最近发言 / TOP20） */
+.qrz-mini {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  padding: 0;
+  border: none;
+  border-radius: var(--r-xs);
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0.4;
+  transition: opacity var(--dur-1) var(--ease-std), color var(--dur-1) var(--ease-std), background var(--dur-1) var(--ease-std);
+}
+.qrz-mini svg { width: 11px; height: 11px; }
+.recent-item:hover .qrz-mini,
+.top-item:hover .qrz-mini { opacity: 1; }
+.qrz-mini:hover { color: var(--accent-ink); background: var(--accent-wash); }
+
+/* 今日已联标记 */
+.today-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #FFFFFF;
+  font-size: 9px;
+  line-height: 1;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px var(--accent-wash);
+}
+[data-theme="e-ink"] .today-badge { background: var(--ink); color: var(--surface); box-shadow: none; }
+
+/* ============================================================
    6. TOP PANEL (TOP20)
    ============================================================ */
 .top-panel {
@@ -1503,6 +1664,16 @@ button { font: inherit; color: inherit; }
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* A5/A8：内部放 QRZ 链接 + 今日已联徽标 + QRZ 按钮 */
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.top-call .callsign-link {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 .top-item.is-self .top-call { color: var(--accent-ink); }
 
@@ -1719,6 +1890,30 @@ button { font: inherit; color: inherit; }
   background-repeat: no-repeat;
   background-position: right 12px center;
   padding-right: 32px;
+}
+
+/* ---- 设备坐标弹窗（B4）---- */
+.coord-box { width: 340px; }
+.coord-hint {
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+  color: var(--ink-3);
+  margin-top: calc(var(--sp-3) * -1);
+}
+.coord-hint code {
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  padding: 1px 4px;
+  border-radius: var(--r-xs);
+  background: var(--sunken);
+  color: var(--accent-ink);
+}
+.coord-grid-preview {
+  font-family: var(--font-mono);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--accent-ink);
+  letter-spacing: 0.08em;
 }
 
 .overlay-btns {

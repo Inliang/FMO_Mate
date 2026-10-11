@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" data-page-node-id="XhXhwhxqB397QaCGYC914u">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin data-page-node-id="a1Blyd2eBfByxb5WLWMDzr">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" data-page-node-id="IpPQGTu3BlviiZVEl9oYxl">
-  <link rel="stylesheet" href="style.css?v=0909p" data-page-node-id="ATWCsppPDIzcDQz3y7BDAF">
+  <link rel="stylesheet" href="style.css?v=0911a" data-page-node-id="ATWCsppPDIzcDQz3y7BDAF">
 </head>
 <body data-page-node-id="0eTqUaa7itPg7UuUXy0v5G">
 <div class="app-wrapper" data-page-node-id="RRCSHqXticB7YEC9y3Al8C">
@@ -33,7 +33,8 @@
         <span id="status-dot" class="status-dot" data-page-node-id="uXAUaHXIVBDKZp61pY8C4w"></span>
         <span id="status-text" class="status-text" data-page-node-id="heQBErJb7lEJjp7um2PEki">未连接</span>
         <span class="status-sep" aria-hidden="true" data-page-node-id="Izs8NW3LCMM5KJU4Cqqq6h">|</span>
-        <span id="live-clock" class="pill-clock" data-page-node-id="zpA6eXIqNdhxW0G1tPF4Nw"></span>
+        <span id="live-clock" class="pill-clock" title="本地时间"></span>
+        <span id="utc-clock" class="pill-clock utc-clock" title="UTC 协调世界时"></span>
         <span id="net-type" class="net-type-tag" title="访问方式" data-page-node-id="GRR5Sw5pbJY5Ulbm1TFNvg">本机</span>
       </div>
 
@@ -97,6 +98,10 @@
         <span class="kpi-label" data-page-node-id="mBFLkrpIPQENeQkK26yQ99">FMO IP</span>
         <span class="kpi-value" id="server-addr" data-page-node-id="Xue7TJKEKJoqeBiF8OwPOG">--</span>
       </div>
+      <div class="kpi-card kpi-coord" id="coord-card" title="点击设置设备坐标（config.setCordinate）">
+        <span class="kpi-label">坐标 / GRID</span>
+        <span class="kpi-value" id="dev-coord">--</span>
+      </div>
     </div>
   </header>
 
@@ -123,6 +128,11 @@
             <button class="refresh-icon-btn" id="ac-refresh-btn" title="刷新现场" aria-label="刷新现场" data-page-node-id="3V9k96v4jcfOar96JnqxUl">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-page-node-id="k4PttDyVYBXr0DCP05uqYY">
                 <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" data-page-node-id="ATahLqHWfyJSb7x1sSeuvp"/><path d="M3 3v5h5" data-page-node-id="3z4rV6sK9zjz4TwDKGB9Xw"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" data-page-node-id="7Sq7Rx53gfo3whazaFi9so"/><path d="M16 16h5v5" data-page-node-id="7izxYNi2F8tf2cbAXuzxiL"/>
+              </svg>
+            </button>
+            <button class="refresh-icon-btn qrz-icon-btn" id="ac-qrz-btn" title="在 QRZ.com 查询该呼号" aria-label="QRZ 查询">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="9"/><path d="M3.5 9h17M3.5 15h17"/><path d="M12 3c2.6 2.4 4 5.6 4 9s-1.4 6.6-4 9c-2.6-2.4-4-5.6-4-9s1.4-6.6 4-9z"/>
               </svg>
             </button>
             <button class="audio-meter" id="audio-mute-btn" title="静音" aria-label="静音" data-page-node-id="3H73JQvSk06N8BCM2BpL0K">
@@ -236,6 +246,11 @@
       <div class="panel-header" data-page-node-id="Fi7ddczolRxsI34Pt9FkUD">
         <span data-page-node-id="8Fak5Ki0vNuziz7GQ1ehMV">通联记录</span>
         <div class="panel-header-actions" data-page-node-id="6zQq0pxq57uGHyxfIRrP3K">
+          <span class="panel-search-wrap">
+            <svg class="panel-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <input id="qso-search" class="panel-search" type="text" placeholder="呼号 / 网格" autocomplete="off" spellcheck="false">
+            <button class="panel-search-clear" id="qso-search-clear" title="清除" type="button">×</button>
+          </span>
           <button id="panel-export-btn" class="panel-export-btn" title="导出 ADIF 日志" data-page-node-id="9OmH12NYMAsObwMmmBOpRf">导出 ADIF</button>
           <span class="panel-count" id="qso-count" data-page-node-id="bKODBnsz8Rscy89BTq1E9f">0</span>
         </div>
@@ -265,6 +280,30 @@
       <div class="server-list-title" data-page-node-id="uZf8eOrHHGUl4vHoSHJMBn">切换服务器</div>
       <input id="server-search" class="server-search" type="text" placeholder="搜索服务器..." data-page-node-id="51L4cdnxkmcPAkbqGeQZDQ">
       <div id="server-list-container" class="server-list-scroll" data-page-node-id="gHeEAP4ZXHcBXmtyYtZW1I"></div>
+    </div>
+  </div>
+
+  <!-- ===== 隐藏: 设备坐标设置 ===== -->
+  <div id="coord-overlay" class="overlay">
+    <div class="overlay-box coord-box">
+      <h2>设备坐标</h2>
+      <p class="coord-hint">坐标用于计算对方台的方位角与距离，写入设备后即刻生效（<code>config.setCordinate</code>）。</p>
+      <div class="settings-row">
+        <label for="coord-lat">纬度</label>
+        <input id="coord-lat" type="text" placeholder="例：31.2304" autocomplete="off">
+      </div>
+      <div class="settings-row">
+        <label for="coord-lon">经度</label>
+        <input id="coord-lon" type="text" placeholder="例：121.4737" autocomplete="off">
+      </div>
+      <div class="settings-row">
+        <label>网格</label>
+        <span class="coord-grid-preview" id="coord-grid-preview">--</span>
+      </div>
+      <div class="overlay-btns">
+        <button id="coord-save" class="btn-accent">写入设备</button>
+        <button id="coord-close" class="btn-muted">取消</button>
+      </div>
     </div>
   </div>
 
@@ -326,6 +365,6 @@
 
 </div>
 
-  <script src="app.js?v=0909p"></script>
+  <script src="app.js?v=0911a"></script>
 </body>
 </html>

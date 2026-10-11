@@ -2,6 +2,27 @@
 
 ## 2026-10-11
 
+### 新增 A5 / A6 / A8 / B4 / E5 五项功能（v=0911a）
+
+- **A5 呼号跳转 QRZ**（`_qrzUrl` / `_openQrz` / `_bindQrz`）
+  - 通联记录、最近发言、TOP20 三处的呼号变成可点链接，点击新标签打开 `https://www.qrz.com/db/<CALL>`（自动去除 SSID）
+  - 当前呼叫卡片新增 QRZ 图标按钮 `#ac-qrz-btn`，无呼号时自动禁用
+  - 最近发言 / TOP20 悬停时浮现迷你 QRZ 图标；点击 QRZ 不再触发"复制呼号"
+- **A6 QSO 搜索**（`qsoSearch` / `_filteredQsoList()`）
+  - 通联记录面板头部新增搜索框 `#qso-search`，实时匹配呼号 / 网格 / QTH 地名 / 中继名 / 留言
+  - 聚焦时宽度 118→150px 展开，`×` 清除按钮，Esc 清空
+  - 面板计数在搜索态改为「命中数/总数」，无命中显示提示文案
+- **A8 今日已联 ★ 标记**（`_todayContactedSet()` / `_todayBadge()`）
+  - 按本地日期比对 QSO 时间戳，今日已通联的呼号在通联记录 / 最近发言 / TOP20 均显示高亮 ★ 徽标
+- **B4 设备坐标独立显示 + 写入**
+  - KPI 行新增独立「坐标 / GRID」卡片 `#coord-card`，显示 `31.2304°N 121.4737°E` 形式，悬停显示梅登海德网格
+  - 点击弹出坐标弹窗 `#coord-overlay`，输入经纬度实时预览网格，回车或「写入设备」调用 `config.setCordinate`
+  - 写入成功后更新 `_myLat/_myLon/myGrid` 并重算方位 / 距离（SpeakingBar + 上个通联卡）
+- **E5 UTC / 本地双时钟**
+  - 状态栏 `#live-clock`（本地）旁新增 `#utc-clock`，带 `UTC` 前缀（`::before`），点击复制 UTC 时间
+  - `_startClock()` 同一 tick 内同时刷新两个时钟
+- 版本串 `?v=0909p` → `?v=0911a`
+
 ### 移除收藏功能 + 输出功能缺口清单
 
 - **移除本地收藏**：`index.html` 删掉收藏筛选按钮组；`style.css` 删掉 `.fav-star` / `.fav-filter-*` 样式；`app.js` 删掉 `favServers` / `_favOnly` 状态与 `loadFavServers` / `saveFavServers` / `isFavServer` / `toggleFavServer` / `setFavFilter` 五个方法

@@ -78,6 +78,7 @@ const App = {
   _myLat: undefined,
   _myLon: undefined,
   qsoList: [],
+  qsoSearch: '',
   serverList: [],
   currentServerName: '',
   _prevServer: '',
@@ -131,6 +132,7 @@ const App = {
     this.initAudioCtx();
     this.updateVU();
     this._startClock();
+    this.updateCoordCard();
   },
 
   bindEvents() {
@@ -147,6 +149,68 @@ const App = {
     if (settingsClose) settingsClose.addEventListener('click', () => this.closeSettings());
     const settingsSave = $('settings-save');
     if (settingsSave) settingsSave.addEventListener('click', () => this.saveSettings());
+
+    // 设备坐标弹窗（B4）
+    const coordCard = $('coord-card');
+    if (coordCard) coordCard.addEventListener('click', () => this.openCoordDialog());
+    const coordOverlay = $('coord-overlay');
+    if (coordOverlay) {
+      coordOverlay.addEventListener('click', (e) => { if (e.target === coordOverlay) this.closeCoordDialog(); });
+    }
+    const coordClose = $('coord-close');
+    if (coordClose) coordClose.addEventListener('click', () => this.closeCoordDialog());
+    const coordSave = $('coord-save');
+    if (coordSave) coordSave.addEventListener('click', () => this.saveCoord());
+    ['coord-lat', 'coord-lon'].forEach(id => {
+      const el = $(id);
+      if (el) {
+        el.addEventListener('input', () => this._updateCoordGridPreview());
+        el.addEventListener('keydown', (e) => { if (e.key === 'Enter') this.saveCoord(); });
+      }
+    });
+
+    // QSO 搜索框（A6）
+    const qsoSearch = $('qso-search');
+    const qsoSearchWrap = qsoSearch && qsoSearch.closest('.panel-search-wrap');
+    if (qsoSearch) {
+      qsoSearch.addEventListener('input', (e) => {
+        this.qsoSearch = (e.target.value || '').trim();
+        if (qsoSearchWrap) qsoSearchWrap.classList.toggle('has-value', this.qsoSearch.length > 0);
+        this.renderQsoList();
+      });
+      qsoSearch.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { qsoSearch.value = ''; this.qsoSearch = ''; this.renderQsoList(); }
+      });
+    }
+    const qsoSearchClear = $('qso-search-clear');
+    if (qsoSearchClear) {
+      qsoSearchClear.addEventListener('click', () => {
+        if (qsoSearch) qsoSearch.value = '';
+        this.qsoSearch = '';
+        if (qsoSearchWrap) qsoSearchWrap.classList.remove('has-value');
+        this.renderQsoList();
+        if (qsoSearch) qsoSearch.focus();
+      });
+    }
+
+    // 当前呼叫 → QRZ 查询（A5）
+    const acQrzBtn = $('ac-qrz-btn');
+    if (acQrzBtn) acQrzBtn.addEventListener('click', () => {
+      const call = this._currentSpeaker?.callsign || '';
+      if (call) this._openQrz(call);
+    });
+
+    // UTC 时钟：点击复制 UTC 时间
+    const utcClock = $('utc-clock');
+    if (utcClock) {
+      utcClock.addEventListener('click', () => {
+        const txt = utcClock.textContent.replace(/^UTC\s*/i, '').trim();
+        navigator.clipboard.writeText(txt)
+          .then(() => this._showToast('已复制 UTC 时间 ' + txt))
+          .catch(() => this._showToast(txt));
+      });
+    }
+
     const fmoIp = $('fmo-ip');
     const fmoPort = $('fmo-port');
     if (fmoIp) fmoIp.addEventListener('keydown', (e) => { if (e.key === 'Enter') this.saveSettings(); });
@@ -401,11 +465,15 @@ const App = {
 
   _startClock() {
     const el = document.getElementById('live-clock');
-    if (!el) return;
+    const utcEl = document.getElementById('utc-clock');
+    if (!el && !utcEl) return;
+    const pad = (n) => String(n).padStart(2, '0');
     const tick = () => {
       const now = new Date();
-      const pad = (n) => String(n).padStart(2, '0');
-      el.textContent = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+      const local = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+      const utc = pad(now.getUTCHours()) + ':' + pad(now.getUTCMinutes()) + ':' + pad(now.getUTCSeconds());
+      if (el) el.textContent = local;
+      if (utcEl) utcEl.textContent = utc;
     };
     tick();
     this._clockTimer = setInterval(tick, 1000);
@@ -659,8 +727,8 @@ const App = {
       try {
         const r = await this.send({ type: 'config', subType: 'getCordinate' });
         if ((r.code === 0 || r.code === undefined) && r.data && typeof r.data === 'object') {
-          this._myLat = r.data.latitude;
-          this._myLon = r.data.longitude;
+          this._myLat = Number(r.data.latitude);
+          this._myLon = Number(r.data.longitude);
           const grid = this.latLonToGrid(r.data.latitude, r.data.longitude);
           this.myGrid = grid;
         }
@@ -742,6 +810,9 @@ const App = {
     const cs = this.myCallsign || 'N0CALL';
     if (devCallsignEl) devCallsignEl.textContent = cs;
     if (devUidEl) devUidEl.textContent = this.myUid || '--';
+
+    // B4：设备坐标独立卡片
+    this.updateCoordCard();
   },
 
   async fetchRadioInfo() {
@@ -1355,8 +1426,14 @@ const App = {
       return;
     }
 
-    // 最新的 15 条
-    const items = [...this.qsoList];
+    // A6：按关键词过滤（呼号 / 网格 / QTH / 中继 / 留言）
+    const items = this._filteredQsoList();
+    if (!items.length) {
+      container.innerHTML = '<div class="list-empty">无匹配「' + this._esc(this.qsoSearch) + '」的记录</div>';
+      return;
+    }
+
+    const todaySet = this._todayContactedSet(); // A8
     items.forEach(item => { if (item.grid || item.locator) this._resolveGridLocation(item.grid || item.locator); });
     container.innerHTML = items.map(item => {
       const ts = item.timestamp ? new Date(item.timestamp * 1000) : null;
@@ -1378,9 +1455,14 @@ const App = {
         ? '<a class="qso-grid" href="javascript:void(0)" title="复制呼号并打开地图 — ' + callsign + '" data-callsign="' + callsign + '">' + grid + '</a>'
         : '';
 
+      // A5：呼号链接到 QRZ；A8：今日已联打 ★
+      const callHtml = callsign && callsign !== '--'
+        ? '<a class="callsign-link" href="#" data-qrz="' + this._esc(callsign) + '" title="QRZ 查询 ' + this._esc(callsign) + '">' + this._esc(callsign) + '</a>'
+        : '--';
+
       return `<div class="qso-row">
         <span class="qso-accent"></span>
-        <span class="qso-callsign">${callsign}</span>
+        <span class="qso-callsign">${callHtml}${this._todayBadge(callsign, todaySet)}</span>
         ${gridHtml ? '<span class="qso-grid-cell">' + gridHtml + '</span>' : '<span class="qso-grid-cell qso-cell-empty">--</span>'}
         <span class="qso-qth-cell" title="${qth}">${qth}</span>
         <span class="qso-memo-cell ${memo ? 'qso-memo-clickable' : 'qso-cell-empty'}" title="${this._esc(memo) || '暂无留言'}" data-memo="${this._esc(memo)}">${memo || '暂无留言'}</span>
@@ -1414,9 +1496,167 @@ const App = {
         }
       });
     });
+
+    this._bindQrz(container); // A5
+
+    // 搜索时同步面板计数（命中 / 总数）
+    const countEl = document.getElementById('qso-count');
+    if (countEl) {
+      countEl.textContent = this.qsoSearch ? (items.length + '/' + this.qsoList.length) : String(this.qsoList.length);
+    }
   },
 
   _esc(str) { return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); },
+
+  // ============ A5: QRZ 查询 ============
+
+  _QRZ_SVG: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8"/><path d="M12 3c2.6 2.4 4 5.6 4 9s-1.4 6.6-4 9c-2.6-2.4-4-5.6-4-9s1.4-6.6 4-9z"/></svg>',
+
+  _qrzUrl(callsign) {
+    const c = (this.parseCallsignSsid(callsign).call || callsign || '').trim();
+    return c ? 'https://www.qrz.com/db/' + encodeURIComponent(c.toUpperCase()) : '';
+  },
+
+  _openQrz(callsign) {
+    const url = this._qrzUrl(callsign);
+    if (!url) return;
+    window.open(url, '_blank', 'noopener');
+  },
+
+  /** 渲染后统一绑定 [data-qrz] 元素的点击 → 打开 QRZ */
+  _bindQrz(root) {
+    if (!root) return;
+    root.querySelectorAll('[data-qrz]').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this._openQrz(el.dataset.qrz);
+      });
+    });
+  },
+
+  // ============ A8: 今日已联标记 ============
+
+  /** 返回今日已通联过的呼号集合（去 SSID，大写） */
+  _todayContactedSet() {
+    const set = new Set();
+    const now = new Date();
+    const y = now.getFullYear(), m = now.getMonth(), d = now.getDate();
+    for (const q of this.qsoList) {
+      const ts = q.timestamp ?? q.time;
+      if (!ts) continue;
+      const t = new Date((typeof ts === 'number' && ts < 1e10 ? ts * 1000 : ts));
+      if (t.getFullYear() === y && t.getMonth() === m && t.getDate() === d) {
+        const c = this.parseCallsignSsid(this._extractQsoCallsign(q)).call;
+        if (c) set.add(c.toUpperCase());
+      }
+    }
+    return set;
+  },
+
+  _todayBadge(callsign, todaySet) {
+    if (!todaySet || !todaySet.size || !callsign) return '';
+    const c = (this.parseCallsignSsid(callsign).call || '').toUpperCase();
+    return c && todaySet.has(c) ? '<span class="today-badge" title="今日已联">★</span>' : '';
+  },
+
+  // ============ A6: QSO 搜索 ============
+
+  _filteredQsoList() {
+    const kw = (this.qsoSearch || '').trim().toLowerCase();
+    if (!kw) return this.qsoList;
+    return this.qsoList.filter(q => {
+      const call = (this._extractQsoCallsign(q) || '').toLowerCase();
+      const grid = (q.grid ?? q.locator ?? '').toLowerCase();
+      const relay = (q.relayName ?? q.serverName ?? q.stationName ?? q.relay ?? q.gateway ?? '').toLowerCase();
+      const memo = (q.toComment ?? q.memo ?? q.message ?? q.msg ?? q.text ?? q.content ?? '').toLowerCase();
+      const qth = (this._gridLocationCache[q.grid ?? q.locator] || '').toLowerCase();
+      return call.includes(kw) || grid.includes(kw) || relay.includes(kw) || memo.includes(kw) || qth.includes(kw);
+    });
+  },
+
+  // ============ B4: 设备坐标 ============
+
+  _fmtCoord(lat, lon) {
+    if (typeof lat !== 'number' || typeof lon !== 'number' || !Number.isFinite(lat) || !Number.isFinite(lon)) return '';
+    const ns = lat >= 0 ? 'N' : 'S';
+    const ew = lon >= 0 ? 'E' : 'W';
+    return Math.abs(lat).toFixed(4) + '°' + ns + ' ' + Math.abs(lon).toFixed(4) + '°' + ew;
+  },
+
+  updateCoordCard() {
+    const el = document.getElementById('dev-coord');
+    if (!el) return;
+    const card = document.getElementById('coord-card');
+    const lat = (this._myLat === undefined || this._myLat === null || this._myLat === '') ? NaN : Number(this._myLat);
+    const lon = (this._myLon === undefined || this._myLon === null || this._myLon === '') ? NaN : Number(this._myLon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      el.textContent = '--';
+      if (card) card.title = '未获取到设备坐标，点击可手动设置';
+      return;
+    }
+    el.textContent = this._fmtCoord(lat, lon);
+    if (card) {
+      card.title = '网格 ' + (this.myGrid || '--') + ' · 点击修改设备坐标';
+    }
+  },
+
+  openCoordDialog() {
+    const overlay = document.getElementById('coord-overlay');
+    if (!overlay) return;
+    const latEl = document.getElementById('coord-lat');
+    const lonEl = document.getElementById('coord-lon');
+    if (latEl) latEl.value = Number.isFinite(this._myLat) ? String(this._myLat) : '';
+    if (lonEl) lonEl.value = Number.isFinite(this._myLon) ? String(this._myLon) : '';
+    this._updateCoordGridPreview();
+    overlay.classList.add('open');
+    if (latEl) setTimeout(() => latEl.focus(), 30);
+  },
+
+  closeCoordDialog() {
+    const overlay = document.getElementById('coord-overlay');
+    if (overlay) overlay.classList.remove('open');
+  },
+
+  _updateCoordGridPreview() {
+    const latEl = document.getElementById('coord-lat');
+    const lonEl = document.getElementById('coord-lon');
+    const out = document.getElementById('coord-grid-preview');
+    if (!out) return;
+    const lat = parseFloat(latEl && latEl.value);
+    const lon = parseFloat(lonEl && lonEl.value);
+    if (Number.isFinite(lat) && Number.isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+      out.textContent = this.latLonToGrid(lat, lon);
+    } else {
+      out.textContent = '--';
+    }
+  },
+
+  async saveCoord() {
+    const latEl = document.getElementById('coord-lat');
+    const lonEl = document.getElementById('coord-lon');
+    const lat = parseFloat(latEl && latEl.value);
+    const lon = parseFloat(lonEl && lonEl.value);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) { this._showToast('请输入有效经纬度'); return; }
+    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) { this._showToast('纬度 -90~90 / 经度 -180~180'); return; }
+
+    try {
+      const resp = await this.send({ type: 'config', subType: 'setCordinate', data: { latitude: lat, longitude: lon } });
+      const ok = !resp || resp.code === 0 || resp.code === undefined;
+      if (!ok) { this._showToast('写入失败 code=' + resp.code); return; }
+      this._myLat = lat;
+      this._myLon = lon;
+      this.myGrid = this.latLonToGrid(lat, lon);
+      this.updateCoordCard();
+      this.closeCoordDialog();
+      this._showToast('坐标已写入 · 网格 ' + this.myGrid);
+      // 坐标影响方位/距离计算，重算当前发言卡片
+      this.renderSpeakingBar();
+      this.renderPrevCard();
+    } catch (e) {
+      this._showToast('写入失败：' + (e.message || e));
+    }
+  },
 
   _showToast(msg) {
     const el = document.createElement('div');
@@ -1519,7 +1759,10 @@ const App = {
   updateQsoCount() {
     const el = document.getElementById('qso-count');
     if (!el) return;
-    el.textContent = this.qsoList.length;
+    // A6：搜索激活时显示「命中数/总数」
+    el.textContent = this.qsoSearch
+      ? (this._filteredQsoList().length + '/' + this.qsoList.length)
+      : String(this.qsoList.length);
 
     // 本地计算今日通联 / 总通联 / 友台数（以本地 qsoList 为准，设备 API 不存在时可工作）
     const todayTs = Math.floor(new Date().setHours(0, 0, 0, 0) / 1000);
@@ -1570,17 +1813,22 @@ const App = {
     }
 
     const maxCount = sorted[0][1];
+    const todaySet = this._todayContactedSet(); // A8
     container.innerHTML = sorted.map(([call, count], i) => {
       const barPct = Math.round((count / maxCount) * 100);
       const isSelf = this.isSameOperator(call, this.myCallsign);
       const barColor = i < 3 ? 'var(--accent)' : i < 10 ? 'var(--accent-soft)' : 'var(--accent-line)';
+      // A5：呼号 → QRZ；A8：今日已联 ★
+      const callHtml = '<a class="callsign-link" href="#" data-qrz="' + this._esc(call) + '" title="QRZ 查询 ' + this._esc(call) + '">' + this._esc(call) + '</a>';
+      const qrzBtn = '<button class="qrz-mini" data-qrz="' + this._esc(call) + '" title="QRZ 查询 ' + this._esc(call) + '" type="button">' + this._QRZ_SVG + '</button>';
       return `<div class="top-item${isSelf ? ' is-self' : ''}">
         <span class="top-rank">${i + 1}</span>
-        <span class="top-call">${call}</span>
+        <span class="top-call">${callHtml}${this._todayBadge(call, todaySet)}${qrzBtn}</span>
         <span class="top-bar-wrap"><span class="top-bar" style="width:${barPct}%;background:${barColor}"></span></span>
         <span class="top-count">${count}次</span>
       </div>`;
     }).join('');
+    this._bindQrz(container);
   },
 
   async refreshStats() {
@@ -2166,6 +2414,7 @@ const App = {
     }
 
     const now = Date.now();
+    const todaySet = this._todayContactedSet(); // A8
     container.innerHTML = items.map((item, index) => {
       const call = this.parseCallsignSsid(item.callsign).call;
       const count = contactCounts.get(call) || 0;
@@ -2203,8 +2452,10 @@ const App = {
       return '<div class="recent-item' + (isActive ? ' is-speaking' : '') + (isSelf ? ' is-self' : '') + '" data-callsign="' + item.callsign + '">'
         + '<span class="recent-index-bg">' + (index + 1) + '</span>'
         + '<div class="recent-body">'
-        + '<span class="recent-callsign">' + item.callsign + '</span>'
+        + '<span class="recent-callsign"><a class="callsign-link" href="#" data-qrz="' + this._esc(item.callsign) + '" title="QRZ 查询 ' + this._esc(item.callsign) + '">' + this._esc(item.callsign) + '</a></span>'
         + (isSelf ? '<span class="self-tag">您</span>' : '')
+        + this._todayBadge(item.callsign, todaySet)
+        + '<button class="qrz-mini" type="button" data-qrz="' + this._esc(item.callsign) + '" title="QRZ 查询 ' + this._esc(item.callsign) + '">' + this._QRZ_SVG + '</button>'
         + (qth ? '<span class="recent-grid" title="' + this._esc(grid || '') + '">' + this._esc(qth) + '</span>' : '')
         + (midLine ? '<span class="recent-extra">' + midLine + '</span>' : '')
         + '<span class="recent-spacer"></span>'
@@ -2214,8 +2465,10 @@ const App = {
         + '</div>';
     }).join('');
 
+    this._bindQrz(container); // A5
     container.querySelectorAll('.recent-item').forEach(el => {
       el.addEventListener('click', (e) => {
+        if (e.target.closest('[data-qrz]')) return; // 点 QRZ 按钮时不复制
         const callsign = el.dataset.callsign;
         if (callsign) {
           navigator.clipboard.writeText(callsign).catch(() => {});
@@ -2229,7 +2482,11 @@ const App = {
     if (!bar) return;
 
     const sp = this._currentSpeaker;
-    if (!sp) return;
+    if (!sp) {
+      const q = document.getElementById('ac-qrz-btn');
+      if (q) { q.disabled = true; q.title = '暂无呼号'; }
+      return;
+    }
 
     bar.classList.remove('idle');
     bar.classList.add('active');
@@ -2261,6 +2518,14 @@ const App = {
     // Callsign
     const csEl = document.getElementById('sb-callsign');
     if (csEl) { csEl.textContent = sp.callsign || '--'; csEl.style.display = ''; }
+
+    // A5：当前呼叫的 QRZ 查询按钮（无呼号时禁用）
+    const qrzBtn = document.getElementById('ac-qrz-btn');
+    if (qrzBtn) {
+      const has = !!(sp.callsign && sp.callsign !== '--');
+      qrzBtn.disabled = !has;
+      qrzBtn.title = has ? ('在 QRZ.com 查询 ' + sp.callsign) : '暂无呼号';
+    }
 
     // Grid tag：优先显示网格转换后的 QTH 地名，保留网格码作为 title 提示
     const gridEl = document.getElementById('sb-grid');
