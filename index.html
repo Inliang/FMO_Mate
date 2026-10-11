@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" data-page-node-id="XhXhwhxqB397QaCGYC914u">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin data-page-node-id="a1Blyd2eBfByxb5WLWMDzr">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" data-page-node-id="IpPQGTu3BlviiZVEl9oYxl">
-  <link rel="stylesheet" href="style.css?v=0911a" data-page-node-id="ATWCsppPDIzcDQz3y7BDAF">
+  <link rel="stylesheet" href="style.css?v=0911b" data-page-node-id="ATWCsppPDIzcDQz3y7BDAF">
 </head>
 <body data-page-node-id="0eTqUaa7itPg7UuUXy0v5G">
 <div class="app-wrapper" data-page-node-id="RRCSHqXticB7YEC9y3Al8C">
@@ -56,6 +56,7 @@
           <button class="tool-btn theme-btn" id="theme-light" data-theme="light" title="浅色主题" data-page-node-id="pWSdeutx1Oz1RQBz2Uw0F9">亮</button>
           <button class="tool-btn theme-btn" id="theme-eink" data-theme="e-ink" title="水墨屏" data-page-node-id="7G9mivCsC1YojYawt6Ngwc">墨</button>
           <button class="tool-btn theme-btn orientation-toggle" id="orientation-toggle-btn" title="切换横竖屏" data-page-node-id="ZizuNdGcc2BCHiP1Wp3vdD">⇅</button>
+          <button class="tool-btn" id="cmd-device-btn" title="设备配置（名称 / 天线 / APRS）">设备</button>
           <button class="tool-btn" id="cmd-settings-btn" title="设置" data-page-node-id="r5tBooPLbFkrDmtirhoeWT">设置</button>
         </div>
       </div>
@@ -212,6 +213,22 @@
             <div class="server-search-results" id="server-search-results" data-page-node-id="DNOk7iopsR7MiLP2criPcn"></div>
           </div>
         </div>
+
+        <!-- A1 上一台/下一台 + A2 当前服务器 UID -->
+        <div class="server-current-bar">
+          <button class="srv-nav-btn" id="srv-prev-btn" title="上一台（station.prev）" aria-label="上一台">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+          </button>
+          <span class="server-current-name" id="server-name-display" title="当前中继">--</span>
+          <span class="server-current-uid" id="server-uid-display" title="当前中继 ID">#--</span>
+          <button class="srv-nav-btn" id="srv-next-btn" title="下一台（station.next）" aria-label="下一台">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+
+        <!-- A3 最近活跃服务器 -->
+        <div class="server-recent-bar" id="server-recent-bar"></div>
+
         <div class="server-list-sidebar" id="server-list-sidebar" data-page-node-id="FNlqZfpUCxGvj4DHmYChgg">
           <div class="side-loading" data-page-node-id="r5FMpACCPxzNaaHG4dxlBF">
             <div class="loading-spinner" data-page-node-id="cVFIPWc77MXBPZ2CEABE7t"></div>
@@ -307,6 +324,72 @@
     </div>
   </div>
 
+  <!-- ===== 隐藏: QSO 详情（A7）===== -->
+  <div id="qso-detail-overlay" class="overlay">
+    <div class="overlay-box qso-detail-box">
+      <div class="qso-detail-head">
+        <h2 id="qso-detail-callsign">--</h2>
+        <span class="qso-detail-badge" id="qso-detail-mode">--</span>
+      </div>
+      <div class="qso-detail-grid" id="qso-detail-grid"></div>
+      <div class="qso-detail-memo" id="qso-detail-memo"></div>
+      <div class="overlay-btns">
+        <button id="qso-detail-record-btn" class="btn-muted" title="查看该呼号的全部通联">筛选该呼号</button>
+        <button id="qso-detail-close" class="btn-accent">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 隐藏: 设备配置（B9 设备名 / B5 天线 / B2 APRS）===== -->
+  <div id="device-overlay" class="overlay">
+    <div class="overlay-box device-box">
+      <h2>设备配置</h2>
+      <p class="coord-hint">修改后写入 FMO 设备；留空表示该项不修改。</p>
+
+      <div class="device-group">
+        <div class="device-group-title">物理设备（B9 / B5）</div>
+        <div class="device-row">
+          <label for="dev-cfg-name">设备名</label>
+          <input id="dev-cfg-name" type="text" maxlength="15" placeholder="≤15 字符" autocomplete="off">
+        </div>
+        <div class="device-row">
+          <label for="dev-cfg-ant">天线描述</label>
+          <input id="dev-cfg-ant" type="text" maxlength="15" placeholder="≤15 字符" autocomplete="off">
+        </div>
+        <div class="device-row">
+          <label for="dev-cfg-ant-h">天线高度 (m)</label>
+          <input id="dev-cfg-ant-h" type="text" placeholder="0 - 100000" autocomplete="off">
+        </div>
+        <div class="device-row">
+          <label for="dev-cfg-freq">物理频率 (MHz)</label>
+          <input id="dev-cfg-freq" type="text" placeholder="0 - 1000" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="device-group">
+        <div class="device-group-title">APRS（B2）</div>
+        <div class="device-row">
+          <label for="dev-cfg-remark">APRS 备注</label>
+          <input id="dev-cfg-remark" type="text" maxlength="63" placeholder="≤63 字节" autocomplete="off">
+        </div>
+        <div class="device-row">
+          <label for="dev-cfg-type">APRS 图标</label>
+          <select id="dev-cfg-type"></select>
+        </div>
+        <div class="device-row">
+          <label for="dev-cfg-pass">Passcode</label>
+          <input id="dev-cfg-pass" type="text" maxlength="5" placeholder="5 位数字或 -1" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="overlay-btns">
+        <button id="dev-cfg-restart" class="btn-muted" title="restartAprsService">重启 APRS</button>
+        <button id="dev-cfg-save" class="btn-accent">写入设备</button>
+        <button id="dev-cfg-close" class="btn-muted">取消</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== 隐藏: 设置面板 ===== -->
   <div id="settings-overlay" class="overlay" data-page-node-id="LUHErb7h9oNgsMfJMj47nI">
     <div class="overlay-box" data-page-node-id="sjXthyxsxKAojofOoNlftz">
@@ -365,6 +448,6 @@
 
 </div>
 
-  <script src="app.js?v=0911a"></script>
+  <script src="app.js?v=0911b"></script>
 </body>
 </html>

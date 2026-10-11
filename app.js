@@ -211,6 +211,48 @@ const App = {
       });
     }
 
+    // A1：上一台 / 下一台
+    const srvPrev = $('srv-prev-btn');
+    if (srvPrev) srvPrev.addEventListener('click', () => this.switchServerStep(-1));
+    const srvNext = $('srv-next-btn');
+    if (srvNext) srvNext.addEventListener('click', () => this.switchServerStep(1));
+
+    // A7：QSO 详情弹窗
+    const detailOverlay = $('qso-detail-overlay');
+    if (detailOverlay) {
+      detailOverlay.addEventListener('click', (e) => { if (e.target === detailOverlay) this.closeQsoDetail(); });
+    }
+    const detailClose = $('qso-detail-close');
+    if (detailClose) detailClose.addEventListener('click', () => this.closeQsoDetail());
+    const detailFilter = $('qso-detail-record-btn');
+    if (detailFilter) {
+      detailFilter.addEventListener('click', () => {
+        const call = this._detailCallsign || '';
+        const si = $('qso-search');
+        if (si) si.value = call;
+        this.qsoSearch = call;
+        const wrap = si && si.closest('.panel-search-wrap');
+        if (wrap) wrap.classList.toggle('has-value', !!call);
+        this.renderQsoList();
+        this.closeQsoDetail();
+        this._showToast(call ? ('已按「' + call + '」筛选') : '无呼号');
+      });
+    }
+
+    // B2 / B5 / B9：设备配置
+    const devBtn = $('cmd-device-btn');
+    if (devBtn) devBtn.addEventListener('click', () => this.openDeviceConfig());
+    const devOverlay = $('device-overlay');
+    if (devOverlay) {
+      devOverlay.addEventListener('click', (e) => { if (e.target === devOverlay) this.closeDeviceConfig(); });
+    }
+    const devClose = $('dev-cfg-close');
+    if (devClose) devClose.addEventListener('click', () => this.closeDeviceConfig());
+    const devSave = $('dev-cfg-save');
+    if (devSave) devSave.addEventListener('click', () => this.saveDeviceConfig());
+    const devRestart = $('dev-cfg-restart');
+    if (devRestart) devRestart.addEventListener('click', () => this.restartAprsService());
+
     const fmoIp = $('fmo-ip');
     const fmoPort = $('fmo-port');
     if (fmoIp) fmoIp.addEventListener('keydown', (e) => { if (e.key === 'Enter') this.saveSettings(); });
@@ -436,6 +478,7 @@ const App = {
       if (devCallsignEl) devCallsignEl.textContent = this.myCallsign || 'N0CALL';
     }
     this._updateNetworkType();
+    this._updateCurrentServerBar(); // A1：未连接时禁用上/下一台
   },
 
   /* 检测本机 / 外网访问 */
@@ -937,11 +980,14 @@ const App = {
           console.log('[FMO-DEBUG-OC] getCurrent 直接返回在线人数:', oc);
         }
         this._showServerInfo();
+        // A3：记录最近使用过的中继
+        this._pushRecentServer(this._currentServerUid, this.currentServerName);
       }
     } catch (e) {}
 
     this.renderServerList();
     this.renderServerSidebar();
+    this.renderRecentServerChips();
     // 显式同步 KPI 在线人数（renderServerList 中也做，此处双保险）
     this._syncKpiOnlineCount();
     setTimeout(() => this._probeAllServerLatency(), 500);
@@ -957,8 +1003,8 @@ const App = {
   },
 
   _showServerInfo() {
-    const nameEl = document.getElementById('server-name-display');
-    if (nameEl) nameEl.textContent = this.currentServerName || '--';
+    // A1 + A2：当前中继条（名称 + UID + 上/下台按钮）
+    this._updateCurrentServerBar();
 
     // 显示 FMO 设备 IP（KPI 卡片行；server-addr 被 _updateServerAddr 统一管理）
     this._updateServerAddr('_showServerInfo');
@@ -1318,6 +1364,8 @@ const App = {
         this._showServerInfo();
         this.renderServerList();
         this.renderServerSidebar();
+        // A3：记录最近使用过的中继
+        this._pushRecentServer(this._currentServerUid, this.currentServerName);
       } else {
         if (nameEl) nameEl.textContent = this._prevServer || '--';
         this.currentServerName = this._prevServer || '';
@@ -1435,7 +1483,7 @@ const App = {
 
     const todaySet = this._todayContactedSet(); // A8
     items.forEach(item => { if (item.grid || item.locator) this._resolveGridLocation(item.grid || item.locator); });
-    container.innerHTML = items.map(item => {
+    container.innerHTML = items.map((item, i) => {
       const ts = item.timestamp ? new Date(item.timestamp * 1000) : null;
       const timeStr = ts
         ? `${ts.getFullYear()}/${String(ts.getMonth()+1).padStart(2,'0')}/${String(ts.getDate()).padStart(2,'0')} ${String(ts.getHours()).padStart(2,'0')}:${String(ts.getMinutes()).padStart(2,'0')}`
@@ -1460,13 +1508,16 @@ const App = {
         ? '<a class="callsign-link" href="#" data-qrz="' + this._esc(callsign) + '" title="QRZ 查询 ' + this._esc(callsign) + '">' + this._esc(callsign) + '</a>'
         : '--';
 
-      return `<div class="qso-row">
+      // A4：中继名可点击 → 直接切换服务器
+      const relayTip = relay ? '点击切换到中继「' + this._esc(relay) + '」' : '无中继';
+
+      return `<div class="qso-row" data-index="${i}">
         <span class="qso-accent"></span>
         <span class="qso-callsign">${callHtml}${this._todayBadge(callsign, todaySet)}</span>
         ${gridHtml ? '<span class="qso-grid-cell">' + gridHtml + '</span>' : '<span class="qso-grid-cell qso-cell-empty">--</span>'}
         <span class="qso-qth-cell" title="${qth}">${qth}</span>
         <span class="qso-memo-cell ${memo ? 'qso-memo-clickable' : 'qso-cell-empty'}" title="${this._esc(memo) || '暂无留言'}" data-memo="${this._esc(memo)}">${memo || '暂无留言'}</span>
-        <span class="qso-relay-cell ${relay ? '' : 'qso-cell-empty'}" title="${this._esc(relay) || '无中继'}">${relay || '无中继'}</span>
+        <span class="qso-relay-cell ${relay ? 'qso-relay-clickable' : 'qso-cell-empty'}" title="${relayTip}" data-relay="${this._esc(relay)}">${relay || '无中继'}</span>
         <span class="qso-time">${timeStr}</span>
       </div>`;
     }).join('');
@@ -1498,6 +1549,25 @@ const App = {
     });
 
     this._bindQrz(container); // A5
+
+    // A7：点击整行 → 详情弹窗（可点元素除外）
+    container.querySelectorAll('.qso-row').forEach(el => {
+      el.addEventListener('click', (e) => {
+        if (e.target.closest('[data-qrz]') || e.target.closest('.qso-memo-clickable')
+            || e.target.closest('.qso-grid') || e.target.closest('.qso-relay-clickable')) return;
+        const item = items[Number(el.dataset.index)];
+        if (item) this.openQsoDetail(item);
+      });
+    });
+
+    // A4：点击中继名 → 切换服务器
+    container.querySelectorAll('.qso-relay-clickable').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this._switchToRelay(el.dataset.relay);
+      });
+    });
 
     // 搜索时同步面板计数（命中 / 总数）
     const countEl = document.getElementById('qso-count');
@@ -1655,6 +1725,338 @@ const App = {
       this.renderPrevCard();
     } catch (e) {
       this._showToast('写入失败：' + (e.message || e));
+    }
+  },
+
+  // ============ A1: 上一台 / 下一台 + A2: 当前服务器 UID ============
+
+  /** 刷新「当前中继」条：名称 + UID + 上/下台按钮可用性 */
+  _updateCurrentServerBar() {
+    const nameEl = document.getElementById('server-name-display');
+    const uidEl = document.getElementById('server-uid-display');
+    if (nameEl) nameEl.textContent = this.currentServerName || '--';
+    if (uidEl) {
+      const u = this._currentServerUid;
+      uidEl.textContent = (u === undefined || u === null || u === '') ? '#--' : '#' + u;
+    }
+    const dis = !this.connected || !this.serverList.length;
+    const pb = document.getElementById('srv-prev-btn');
+    const nb = document.getElementById('srv-next-btn');
+    if (pb) pb.disabled = dis;
+    if (nb) nb.disabled = dis;
+  },
+
+  /** 重新拉取设备当前中继并刷新全部相关视图 */
+  async _syncCurrentServer() {
+    const r = await this.send({ type: 'station', subType: 'getCurrent' });
+    if ((r.code === 0 || r.code === undefined) && r.data) {
+      this.currentServerName = r.data.name || '';
+      this._currentServerUid = r.data.uid ?? r.data._id ?? r.data.id ?? '';
+      this._showServerInfo();
+      this.renderServerSidebar();
+      this.renderServerList();
+      this._pushRecentServer(this._currentServerUid, this.currentServerName);
+      await this.fetchQsoListAll();
+    }
+  },
+
+  /** dir: -1 上一台 / +1 下一台（官方 v2：station.prev / station.next） */
+  async switchServerStep(dir) {
+    if (!this.connected) { this._showToast('未连接设备'); return; }
+    const sub = dir < 0 ? 'prev' : 'next';
+    const pb = document.getElementById('srv-prev-btn');
+    const nb = document.getElementById('srv-next-btn');
+    if (pb) pb.disabled = true;
+    if (nb) nb.disabled = true;
+    try {
+      const resp = await this.send({ type: 'station', subType: sub, data: {} });
+      if (resp && resp.code !== undefined && resp.code !== 0) {
+        this._showToast('切换失败 code=' + resp.code);
+        return;
+      }
+      await this._syncCurrentServer();
+      this._showToast((dir < 0 ? '上一台：' : '下一台：') + (this.currentServerName || '--'));
+    } catch (e) {
+      this._showToast('切换失败：' + (e.message || e));
+    } finally {
+      this._updateCurrentServerBar();
+    }
+  },
+
+  // ============ A3: 最近活跃服务器 ============
+
+  _loadRecentServers() {
+    try {
+      const raw = localStorage.getItem('fmo-recent-servers');
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  },
+
+  _saveRecentServers(list) {
+    try { localStorage.setItem('fmo-recent-servers', JSON.stringify(list)); } catch (e) {}
+  },
+
+  _pushRecentServer(uid, name) {
+    if (uid === undefined || uid === null || uid === '') return;
+    let list = this._loadRecentServers().filter(x => String(x.uid) !== String(uid));
+    list.unshift({ uid: String(uid), name: name || '--', ts: Date.now() });
+    this._saveRecentServers(list.slice(0, 6));
+    this.renderRecentServerChips();
+  },
+
+  renderRecentServerChips() {
+    const bar = document.getElementById('server-recent-bar');
+    if (!bar) return;
+    // 只显示仍存在于服务器列表中的项（设备可能已下线某些中继）
+    const known = new Set(this.serverList.map(s => String(s.uid ?? s._id ?? s.id ?? '')));
+    const list = this._loadRecentServers().filter(x => known.has(String(x.uid)));
+    if (!list.length) { bar.innerHTML = ''; return; }
+
+    const curUid = String(this._currentServerUid ?? '');
+    bar.innerHTML = '<span class="server-recent-label">最近</span>' + list.map(x => {
+      const isCur = String(x.uid) === curUid;
+      return '<button class="server-recent-chip' + (isCur ? ' is-current' : '') + '" type="button"'
+        + ' data-server-uid="' + this._esc(x.uid) + '"'
+        + ' title="' + this._esc(x.name) + ' · ID #' + this._esc(x.uid) + '">'
+        + this._esc(x.name) + '<span class="chip-uid">#' + this._esc(x.uid) + '</span></button>';
+    }).join('');
+
+    bar.querySelectorAll('.server-recent-chip').forEach(el => {
+      el.addEventListener('click', () => {
+        if (el.classList.contains('is-current')) return;
+        this.switchServer(el.dataset.serverUid);
+      });
+    });
+  },
+
+  // ============ A4: 点击中继名直接切换 ============
+
+  async _switchToRelay(relayName) {
+    if (!relayName) return;
+    const key = String(relayName).trim();
+    const matches = this.serverList.filter(s => String(s.name || '').trim() === key);
+    if (!matches.length) {
+      this._showToast('中继「' + key + '」不在服务器列表中');
+      return;
+    }
+    if (matches.length > 1) {
+      this._showToast('有 ' + matches.length + ' 个同名中继（' + matches.map(m => '#' + (m.uid ?? m._id ?? m.id)).join(' / ') + '），请在上方列表按 ID 选择');
+      return;
+    }
+    const uid = matches[0].uid ?? matches[0]._id ?? matches[0].id ?? '';
+    await this.switchServer(String(uid));
+  },
+
+  // ============ A7: QSO 详情弹窗 ============
+
+  async openQsoDetail(item) {
+    const overlay = document.getElementById('qso-detail-overlay');
+    if (!overlay || !item) return;
+
+    let detail = item;
+    if (item.logId) {
+      try {
+        const r = await this.send({ type: 'qso', subType: 'getDetail', data: { logId: item.logId } });
+        if (r && (r.code === 0 || r.code === undefined) && r.data && r.data.log) {
+          detail = r.data.log;
+          this._qsoDetailCache[item.logId] = detail;
+          Object.assign(item, detail);
+        }
+      } catch (e) {}
+    }
+
+    const call = this._extractQsoCallsign(detail) || '--';
+    const grid = detail.grid ?? detail.locator ?? '';
+    if (grid) this._resolveGridLocation(grid);
+    const qth = grid ? (this._gridLocationCache[grid] || grid) : '';
+    const memo = this._getQsoMemoRelay(detail).memo;
+    const relay = this._getQsoMemoRelay(detail).relay;
+
+    const tsRaw = detail.timestamp ?? detail.time;
+    let timeStr = '--';
+    if (tsRaw) {
+      const t = new Date((typeof tsRaw === 'number' && tsRaw < 1e10 ? tsRaw * 1000 : tsRaw));
+      const p = (n) => String(n).padStart(2, '0');
+      timeStr = t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate())
+        + ' ' + p(t.getHours()) + ':' + p(t.getMinutes()) + ':' + p(t.getSeconds());
+    }
+
+    const rawFreq = detail.freq ?? detail.frequency ?? detail.rxFreq ?? '';
+    let freqStr = '';
+    if (rawFreq !== '' && Number.isFinite(Number(rawFreq)) && Number(rawFreq) > 0) {
+      const n = Number(rawFreq);
+      freqStr = (n > 10000 ? (n / 1e6).toFixed(4) : n.toFixed(4)) + ' MHz';
+    }
+
+    const dist = detail.distance ?? detail.dist;
+    const azi = detail.azimuth ?? detail.az ?? detail.bearing;
+    const count = this.qsoList.filter(q => this.isSameOperator(this._extractQsoCallsign(q), call)).length;
+    const fromCall = detail.fromCallsign ?? detail.srcCallsign ?? detail.myCallsign ?? this.myCallsign ?? '';
+
+    const rows = [];
+    const push = (label, value, wide) => {
+      const v = (value === undefined || value === null) ? '' : String(value);
+      if (v === '') return;
+      rows.push({ label, value: v, wide: !!wide });
+    };
+    push('呼号', call);
+    push('本机', fromCall);
+    push('网格', grid);
+    push('QTH', qth);
+    push('频率', freqStr);
+    push('距离', dist !== undefined ? Number(dist).toFixed(0) + ' km' : '');
+    push('方位', azi !== undefined ? this._azimuthToDirection(Number(azi)) + ' ' + Math.round(Number(azi)) + '°' : '');
+    push('中继', relay);
+    push('通联次数', count ? 'x' + count : '');
+    push('时间', timeStr, true);
+
+    const csEl = document.getElementById('qso-detail-callsign');
+    if (csEl) csEl.textContent = call;
+    const modeEl = document.getElementById('qso-detail-mode');
+    if (modeEl) modeEl.textContent = detail.mode ?? detail.qsoMode ?? detail.type ?? 'QSO';
+
+    const gridEl = document.getElementById('qso-detail-grid');
+    if (gridEl) {
+      gridEl.innerHTML = rows.map(r =>
+        '<div class="qso-detail-item' + (r.wide ? ' is-wide' : '') + '">'
+        + '<dt>' + this._esc(r.label) + '</dt><dd title="' + this._esc(r.value) + '">' + this._esc(r.value) + '</dd></div>'
+      ).join('');
+    }
+    const memoEl = document.getElementById('qso-detail-memo');
+    if (memoEl) memoEl.textContent = memo ? ('留言：' + memo) : '';
+
+    overlay.classList.add('open');
+    this._detailCallsign = call;
+  },
+
+  closeQsoDetail() {
+    const overlay = document.getElementById('qso-detail-overlay');
+    if (overlay) overlay.classList.remove('open');
+  },
+
+  // ============ B2 / B5 / B9: 设备配置 ============
+
+  _cfgGet(subType, pick) {
+    return (async () => {
+      try {
+        const r = await this.send({ type: 'config', subType });
+        if (r && (r.code === 0 || r.code === undefined) && r.data) return pick(r.data) ?? '';
+      } catch (e) {}
+      return '';
+    })();
+  },
+
+  async openDeviceConfig() {
+    const overlay = document.getElementById('device-overlay');
+    if (!overlay) return;
+    const $ = id => document.getElementById(id);
+
+    const sel = $('dev-cfg-type');
+    if (sel && !sel.options.length) {
+      sel.innerHTML = '<option value="">（不修改）</option>'
+        + Array.from({ length: 15 }, (_, i) => '<option value="' + (i + 1) + '">图标类型 ' + (i + 1) + '</option>').join('');
+    }
+
+    if (this.connected) {
+      this._showToast('读取设备配置…');
+      const [name, ant, antH, freq, remark, aprsType, pass] = await Promise.all([
+        this._cfgGet('getUserPhyDeviceName', d => d.name ?? d.deviceName ?? d.model),
+        this._cfgGet('getUserPhyAnt', d => Array.isArray(d) && d.length
+          ? (d[0]?.ant ?? d[0]?.type ?? d[0]?.name ?? '')
+          : (d.ant ?? d.type ?? d.antenna ?? d.name)),
+        this._cfgGet('getUserPhyAntHeight', d => d.height ?? d.value ?? d.agl),
+        this._cfgGet('getUserPhyFreq', d => d.frequency ?? d.freq ?? d.rx_freq),
+        this._cfgGet('getAprsRemark', d => d.remark ?? d.aprsRemark),
+        this._cfgGet('getAprsType', d => d.aprsType ?? d.type),
+        this._cfgGet('getPasscode', d => d.passcode ?? d.value)
+      ]);
+      if ($('dev-cfg-name')) $('dev-cfg-name').value = name ?? '';
+      if ($('dev-cfg-ant')) $('dev-cfg-ant').value = ant ?? '';
+      if ($('dev-cfg-ant-h')) $('dev-cfg-ant-h').value = (antH === '' || antH === undefined) ? '' : String(antH);
+      if ($('dev-cfg-freq')) $('dev-cfg-freq').value = (freq === '' || freq === undefined) ? '' : String(freq);
+      if ($('dev-cfg-remark')) $('dev-cfg-remark').value = remark ?? '';
+      if (sel) sel.value = (aprsType === '' || aprsType === undefined) ? '' : String(aprsType);
+      if ($('dev-cfg-pass')) $('dev-cfg-pass').value = (pass === '' || pass === undefined) ? '' : String(pass);
+    } else {
+      this._showToast('未连接设备，仅可查看（写入需先连接）');
+    }
+
+    overlay.classList.add('open');
+  },
+
+  closeDeviceConfig() {
+    const overlay = document.getElementById('device-overlay');
+    if (overlay) overlay.classList.remove('open');
+  },
+
+  async saveDeviceConfig() {
+    const $ = id => document.getElementById(id);
+    if (!this.connected) { this._showToast('未连接设备，无法写入'); return; }
+
+    const val = (id) => (($(id) && $(id).value) || '').trim();
+    const tasks = [];
+
+    const name = val('dev-cfg-name');
+    if (name) tasks.push(['设备名', { type: 'config', subType: 'setUserPhyDeviceName', data: { deviceName: name } }]);
+
+    const ant = val('dev-cfg-ant');
+    if (ant) tasks.push(['天线描述', { type: 'config', subType: 'setUserPhyAnt', data: { ant } }]);
+
+    const antH = parseFloat(val('dev-cfg-ant-h'));
+    if (Number.isFinite(antH)) {
+      if (antH < 0 || antH > 100000) { this._showToast('天线高度须在 0 - 100000 m'); return; }
+      tasks.push(['天线高度', { type: 'config', subType: 'setUserPhyAntHeight', data: { height: antH } }]);
+    }
+
+    const freq = parseFloat(val('dev-cfg-freq'));
+    if (Number.isFinite(freq)) {
+      if (freq < 0 || freq > 1000) { this._showToast('物理频率须在 0 - 1000 MHz'); return; }
+      tasks.push(['物理频率', { type: 'config', subType: 'setUserPhyFreq', data: { freq } }]);
+    }
+
+    const remark = val('dev-cfg-remark');
+    if (remark) {
+      const bytes = new TextEncoder().encode(remark).length;
+      if (bytes > 63) { this._showToast('APRS 备注超长：' + bytes + ' 字节（上限 63）'); return; }
+      tasks.push(['APRS 备注', { type: 'config', subType: 'setAprsRemark', data: { remark } }]);
+    }
+
+    const aprsType = (($('dev-cfg-type') && $('dev-cfg-type').value) || '').trim();
+    if (aprsType) tasks.push(['APRS 图标', { type: 'config', subType: 'setAprsType', data: { aprsType: Number(aprsType) } }]);
+
+    const pass = val('dev-cfg-pass');
+    if (pass) {
+      if (!/^(-1|\d{5})$/.test(pass)) { this._showToast('Passcode 须为 5 位数字或 -1'); return; }
+      tasks.push(['Passcode', { type: 'config', subType: 'setPasscode', data: { passcode: pass } }]);
+    }
+
+    if (!tasks.length) { this._showToast('没有需要修改的项'); return; }
+
+    const failed = [];
+    for (const [label, req] of tasks) {
+      try {
+        const r = await this.send(req);
+        if (!r || (r.code !== undefined && r.code !== 0)) failed.push(label);
+      } catch (e) { failed.push(label); }
+    }
+
+    if (failed.length) {
+      this._showToast('写入失败：' + failed.join('、'));
+    } else {
+      this._showToast('已写入 ' + tasks.length + ' 项配置');
+      this.closeDeviceConfig();
+      await this.fetchDeviceInfo(); // 刷新 KPI（设备名 / 天线 / 频率 / 高度）
+    }
+  },
+
+  async restartAprsService() {
+    if (!this.connected) { this._showToast('未连接设备'); return; }
+    try {
+      const r = await this.send({ type: 'config', subType: 'restartAprsService', data: {} });
+      this._showToast(!r || r.code === 0 || r.code === undefined ? '已重启 APRS 服务' : '重启失败 code=' + r.code);
+    } catch (e) {
+      this._showToast('重启失败：' + (e.message || e));
     }
   },
 
@@ -2447,7 +2849,9 @@ const App = {
       const qth = grid ? (this._gridLocationCache[grid] || grid) : '';
       let midLine = '';
       if (memo) midLine += '<span class="recent-memo">' + this._esc(memo) + '</span>';
-      if (serverName) midLine += (midLine ? '<span class="recent-dot">·</span>' : '') + '<span class="recent-server">' + this._esc(serverName) + '</span>';
+      // A4：中继名可点击 → 直接切换服务器
+      if (serverName) midLine += (midLine ? '<span class="recent-dot">·</span>' : '')
+        + '<span class="recent-server recent-relay-clickable" title="点击切换到中继「' + this._esc(serverName) + '」" data-relay="' + this._esc(serverName) + '">' + this._esc(serverName) + '</span>';
 
       return '<div class="recent-item' + (isActive ? ' is-speaking' : '') + (isSelf ? ' is-self' : '') + '" data-callsign="' + item.callsign + '">'
         + '<span class="recent-index-bg">' + (index + 1) + '</span>'
@@ -2466,9 +2870,20 @@ const App = {
     }).join('');
 
     this._bindQrz(container); // A5
+
+    // A4：最近发言里的中继名 → 切换服务器
+    container.querySelectorAll('.recent-relay-clickable').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this._switchToRelay(el.dataset.relay);
+      });
+    });
+
     container.querySelectorAll('.recent-item').forEach(el => {
       el.addEventListener('click', (e) => {
         if (e.target.closest('[data-qrz]')) return; // 点 QRZ 按钮时不复制
+        if (e.target.closest('.recent-relay-clickable')) return;
         const callsign = el.dataset.callsign;
         if (callsign) {
           navigator.clipboard.writeText(callsign).catch(() => {});

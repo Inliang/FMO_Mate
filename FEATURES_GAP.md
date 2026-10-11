@@ -35,13 +35,13 @@
 
 | # | 缺失功能 | 接口 / 依据 | 状态 |
 |---|---------|-----------|------|
-| A1 | **上一台 / 下一台快速切换** | `station.next` / `station.prev`（官方 v2 §2.3） | 待做。我们只实现了 `setCurrent`。加两个按钮即可，改台不用展开列表 |
-| A2 | **显示当前服务器 UID** | `station.getCurrent` 返回 `{uid, name}` | 待做。同名服务器靠 UID 区分 |
-| A3 | **最近活跃服务器切换入口** | 本地记录最近使用过的 uid（localStorage） | 待做。设备端无"最近使用"接口，只能前端记 |
-| A4 | **点击 QSO 记录里的中继名直接切换** | `station.getListRange` + `setCurrent` | 待做。注意同名中继要提示 |
+| A1 | **上一台 / 下一台快速切换** | `station.next` / `station.prev`（官方 v2 §2.3） | ✅ **已实现**（2026-10-11）：服务器卡片顶部 ‹ › 两个按钮，切换后自动 `getCurrent` 同步并重载 QSO |
+| A2 | **显示当前服务器 UID** | `station.getCurrent` 返回 `{uid, name}` | ✅ **已实现**（2026-10-11）：服务器卡片顶部「名称 + `#uid`」条（原 `#server-name-display` 元素缺失已一并修复） |
+| A3 | **最近活跃服务器切换入口** | 本地记录最近使用过的 uid（localStorage） | ✅ **已实现**（2026-10-11）：`localStorage['fmo-recent-servers']` 存最近 6 个，卡片顶部横向 chip 一键回切 |
+| A4 | **点击 QSO 记录里的中继名直接切换** | `station.getListRange` + `setCurrent` | ✅ **已实现**（2026-10-11）：通联记录 / 最近发言中的中继名可点击；同名中继会提示各 uid 让用户手动选 |
 | A5 | **呼号点击跳转 QRZ** | `https://www.qrz.com/db/<CALL>` | ✅ **已实现**（2026-10-11）：通联记录 / 最近发言 / TOP20 呼号可点，当前呼叫卡片新增 QRZ 图标按钮 |
 | A6 | **QSO 按呼号搜索/筛选** | 前端过滤已有数据 | ✅ **已实现**（2026-10-11）：通联记录面板搜索框，匹配呼号 / 网格 / QTH / 中继 / 留言，Esc 清空 |
-| A7 | **QSO 详情弹窗** | `qso.getDetail`（已在用） | 待做 |
+| A7 | **QSO 详情弹窗** | `qso.getDetail`（已在用） | ✅ **已实现**（2026-10-11）：点击通联记录整行弹窗，字段含呼号 / 本机 / 网格 / QTH / 频率 / 距离 / 方位 / 中继 / 通联次数 / 时间 / 留言，可一键按该呼号筛选 |
 | A8 | **今日已联 ⭐ 标记** | 前端比对今日日期 | ✅ **已实现**（2026-10-11）：通联记录 / 最近发言 / TOP20 的今日已联呼号带 ★ 徽标 |
 
 ### B 级：设备配置读写（`config` 命名空间，官方 v2 完整列出 30 个方法，我们只用了 5 个 get）
@@ -52,14 +52,14 @@
 | # | 缺失功能 | 写接口 | 约束 |
 |---|---------|--------|------|
 | B1 | **修改设备/服务器名称** | `config.setServerName` | ≤31 字符 |
-| B2 | **APRS 备注 / 图标 / Passcode** | `setAprsRemark`(≤63字节) / `setAprsType`(1-15) / `setPasscode`(5位或-1) | 可加 `restartAprsService` 生效 |
+| B2 | **APRS 备注 / 图标 / Passcode** | `setAprsRemark`(≤63字节) / `setAprsType`(1-15) / `setPasscode`(5位或-1) | ✅ **已实现**（2026-10-11）：设备配置弹窗 APRS 分组，另有「重启 APRS」按钮 |
 | B3 | **黑名单管理** | `setBlacklist` | 大写字母+数字+逗号+空格，≤511 字符 |
 | B4 | **设备坐标设置** | `setCordinate {latitude, longitude}` | ✅ **已实现**（2026-10-11）：KPI 行新增独立「坐标 / GRID」卡片，点击弹窗写入设备并实时预览网格 |
-| B5 | **天线描述 / 高度 / 物理频率** | `setUserPhyAnt`(≤15) / `setUserPhyAntHeight`(0-100000m) / `setUserPhyFreq`(0-1000MHz) | |
-| B6 | **QSO 祝福语 / 登录公告** | `setQsoBestWish`(≤64字节) / `setServerLoginAnnouncement`(≤127字节) | |
-| B7 | **服务器过滤器** | `setServerFilter` (0-8) | 控制台可见列表范围 |
-| B8 | **广播服务器 / 广播用户模式** | `setBroadcastServer` / `setBroadcastUser` | 无参数 |
-| B9 | **物理设备名** | `setUserPhyDeviceName`(≤15) | |
+| B5 | **天线描述 / 高度 / 物理频率** | `setUserPhyAnt`(≤15) / `setUserPhyAntHeight`(0-100000m) / `setUserPhyFreq`(0-1000MHz) | ✅ **已实现**（2026-10-11）：设备配置弹窗「物理设备」分组 |
+| B6 | **QSO 祝福语 / 登录公告** | `setQsoBestWish`(≤64字节) / `setServerLoginAnnouncement`(≤127字节) | 待做 |
+| B7 | **服务器过滤器** | `setServerFilter` (0-8) | 待做。控制台可见列表范围 |
+| B8 | **广播服务器 / 广播用户模式** | `setBroadcastServer` / `setBroadcastUser` | 待做。无参数 |
+| B9 | **物理设备名** | `setUserPhyDeviceName`(≤15) | ✅ **已实现**（2026-10-11）：设备配置弹窗「物理设备」分组 |
 
 > 注意：`config.setUrl` / `setPort` 会改设备连的上游地址，**不建议做**（改错就掉线）。
 
@@ -114,11 +114,12 @@
 
 ## 三、建议实施顺序
 
-1. ~~**第一批**：A1 / A2 / A5 / A6 / A8~~ → A5、A6、A8 已完成（2026-10-11）
-2. **下一步可做**：A1 上一台/下一台、A2 当前 UID、A3 最近活跃服务器、A4 点击中继切换、A7 QSO 详情弹窗、E1 老朋友页
-3. **第三批**：C1 日志备份下载、C2 IndexedDB 持久化、B 组其余设备配置（B1/B2/B3/B5/B6/B7/B8/B9）
-4. **第四批**：D 组语音播报、E2 多维排行榜、E3 多地址、E4 地图外链
-5. **暂缓**：F 平台化、G 不做项
+**已完成（2026-10-11）**：A1、A2、A3、A4、A5、A6、A7、A8、B2、B4、B5、B9、E5 —— 共 13 项
+
+1. **下一步可做（A 级已清空）**：E1 老朋友页、E2 多维排行榜、B1 设备名、B3 黑名单、B6 祝福语/公告、B7 服务器过滤器、B8 广播模式
+2. **第三批**：C1 日志备份下载（`/api/qso/backup`）、C2 IndexedDB 持久化、C3 导入 .db、C4 导出 .db
+3. **第四批**：D1-D4 语音播报（NATO）、E3 多地址、E4 地图外链、E6 回到顶部
+4. **暂缓**：F 平台化、G 不做项
 
 ---
 

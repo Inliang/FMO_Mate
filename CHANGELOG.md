@@ -2,6 +2,32 @@
 
 ## 2026-10-11
 
+### 新增 A1 / A2 / A3 / A4 / A7 / B2 / B5 / B9 八项功能（v=0911b）
+
+- **A1 上一台 / 下一台切换**（`switchServerStep(dir)` / `_syncCurrentServer()`）
+  - 服务器卡片顶部新增 ‹ › 两个导航按钮，调用官方 `station.prev` / `station.next`
+  - 切换成功后自动 `station.getCurrent` 同步名称/UID → 刷新列表高亮 → 重载 QSO 列表
+  - 未连接或列表为空时按钮自动禁用
+- **A2 显示当前服务器 UID**（`_updateCurrentServerBar()`）
+  - 服务器卡片顶部新增「当前中继条」：`‹  名称  #uid  ›`
+  - **顺带修复**：`#server-name-display` 元素此前在 HTML 中根本不存在，`_showServerInfo()` 一直空转；现已补上并统一由 `_updateCurrentServerBar()` 管理
+- **A3 最近活跃服务器**（`_pushRecentServer` / `renderRecentServerChips` / `_loadRecentServers`）
+  - `localStorage['fmo-recent-servers']` 保存最近 6 个使用过的中继（uid + name + ts）
+  - 卡片顶部横向 chip 条，点击一键回切；当前项高亮；已下线/不在列表中的项自动隐藏
+- **A4 点击中继名直接切换**（`_switchToRelay(name)`）
+  - 通联记录的中继列、最近发言的中继标签均可点击（虚下划线 + 悬停变色）
+  - 先按名称精确匹配；命中多个同名中继时提示各 uid 让用户在列表中按 ID 选；未命中给出提示
+- **A7 QSO 详情弹窗**（`openQsoDetail` / `closeQsoDetail`）
+  - 点击通联记录整行弹出（内部可点元素如呼号/网格/留言/中继除外）
+  - 字段：呼号 / 本机 / 网格 / QTH / 频率 / 距离 / 方位 / 中继 / 通联次数 / 时间 / 留言
+  - 缺失字段用 `qso.getDetail(logId)` 按需补齐并写回缓存；底部「筛选该呼号」直接填入 A6 搜索框
+- **B9 + B5 + B2 设备配置弹窗**（工具栏新增「设备」按钮）
+  - 打开时并发读取 7 个 getter 预填：`getUserPhyDeviceName` / `getUserPhyAnt` / `getUserPhyAntHeight` / `getUserPhyFreq` / `getAprsRemark` / `getAprsType` / `getPasscode`
+  - 写入时只提交有变动的项：B9 `setUserPhyDeviceName`、B5 `setUserPhyAnt` / `setUserPhyAntHeight` / `setUserPhyFreq`、B2 `setAprsRemark` / `setAprsType` / `setPasscode`
+  - 前端校验：天线高度 0-100000m、频率 0-1000MHz、APRS 备注 ≤63 字节（TextEncoder 实测）、Passcode `/^(-1|\d{5})$/`
+  - 额外「重启 APRS」按钮（`config.restartAprsService`）；写入成功后自动 `fetchDeviceInfo()` 刷新 KPI
+- 版本串 `?v=0911a` → `?v=0911b`
+
 ### 新增 A5 / A6 / A8 / B4 / E5 五项功能（v=0911a）
 
 - **A5 呼号跳转 QRZ**（`_qrzUrl` / `_openQrz` / `_bindQrz`）
