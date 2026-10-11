@@ -1113,18 +1113,11 @@ const App = {
       return;
     }
 
-    // 折叠态只保留前 COLLAPSE_LIMIT 条，当前服务器始终置顶，避免折叠后看不到正在用的中继
-    const LIMIT = 5;
-    const expanded = !!this._serverExpanded;
-    const showToggle = this.serverList.length > LIMIT;
-
-    let items = this.serverList;
-    if (!expanded) {
-      const cur = this.currentServerName;
-      items = [...this.serverList]
-        .sort((a, b) => (a.name === cur ? 0 : 1) - (b.name === cur ? 0 : 1))
-        .slice(0, LIMIT);
-    }
+    // 全量渲染所有服务器：列表容器自带滚动，滚轮即可查看全部，不再需要折叠/展开按钮
+    // 当前服务器始终置顶，便于一眼看到正在用的中继
+    const cur = this.currentServerName;
+    const items = [...this.serverList]
+      .sort((a, b) => (a.name === cur ? 0 : 1) - (b.name === cur ? 0 : 1));
 
     const html = items.map(s => {
       const name = s.name || '--';
@@ -1138,25 +1131,13 @@ const App = {
 
     sidebar.innerHTML = html;
 
+    // 不再渲染展开/收起按钮，footer 置空并由 CSS 隐藏
     const footer = document.getElementById('server-list-footer');
-    if (footer) {
-      footer.innerHTML = showToggle
-        ? `<button class="server-toggle" id="server-toggle-btn" type="button">`
-          + (expanded ? '收起' : '展开全部 ' + this.serverList.length) + '</button>'
-        : '';
-    }
+    if (footer) footer.innerHTML = '';
 
     sidebar.querySelectorAll('.server-item-side').forEach(el => {
       el.addEventListener('click', () => this.switchServer(el.dataset.serverName));
     });
-
-    const toggle = document.getElementById('server-toggle-btn');
-    if (toggle) {
-      toggle.addEventListener('click', () => {
-        this._serverExpanded = !this._serverExpanded;
-        this.renderServerSidebar();
-      });
-    }
   },
 
   async switchServer(name) {

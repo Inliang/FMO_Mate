@@ -1179,6 +1179,8 @@ button { font: inherit; color: inherit; }
   flex-shrink: 0;
   border-top: 1px solid var(--line);
 }
+/* footer 为空（列表已全量滚动展示）时整体隐藏，避免残留分隔线 */
+.server-list-footer:empty { display: none; padding: 0; border-top: none; }
 .server-toggle {
   display: block;
   width: 100%;
