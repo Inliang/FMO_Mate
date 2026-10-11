@@ -1429,7 +1429,12 @@ const App = {
       const mins = Math.floor(diff / 60000);
       if (mins < 1) timeEl.textContent = '刚刚';
       else if (mins < 60) timeEl.textContent = mins + '分钟前';
-      else { const hrs = Math.floor(mins / 60); timeEl.textContent = hrs + '小时前'; }
+      else if (mins < 1440) { const hrs = Math.floor(mins / 60); timeEl.textContent = hrs + '小时前'; }
+      else {
+        const days = Math.floor(mins / 1440);
+        const hrs = Math.floor((mins % 1440) / 60);
+        timeEl.textContent = hrs > 0 ? days + '天' + hrs + '小时前' : days + '天前';
+      }
     }
 
     // 计算与上一通联呼号的通联次数
