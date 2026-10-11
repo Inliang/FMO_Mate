@@ -2,6 +2,13 @@
 
 ## 2026-10-11
 
+### 移除收藏功能 + 输出功能缺口清单
+
+- **移除本地收藏**：`index.html` 删掉收藏筛选按钮组；`style.css` 删掉 `.fav-star` / `.fav-filter-*` 样式；`app.js` 删掉 `favServers` / `_favOnly` 状态与 `loadFavServers` / `saveFavServers` / `isFavServer` / `toggleFavServer` / `setFavFilter` 五个方法
+  - 原因：已核实 **FMO 设备协议无收藏接口**（`station` 域仅 `getListRange / getCurrent / setCurrent / next / prev`，列表项只有 `uid` 与 `name`），本地收藏无法与设备同步，多端会不一致
+  - `probeFavoriteApi()` 诊断函数保留，仍可通过 `?probe=fav` 或控制台 `FMO.probeFavoriteApi()` 调用
+- **新增 `FEATURES_GAP.md`**：对照 FMO-Dashboard / FmoLogs / FmoDeck / fmo-show 与官方 API v2 文档，梳理出 A~G 七级共 30 项缺失功能，并给出建议实施顺序
+
 ### 服务器列表：滚轮全量浏览 + 显示服务器 ID（v=0909o / app.js v=0909j）
 
 - **移除折叠/展开按钮**：`renderServerSidebar()` 不再把列表裁成 5 条，改为全量渲染所有中继（当前服务器始终置顶）

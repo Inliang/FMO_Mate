@@ -105,6 +105,7 @@ fmo-secondary/
 ├── style.css         # 样式（三主题 + 响应式）
 ├── ARCHITECTURE.md   # 架构设计文档
 ├── PROTOCOL.md       # WebSocket 协议映射
+├── FEATURES_GAP.md   # 功能缺口清单（对照第三方项目）
 ├── UI_DESIGN.md      # UI/UX 设计规范
 ├── CHANGELOG.md      # 更新日志
 └── README.md
