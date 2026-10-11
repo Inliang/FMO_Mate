@@ -1121,11 +1121,13 @@ const App = {
 
     const html = items.map(s => {
       const name = s.name || '--';
-      const count = s.onlineCount ?? s.count ?? s.users ?? s.online ?? s.onlineCount ?? '--';
+      const uid = s.uid ?? s._id ?? s.id ?? '--';
+      const count = s.onlineCount ?? s.count ?? s.users ?? s.online ?? '';
       const activeClass = name === this.currentServerName ? ' active' : '';
+      const countTip = count !== '' ? ` · U${count} 在线` : '';
       return `<div class="server-item-side${activeClass}" data-server-name="${name}">
         <span class="station-name">${name}</span>
-        <span class="server-sidebar-count">U${count} 在线</span>
+        <span class="server-sidebar-count" title="${name} · ID #${uid}${countTip}">#${uid}</span>
       </div>`;
     }).join('');
 
