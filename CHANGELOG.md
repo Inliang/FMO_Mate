@@ -11,6 +11,57 @@ AIGC:
 
 # FMO 副屏伴侣 — 更新日志
 
+## 2026-10-11
+
+### 服务器列表：滚轮全量浏览 + 显示服务器 ID（v=0909o / app.js v=0909j）
+
+- **移除折叠/展开按钮**：`renderServerSidebar()` 不再把列表裁成 5 条，改为全量渲染所有中继（当前服务器始终置顶）
+- **滚轮直接浏览**：列表容器 `.server-list-sidebar` 自带 `overflow-y: auto`，鼠标滚轮即可查看全部，无需点击「展开全部」
+- **删除 `_serverExpanded` 状态**与 `#server-toggle-btn` 点击逻辑；`#server-list-footer` 置空
+- **右侧标签改显服务器 ID**：`U-- 在线` → `#<uid>`（`s.uid ?? s._id ?? s.id`）；在线数不再丢失，移入悬停 `title` 提示（格式：`服务器名 · ID #xxx · U在线数`）
+- CSS 新增 `.server-list-footer:empty { display: none }`，避免空 footer 残留分隔线
+
+### UI 全站重构：Design Token 体系 + 霓虹绿 HUD（v=0909a ~ v=0909n）
+
+**Design Token 体系**
+
+- `style.css` 整体重写为 Token → Primitives → Components → Responsive 四层架构（2741 行 → ~1950 行）
+- `index.html` 删除头部约 170 行 `!important` 防御式覆盖块（493 行 → 313 行）
+- 补齐缺失 id：`#settings-heading` / `#last-refresh` / `#sb-audio-icon` / `#server-list-footer`
+- Token 覆盖：三主题（light/dark/e-ink）、8 级字号、8 级间距、6 档圆角、3 档阴影 + 焦点环 + 动效曲线；所有数字字段启用 `tabular-nums`
+
+**霓虹绿 HUD 主色（v=0909d 起）**
+
+- 深色主题 `--accent: #00E676`，浅色 `--accent: #10B981`，替代原暖琥珀
+- `--accent-glow` / `--live` / `--sh-focus` / `--glow`（径向光晕）全部跟随主色
+- Speaking 卡当前发言时叠加霓虹绿径向光晕，营造 control-room 观感
+
+**一屏显示（不再需要下拉页面）**
+
+- `.app-wrapper` 改 CSS Grid：`grid-template-rows: auto minmax(220px,1.55fr) minmax(120px,0.78fr) auto`
+- `body { overflow: hidden }`，各面板内部独立滚动
+- 垂直行间距 `row-gap: 18px`（水平保持 `--gutter: 14px`）
+- ≤980px / ≤660px 高度自动回退为普通滚动，避免内容压扁
+
+**Speaking 卡（当前呼号）精简与强化**
+
+- 删除底部三张详情卡（中继/服务器、频率/高度、QTH/网格）——这些信息在 QSO 列表、上个通联、服务器列表中均已存在
+- 巨型呼号独占视觉中心：`clamp(56px, 8.6vw, 104px)` + `text-shadow: 0 0 40px var(--accent-glow)`
+- 计时器 + 刷新按钮 + 音频电平合并为单行低调胶囊 `.ac-subline`
+- 隐藏 `.contact-tags`（"已通联"行）；count-badge / grid-pill 缩至 18px/10px 让位给呼号
+- 罗盘移至 hero 右上角绝对定位并放大：圆 `44→64px`、箭头 `15×20→22×28`、方位文字 `13→20px`、距离 `11→13px`
+
+**新增交互**
+
+- **静音/放音按钮**：原音频电平图标改为可点击按钮，`toggleMute()` 切换 `isMuted` 并同步 `gainNode.gain.value`；图标在「扬声器 ↔ 带斜杠」间切换，静音态呈琥珀色（`--warn`），悬停提示「已静音，点击放音」
+- **刷新按钮**：`#ac-refresh-btn` 绑定 `window.location.reload()`，图标不变
+
+**信息展示优化**
+
+- **QTH 地名**：`#sb-grid` 网格标签优先显示梅登海德网格反查后的地名（如「甘肃省兰州市安宁区」），解析完成前回退显示网格码，悬停 `title` 保留原始网格；标签移至呼号右下角并放大字号（10→12px）
+- **顶部状态条**：删除「呼号 正在守听」描述（`#command-desc` 及其赋值逻辑与样式），时间胶囊 `live-clock` 左移至状态文本与访问方式标签之间
+- **TOP20 进度条**：颜色由硬编码 hex 改为绑定 `var(--accent)` / `var(--accent-soft)` / `var(--accent-line)`，跟随主题
+
 ## 2026-07-25
 
 ### 整站 UI 重构：三主题体系 + 新布局 + 细节打磨（v=0725a ~ v=0725g）
