@@ -56,6 +56,24 @@
 ← { data: { list: [{ uid, name, onlineCount }] } }
 ```
 
+> **station 域完整方法表**（以 [fmo-mobile-controller API v2 文档](https://github.com/niufox/fmo-mobile-controller/blob/main/API_DOCUMENTATION_v2.md) 为准）
+
+| subType | 请求参数 | 响应 | 说明 |
+|---------|---------|------|------|
+| `getListRange` | `{ start, count }` | `getListResponse` | 服务器列表；`getList()` 是 `getListRange(0,8)` 的封装 |
+| `getCurrent` | `{}` | `getCurrentResponse` | 当前服务器 `{ uid, name }` |
+| `setCurrent` | **`{ uid: number }`** | `setCurrentResponse` | 切换服务器，**按 uid 定位**（勿发 name，同名服务器会切错） |
+| `next` | `{}` | `nextResponse` | 切换到下一个服务器 |
+| `prev` | `{}` | `prevResponse` | 切换到上一个服务器 |
+
+**收藏相关结论（已核实）**：FMO 协议中**不存在收藏/常用/星标服务器接口**。
+- `station` 域仅上述 5 个方法；
+- 服务器列表条目实际字段只有 `uid` 与 `name`（无收藏标记字段）；
+- 实测 `getFavoriteList` / `getFavorites` / `getFavList` / `getCollectList` 等候选接口均无响应；
+- fmo-show（协议逆向源头）源码中亦无收藏实现。
+
+因此本项目的「收藏」为**浏览器本地收藏**（`localStorage['fmo-fav-servers']`，按 uid 存储）。
+
 ### 2.4 QSO 统计
 
 ```
