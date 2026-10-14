@@ -2010,8 +2010,9 @@ const App = {
     }
     const selFilter = $('dev-cfg-filter');
     if (selFilter && !selFilter.options.length) {
+      // 官方使用说明书：过滤器 = 以本机网格为圆心、该值为半径画圆，圆内保留、圆外过滤
       selFilter.innerHTML = '<option value="">（不修改）</option>'
-        + Array.from({ length: 9 }, (_, i) => '<option value="' + i + '">过滤器 ' + i + '</option>').join('');
+        + Array.from({ length: 9 }, (_, i) => '<option value="' + i + '">' + (i === 0 ? '0 · 不过滤' : i + ' 级') + '</option>').join('');
     }
 
     if (this.connected) {
@@ -2747,6 +2748,39 @@ const App = {
     if (!coords) { this._gridLocationPending.delete(grid); return; }
     try {
       let state = '', city = '', district = '';
+
+      // Tier 0：grid.lzyike.cn —— 专为梅登海德网格设计的行政区划服务
+      // 免费、无需 Key（高德 Key 有每日配额，超限会返回 CUQPS_HAS_EXCEEDED_THE_LIMIT）
+      // 返回 { retcode, data: { country, province, city, district, township } }
+      // 注意：只取前 4 位网格查询，6 位精度该服务只返回国家
+      try {
+        const g4 = String(grid).toUpperCase().slice(0, 4);
+        const ctrl0 = new AbortController();
+        const timer0 = setTimeout(() => ctrl0.abort(), 5000);
+        const resp0 = await fetch('https://grid.lzyike.cn/api/grid2addr/' + encodeURIComponent(g4), { signal: ctrl0.signal });
+        clearTimeout(timer0);
+        if (!resp0.ok) throw new Error('grid2addr HTTP ' + resp0.status);
+        const d0 = await resp0.json();
+        if (d0.retcode === 0 && d0.data) {
+          const a = d0.data;
+          const p = [];
+          if (a.province && a.province !== '中华人民共和国') p.push(a.province);
+          if (a.city && !p.some(x => x.includes(a.city))) p.push(a.city);
+          if (a.district && !p.some(x => x.includes(a.district))) p.push(a.district);
+          if (p.length) {
+            this._gridLocationCache[grid] = p.join('');
+            if (this._currentSpeaker && this._currentSpeaker.grid === grid) { this.renderSpeakingBar(); }
+            this.renderQsoList();
+            this.renderRecentSpeakers();
+            this._gridLocationPending.delete(grid);
+            return;
+          }
+          throw new Error('grid2addr 无行政区划数据');
+        }
+        throw new Error('grid2addr retcode=' + d0.retcode);
+      } catch (gErr) {
+        console.warn('[FMO] grid2addr failed, falling back to Amap:', gErr.message || gErr);
+      }
 
       // Tier 1：高德 REST API（CORS *，直接 fetch，无 JSONP）
       try {

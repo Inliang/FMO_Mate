@@ -7,7 +7,12 @@
 > - [EthanYan6/fmo-show](https://github.com/EthanYan6/fmo-show)（★6，墨水屏网页端，协议逆向来源）
 > - [niufox/fmo-mobile-controller](https://github.com/niufox/fmo-mobile-controller)（★13，**官方 API v2 文档**，`API_DOCUMENTATION_v2.md`）
 >
-> 最近更新：2026-10-11
+> 追加对照（2026-10-14）：
+> - [fmo.feel101.com](https://fmo.feel101.com/product.html)「FMO 魔方」（PC 仪表盘 / 大字版 / 手机版 / 值守屏 / APRS 地图 / 小爱版）
+> - [bg5esn.com/docs](https://bg5esn.com/docs/) 官方文档站（使用说明书 · 更新说明 · 开源资源清单 · 实践分享）
+> - [BG5ESN](https://github.com/BG5ESN) 官方开源工具集
+>
+> 最近更新：2026-10-14
 
 ---
 
@@ -59,7 +64,7 @@
 | B4 | **设备坐标** | `setCordinate {latitude, longitude}` | ✅ 已实现（2026-10-11） |
 | B5 | **天线描述 / 高度 / 物理频率** | `setUserPhyAnt` / `setUserPhyAntHeight` / `setUserPhyFreq` | ≤15 / 0-100000m / 0-1000MHz · ✅ 已实现（2026-10-11） |
 | B6 | **QSO 祝福语 / 登录公告** | `setQsoBestWish` / `setServerLoginAnnouncement` | ≤64字节 / ≤127字节 · ✅ 已实现（2026-10-14） |
-| B7 | **服务器过滤器** | `setServerFilter` | 0-8 整数 · ✅ 已实现（2026-10-14） |
+| B7 | **服务器过滤半径** | `setServerFilter` | 0-8 整数 · ✅ 已实现（2026-10-14）。**语义按官方使用说明书修正**：以本机网格为圆心、该值为半径画圆，圆内服务器保留、圆外过滤（UI 已改为「0 · 不过滤 / N 级」） |
 | B8 | **广播服务器 / 广播用户模式** | `setBroadcastServer` / `setBroadcastUser` | 无参数、无查询接口，做成即时按钮 · ✅ 已实现（2026-10-14） |
 | B9 | **物理设备名** | `setUserPhyDeviceName` | ≤15 字符 · ✅ 已实现（2026-10-11） |
 | — | ~~上游服务器地址 / 端口~~ | ~~`setUrl` / `setPort`~~ | ⛔ **主动放弃**：改错即掉线，设备就在手边，网页端收益低风险高 |
@@ -113,16 +118,33 @@
 | G4 | **SSTV 解码** | FmoDeck 有（Robot36/72、Martin M1/M2、PD120、Scottie S1/S2）。纯前端可实现，但工作量大且需 FM 解调 + slant 校正，属独立子项目 |
 | G5 | **在线人数** | 服务器列表无 `onlineCount` 字段，之前显示 `U-- 在线` 已改为显示 `#uid` |
 
+### H 级：2026-10-14 新增（外部服务对接 + 固件日志里挖出来的能力）
+
+| # | 功能 | 依据 | 状态 |
+|---|------|------|------|
+| H1 | **网格→行政区划改用 `grid.lzyike.cn`** | `GET https://grid.lzyike.cn/api/grid2addr/<GRID4>` → `{retcode,data:{country,province,city,district,township}}`。免费、免 Key | ✅ **已实现**（2026-10-14）：提到 Tier 0，高德降为 Tier 1。高德 Key 有每日配额（曾报 `CUQPS_HAS_EXCEEDED_THE_LIMIT`），此服务无配额问题。**注意只取前 4 位网格查询**，6 位精度该服务只返回国家 |
+| H2 | **APRS / 节点地图外链** | [map.srv.ink](https://map.srv.ink/)（BG9JYT，实时抓 APRS 节点位置与状态）、[aprsmap.feel101.com](https://aprsmap.feel101.com)（全国 FMO 设备实时分布 + 通联事件流 + 台站与客户端一览） | 待做。替代 E4 自研地图：不引地图库，直接外链 |
+| H3 | **台网点名** | [fmo.bh1jss.net/checkin](http://fmo.bh1jss.net/checkin/)（BH1JSS 开发的点名主控软件） | 待做。可加外链入口 |
+| H4 | **浏览器定位写入设备坐标** | 官方 [FMO-Andorid-GPS-Tool](https://github.com/BG5ESN/FMO-Andorid-GPS-Tool) 用手机 GPS 实时设置 FMO 位置；网页端可用 `navigator.geolocation` + 已有 B4 的 `config.setCordinate` | 待做。零依赖，是 B4 的自然延伸（车载 / 移动场景很实用） |
+| H5 | **QSO 日志签名验证** | 官方 [fmo-log-sign-verify-tool](https://github.com/BG5ESN/fmo-log-sign-verify-tool)，FMO 日志带 **Ed25519** 数字签名（固件 v2.2.19 起「增加日志数字签名功能」） | 待做，难度高（需在浏览器实现 Ed25519 验签 + 拿到签名格式） |
+| H6 | **`.db` 日志 → ADIF** | 官方 [FMO-sqlite-2-adif](https://github.com/BG5ESN/FMO-sqlite-2-adif) | 待做。与 C3/C4 合并：备份拿到的 `.db` 在前端转 ADIF（需 sql.js） |
+| H7 | **黑名单用户库对接** | 官方 [fmo-blacklist-users](https://github.com/BG5ESN/fmo-blacklist-users) 公开的黑名单数据 | 待做，可选（隐私与误伤需谨慎） |
+| H8 | **设备端网页的其他能力** | 固件日志：`v2.2.13` 网页远控页增加**待机控制 / 个人信息 / 搜索到台站切换**；`v2.3.8` **配网 API**（`/api/provision`）；`V4.1.0` **台站导入**；`v2.2.20` **MESSAGE 短消息**；`v2.3.13` **活跃服务器列表** | ⚠️ **需实测**：这些是设备端功能，但 WebSocket 接口名未知。可加 `probeDeviceApi()` 逐个试 `/api/*` 与 `message.*` 等命名空间 |
+
+> **收藏服务器的重要更正**：固件 `V4.1.10`（2026/9/1）「修复收藏服务器」，说明**设备端确实有收藏功能**，
+> 只是未通过 WebSocket 暴露（我们 2026-10-11 探测的 12 个候选名全部超时）。若 H8 实测能找到接口，可重新加入。
+
 ---
 
 ## 三、建议实施顺序
 
-**已完成**：A1–A8（全清）、B1–B9（全清，除主动放弃的 setUrl/setPort）、C1、E1、E5 —— 共 20 项
+**已完成**：A1–A8（全清）、B1–B9（全清，除主动放弃的 setUrl/setPort）、C1、E1、E5、H1 —— 共 21 项
 
-1. **下一步可做**：E2 多维排行榜、C2 IndexedDB 持久化
-2. **第三批**：C3 导入 .db、C4 导出 .db
-3. **第四批**：D1-D4 语音播报（NATO）、E3 多地址、E4 地图外链、E6 回到顶部
-4. **暂缓**：F 平台化、G 不做项
+1. **下一步可做（都很轻）**：H2 APRS/节点地图外链、H3 台网点名外链、H4 浏览器定位写坐标、E6 回到顶部
+2. **中等工作量**：E2 多维排行榜、C2 IndexedDB 持久化、D1-D3 语音播报（NATO）
+3. **较重**：C3/C4 `.db` 日志导入与转 ADIF（H6，需 sql.js）、E3 多地址、D4 离线 TTS 兜底
+4. **需先实测**：H8 设备端网页其他接口（`message.*` / `/api/provision` / 待机控制 / 台站导入）
+5. **暂缓**：F 平台化、G 不做项、H5 日志签名验证、H7 黑名单库
 
 ---
 

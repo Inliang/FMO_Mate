@@ -2,6 +2,18 @@
 
 ## 2026-10-14
 
+### 网格→QTH 改用免 Key 服务 + 修正过滤半径语义（v=1014c）
+
+参考 [fmo.feel101.com](https://fmo.feel101.com/product.html)「FMO 魔方」与官方文档站后做的两项修正：
+
+- **H1：网格 → 行政区划改用 `grid.lzyike.cn`（Tier 0）**
+  - `GET https://grid.lzyike.cn/api/grid2addr/<GRID4>` → `{retcode, data:{country, province, city, district, township}}`
+  - **免费、无需 Key**。此前 Tier 1 用的高德 Key 有每日配额，超限会返回 `CUQPS_HAS_EXCEEDED_THE_LIMIT` 导致 QTH 全部退化成网格码
+  - **只取前 4 位网格查询**：实测 6 位精度（如 `PM01xc`）该服务只返回国家，4 位（`PM01`）才返回省市县
+  - 高德降为 Tier 1、Nominatim 仍为 Tier 2，三级兜底不变
+- **B7 语义修正**：官方使用说明书明确「过滤器是以网格为中心、以过滤器为**半径**画的一个圆，圆内服务器保留、圆外过滤掉」
+  - UI 标签 `服务器过滤器` → `过滤半径`，下拉项改为 `0 · 不过滤 / 1 级 … 8 级`，并补 title 说明
+
 ### 新增 C1 日志备份 + E1 老朋友页（v=1014b）
 
 - **C1 FMO 日志全量备份下载**

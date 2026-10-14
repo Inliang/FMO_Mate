@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" data-page-node-id="XhXhwhxqB397QaCGYC914u">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin data-page-node-id="a1Blyd2eBfByxb5WLWMDzr">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" data-page-node-id="IpPQGTu3BlviiZVEl9oYxl">
-  <link rel="stylesheet" href="style.css?v=1014b" data-page-node-id="ATWCsppPDIzcDQz3y7BDAF">
+  <link rel="stylesheet" href="style.css?v=1014c" data-page-node-id="ATWCsppPDIzcDQz3y7BDAF">
 </head>
 <body data-page-node-id="0eTqUaa7itPg7UuUXy0v5G">
 <div class="app-wrapper" data-page-node-id="RRCSHqXticB7YEC9y3Al8C">
@@ -436,8 +436,8 @@
           <input id="dev-cfg-servername" type="text" maxlength="31" placeholder="≤31 字符" autocomplete="off">
         </div>
         <div class="device-row">
-          <label for="dev-cfg-filter">服务器过滤器</label>
-          <select id="dev-cfg-filter"></select>
+          <label for="dev-cfg-filter" title="以本机网格为中心、以该值为半径画圆，圆内服务器保留，圆外过滤掉（官方使用说明书）">过滤半径</label>
+          <select id="dev-cfg-filter" title="0 = 不过滤；数值越大保留范围越大"></select>
         </div>
       </div>
 
@@ -532,6 +532,6 @@
 
 </div>
 
-  <script src="app.js?v=1014b"></script>
+  <script src="app.js?v=1014c"></script>
 </body>
 </html>
