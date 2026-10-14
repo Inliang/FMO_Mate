@@ -134,7 +134,8 @@ const App = {
     this.updateVU();
     this._startClock();
     this.updateCoordCard();
-    this._setTopPanelTab(this._topPanelTab || 'top20'); // E1：初始化 TOP20 / 老朋友 tab
+    this._setTopPanelTab(this._topPanelTab || 'top20'); // E1：初始化 TOP 面板 tab
+    this.loadCache(); // C2：先渲染本地缓存，连接设备后再增量合并
   },
 
   bindEvents() {
@@ -151,6 +152,9 @@ const App = {
     if (settingsClose) settingsClose.addEventListener('click', () => this.closeSettings());
     const settingsSave = $('settings-save');
     if (settingsSave) settingsSave.addEventListener('click', () => this.saveSettings());
+    // C2：清空本地缓存
+    const clearCacheBtn = $('settings-clear-cache');
+    if (clearCacheBtn) clearCacheBtn.addEventListener('click', () => this.clearCache());
 
     // 设备坐标弹窗（B4）
     const coordCard = $('coord-card');
@@ -238,6 +242,11 @@ const App = {
     if (tabTop) tabTop.addEventListener('click', () => this._setTopPanelTab('top20'));
     const tabFriends = $('tab-friends');
     if (tabFriends) tabFriends.addEventListener('click', () => this._setTopPanelTab('friends'));
+    // E2：网格 / 中继 两个新维度
+    const tabGrid = $('tab-grid');
+    if (tabGrid) tabGrid.addEventListener('click', () => this._setTopPanelTab('grid'));
+    const tabRelay = $('tab-relay');
+    if (tabRelay) tabRelay.addEventListener('click', () => this._setTopPanelTab('relay'));
     const friendOverlay = $('friend-overlay');
     if (friendOverlay) {
       friendOverlay.addEventListener('click', (e) => { if (e.target === friendOverlay) this.closeFriendHistory(); });
@@ -1035,6 +1044,7 @@ const App = {
     this.renderServerList();
     this.renderServerSidebar();
     this.renderRecentServerChips();
+    this._scheduleCacheSave(); // C2：服务器列表写入 IndexedDB
     // 显式同步 KPI 在线人数（renderServerList 中也做，此处双保险）
     this._syncKpiOnlineCount();
     setTimeout(() => this._probeAllServerLatency(), 500);
@@ -1443,6 +1453,12 @@ const App = {
   async fetchQsoListAll() {
     console.log('[FMO-DEBUG-QSO] fetchQsoListAll 开始');
     const all = [];
+    // C2：已有 logId 的集合，用于命中缓存时提前停止翻页
+    const known = new Set();
+    for (const q of this.qsoList) {
+      if (q && q.logId !== undefined && q.logId !== null) known.add(String(q.logId));
+    }
+    this._qsoCacheHits = 0;
 
     try {
       // 对照 fmo-show：不传 pageSize，设备默认每页 20 条，用 logId 推断总数
@@ -1458,20 +1474,37 @@ const App = {
         else { list = []; }
         if (list.length === 0) break;
         all.push(...list);
+
+        // 统计本页新记录数；整页都是已缓存的旧记录即可停止翻页
+        let pageNew = 0;
+        for (const it of list) {
+          const id = it && it.logId;
+          if (id === undefined || id === null) { pageNew++; continue; }
+          const k = String(id);
+          if (known.has(k)) { this._qsoCacheHits++; } else { known.add(k); pageNew++; }
+        }
         if (list.length < 20) break;
+        if (pageNew === 0 && page > 0) {
+          console.log('[FMO-CACHE] 第 ' + page + ' 页起全部命中本地缓存，提前停止翻页');
+          break;
+        }
         page++;
       }
     } catch (e) { console.warn('[FMO-DEBUG-QSO] fetchQsoListAll 异常:', e.message); }
 
-    console.log('[FMO-DEBUG-QSO] fetchQsoListAll 完成，共 ' + all.length + ' 条 QSO');
-    this.qsoList = all;
+    console.log('[FMO-DEBUG-QSO] fetchQsoListAll 完成，本轮拉取 ' + all.length + ' 条'
+      + (this._qsoCacheHits ? '（其中 ' + this._qsoCacheHits + ' 条已在本地缓存中）' : ''));
+
+    // C2：与本地缓存合并，而不是整体覆盖（避免缓存中更早的历史记录被丢掉）
+    this.qsoList = this._mergeQso(this.qsoList, all);
     await this._enrichQsoDetails();
     this.renderQsoList();
     this.renderRecentSpeakers(); // qsoList loaded, re-render speaking cards with real memo/relay
-    all.forEach(q => { if (q.grid || q.locator) this._resolveGridLocation(q.grid || q.locator); });
+    this.qsoList.forEach(q => { if (q.grid || q.locator) this._resolveGridLocation(q.grid || q.locator); });
     this.updateQsoCount();
     this.renderPrevCard();
     this._refreshTopPanel();
+    this._scheduleCacheSave(); // C2：写回 IndexedDB
   },
 
   /* 通过 qso.getDetail 补全列表中 QSO 的留言/中继字段（getList 只返回基础字段） */
@@ -2160,6 +2193,227 @@ const App = {
     }
   },
 
+  // ============ C2: IndexedDB 本地持久化 ============
+
+  _IDB_NAME: 'fmo-mate',
+  _IDB_VERSION: 1,
+  _IDB_MAX: 5000,        // 缓存上限，超出时裁剪最旧的记录
+  _idb: null,
+  _cacheSaveTimer: null,
+
+  _idbOpen() {
+    if (this._idb) return Promise.resolve(this._idb);
+    if (this._idbFailed) return Promise.resolve(null);
+    return new Promise((resolve) => {
+      try {
+        const req = indexedDB.open(this._IDB_NAME, this._IDB_VERSION);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains('qso')) db.createObjectStore('qso', { keyPath: 'logId' });
+          if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta');
+        };
+        req.onsuccess = () => { this._idb = req.result; resolve(this._idb); };
+        req.onerror = () => { this._idbFailed = true; resolve(null); };
+        req.onblocked = () => { this._idbFailed = true; resolve(null); };
+      } catch (e) {
+        this._idbFailed = true;
+        resolve(null);
+      }
+    });
+  },
+
+  async _idbGetAll(store) {
+    const db = await this._idbOpen();
+    if (!db) return [];
+    return new Promise((resolve) => {
+      try {
+        const req = db.transaction(store, 'readonly').objectStore(store).getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => resolve([]);
+      } catch (e) { resolve([]); }
+    });
+  },
+
+  async _idbBulkPut(store, items) {
+    const db = await this._idbOpen();
+    if (!db || !items || !items.length) return false;
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction(store, 'readwrite');
+        const os = tx.objectStore(store);
+        for (const it of items) { try { os.put(it); } catch (e) {} }
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+        tx.onabort = () => resolve(false);
+      } catch (e) { resolve(false); }
+    });
+  },
+
+  async _idbSetMeta(key, value) {
+    const db = await this._idbOpen();
+    if (!db) return false;
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction('meta', 'readwrite');
+        tx.objectStore('meta').put(value, key);
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+      } catch (e) { resolve(false); }
+    });
+  },
+
+  async _idbGetMeta(key) {
+    const db = await this._idbOpen();
+    if (!db) return undefined;
+    return new Promise((resolve) => {
+      try {
+        const req = db.transaction('meta', 'readonly').objectStore('meta').get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => resolve(undefined);
+      } catch (e) { resolve(undefined); }
+    });
+  },
+
+  async _idbClear() {
+    const db = await this._idbOpen();
+    if (!db) return false;
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction(['qso', 'meta'], 'readwrite');
+        tx.objectStore('qso').clear();
+        tx.objectStore('meta').clear();
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+      } catch (e) { resolve(false); }
+    });
+  },
+
+  /** 按时间倒序 + 按 logId 去重 */
+  _sortQso(list) {
+    const seen = new Set();
+    const out = [];
+    for (const q of list) {
+      const id = q && q.logId;
+      if (id === undefined || id === null) { out.push(q); continue; }
+      const k = String(id);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(q);
+    }
+    out.sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
+    return out;
+  },
+
+  /** 合并新拉到的 QSO 与已有列表（新数据覆盖同 logId 旧数据） */
+  _mergeQso(existing, incoming) {
+    const byId = new Map();
+    const noId = [];
+    for (const q of existing) {
+      const id = q && q.logId;
+      if (id === undefined || id === null) noId.push(q);
+      else byId.set(String(id), q);
+    }
+    for (const q of incoming) {
+      const id = q && q.logId;
+      if (id === undefined || id === null) noId.push(q);
+      else byId.set(String(id), { ...(byId.get(String(id)) || {}), ...q });
+    }
+    return this._sortQso([...byId.values(), ...noId]);
+  },
+
+  /** 启动时先渲染本地缓存，让界面立刻有内容 */
+  async loadCache() {
+    try {
+      const [qso, servers, meta] = await Promise.all([
+        this._idbGetAll('qso'),
+        this._idbGetMeta('serverList'),
+        this._idbGetMeta('meta')
+      ]);
+      if (qso && qso.length) {
+        this.qsoList = this._sortQso(qso);
+        this.renderQsoList();
+        this.renderRecentSpeakers();
+        this._refreshTopPanel();
+        this.renderPrevCard();
+        this.updateQsoCount();
+        console.log('[FMO-CACHE] 本地缓存载入 ' + this.qsoList.length + ' 条 QSO');
+      }
+      if (Array.isArray(servers) && servers.length) {
+        this.serverList = servers;
+        this.renderServerSidebar();
+        this.renderRecentServerChips();
+        console.log('[FMO-CACHE] 本地缓存载入 ' + servers.length + ' 个服务器');
+      }
+      if (meta) {
+        if (meta.myCallsign && !this.myCallsign) this.myCallsign = meta.myCallsign;
+        if (meta.myUid && !this.myUid) this.myUid = meta.myUid;
+      }
+      this._updateCacheInfo(qso ? qso.length : 0, meta && meta.savedAt);
+    } catch (e) {
+      console.warn('[FMO-CACHE] 载入失败:', e && e.message);
+    }
+  },
+
+  _updateCacheInfo(count, savedAt) {
+    const el = document.getElementById('cache-info');
+    if (!el) return;
+    if (!count) { el.textContent = '暂无缓存（连接设备后自动建立）'; return; }
+    let t = '';
+    if (savedAt) {
+      const d = new Date(savedAt);
+      const p = (n) => String(n).padStart(2, '0');
+      t = '，更新于 ' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+    }
+    el.textContent = '已缓存 ' + count + ' 条 QSO' + t;
+  },
+
+  /** 防抖写盘，避免高频渲染时反复写 IndexedDB */
+  _scheduleCacheSave() {
+    if (this._idbFailed) return;
+    clearTimeout(this._cacheSaveTimer);
+    this._cacheSaveTimer = setTimeout(() => this.saveCache(), 1500);
+  },
+
+  async saveCache() {
+    try {
+      const withId = this.qsoList.filter(q => q && q.logId !== undefined && q.logId !== null);
+      const keep = this._sortQso(withId).slice(0, this._IDB_MAX);
+      await this._idbBulkPut('qso', keep);
+      if (this.serverList.length) await this._idbSetMeta('serverList', this.serverList);
+      await this._idbSetMeta('meta', {
+        myCallsign: this.myCallsign,
+        myUid: this.myUid,
+        savedAt: Date.now()
+      });
+      // 超出上限时裁剪最旧的记录，避免存储无限增长
+      const all = await this._idbGetAll('qso');
+      if (all.length > this._IDB_MAX * 1.5) {
+        const keepIds = new Set(keep.map(q => String(q.logId)));
+        const db = await this._idbOpen();
+        if (db) {
+          const tx = db.transaction('qso', 'readwrite');
+          const os = tx.objectStore('qso');
+          for (const q of all) {
+            if (!keepIds.has(String(q.logId))) { try { os.delete(q.logId); } catch (e) {} }
+          }
+        }
+      }
+      this._updateCacheInfo(keep.length, Date.now());
+    } catch (e) {
+      console.warn('[FMO-CACHE] 保存失败:', e && e.message);
+    }
+  },
+
+  async clearCache() {
+    const ok = await this._idbClear();
+    if (ok) {
+      this._showToast('本地缓存已清空');
+      this._updateCacheInfo(0);
+    } else {
+      this._showToast('清空失败（浏览器可能不支持 IndexedDB）');
+    }
+  },
+
   // ============ C1: FMO 日志全量备份下载 ============
 
   /** 设备端备份地址：http(s)://<host>/api/qso/backup（协议跟随当前页面，避免混合内容） */
@@ -2349,21 +2603,21 @@ const App = {
   /** 数据刷新时按当前 tab 分派渲染 */
   _refreshTopPanel() {
     if (this._topPanelTab === 'friends') this.renderFriends();
-    else this.renderTopCallers();
+    else this.renderRank(this._topPanelTab === 'top20' ? 'callsign' : this._topPanelTab);
   },
 
   _setTopPanelTab(tab) {
     this._topPanelTab = tab;
-    const t20 = document.getElementById('tab-top20');
-    const fr = document.getElementById('tab-friends');
-    if (t20) t20.classList.toggle('is-active', tab === 'top20');
-    if (fr) fr.classList.toggle('is-active', tab === 'friends');
+    const map = { top20: 'tab-top20', friends: 'tab-friends', grid: 'tab-grid', relay: 'tab-relay' };
+    Object.entries(map).forEach(([k, id]) => {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('is-active', tab === k);
+    });
     const topBox = document.getElementById('top-callers');
     const friendBox = document.getElementById('friends-list');
-    if (topBox) topBox.style.display = tab === 'top20' ? '' : 'none';
+    if (topBox) topBox.style.display = tab === 'friends' ? 'none' : '';
     if (friendBox) friendBox.style.display = tab === 'friends' ? '' : 'none';
-    if (tab === 'friends') this.renderFriends();
-    else this.renderTopCallers();
+    this._refreshTopPanel();
   },
 
   openFriendHistory(call) {
@@ -2580,6 +2834,7 @@ const App = {
     this.refreshStats();
     this.renderPrevCard();
     this._refreshTopPanel();
+    this._scheduleCacheSave(); // C2：新 QSO 即时写回 IndexedDB
   },
 
   updateQsoCount() {
@@ -2615,47 +2870,95 @@ const App = {
     if (friendsEl) friendsEl.textContent = uniqueCallers.size;
   },
 
-  renderTopCallers() {
+  /**
+   * E2：多维排行榜 —— kind 决定聚合维度
+   *   'callsign' 按呼号（A 级原有 TOP20）
+   *   'grid'     按网格方块（取前 4 位，如 PM01）
+   *   'relay'    按中继名称
+   */
+  _buildRank(kind) {
+    const counts = new Map();
+    for (const q of this.qsoList) {
+      let key = '';
+      if (kind === 'grid') {
+        const g = (q.grid ?? q.locator ?? '').trim().toUpperCase();
+        if (!g) continue;
+        key = g.slice(0, 4); // 只取前 4 位，网格方块级别
+      } else if (kind === 'relay') {
+        key = this._getQsoMemoRelay(q).relay.trim();
+        if (!key) continue;
+      } else {
+        const qc = this._extractQsoCallsign(q);
+        if (!qc) continue;
+        key = this.parseCallsignSsid(qc).call;
+      }
+      if (key) counts.set(key, (counts.get(key) || 0) + 1);
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20);
+  },
+
+  renderRank(kind) {
     const container = document.getElementById('top-callers');
     if (!container) return;
 
-    const counts = new Map();
-    this.qsoList.forEach(q => {
-      const qc = this._extractQsoCallsign(q);
-      if (qc) {
-        const call = this.parseCallsignSsid(qc).call;
-        counts.set(call, (counts.get(call) || 0) + 1);
-      }
-    });
-
-    const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20);
+    const sorted = this._buildRank(kind === 'top20' ? 'callsign' : kind);
 
     const countEl = document.getElementById('top-count');
     if (countEl) countEl.textContent = sorted.length;
 
     if (!sorted.length) {
-      container.innerHTML = '<div class="list-empty">暂无数据</div>';
+      const empty = kind === 'grid' ? '暂无网格数据' : kind === 'relay' ? '暂无中继数据' : '暂无数据';
+      container.innerHTML = '<div class="list-empty">' + empty + '</div>';
       return;
     }
 
     const maxCount = sorted[0][1];
     const todaySet = this._todayContactedSet(); // A8
-    container.innerHTML = sorted.map(([call, count], i) => {
+    container.innerHTML = sorted.map(([key, count], i) => {
       const barPct = Math.round((count / maxCount) * 100);
-      const isSelf = this.isSameOperator(call, this.myCallsign);
       const barColor = i < 3 ? 'var(--accent)' : i < 10 ? 'var(--accent-soft)' : 'var(--accent-line)';
-      // A5：呼号 → QRZ；A8：今日已联 ★
-      const callHtml = '<a class="callsign-link" href="#" data-qrz="' + this._esc(call) + '" title="QRZ 查询 ' + this._esc(call) + '">' + this._esc(call) + '</a>';
-      const qrzBtn = '<button class="qrz-mini" data-qrz="' + this._esc(call) + '" title="QRZ 查询 ' + this._esc(call) + '" type="button">' + this._QRZ_SVG + '</button>';
-      return `<div class="top-item${isSelf ? ' is-self' : ''}">
+      let mainHtml, title, selfClass = '';
+
+      if (kind === 'grid') {
+        if (this._gridLocationCache[key] === undefined) this._resolveGridLocation(key);
+        const qth = this._gridLocationCache[key] || '';
+        title = qth ? (key + ' · ' + qth) : key;
+        mainHtml = '<span class="rank-key">' + this._esc(key) + '</span>'
+          + (qth ? '<span class="rank-sub">' + this._esc(qth) + '</span>' : '');
+      } else if (kind === 'relay') {
+        title = '点击切换到中继「' + key + '」';
+        mainHtml = '<a class="callsign-link rank-key" href="#" data-relay="' + this._esc(key) + '">' + this._esc(key) + '</a>';
+      } else {
+        const isSelf = this.isSameOperator(key, this.myCallsign);
+        if (isSelf) selfClass = ' is-self';
+        title = 'QRZ 查询 ' + key;
+        // A5：呼号 → QRZ；A8：今日已联 ★
+        mainHtml = '<a class="callsign-link rank-key" href="#" data-qrz="' + this._esc(key) + '" title="QRZ 查询 ' + this._esc(key) + '">' + this._esc(key) + '</a>'
+          + this._todayBadge(key, todaySet)
+          + '<button class="qrz-mini" data-qrz="' + this._esc(key) + '" title="QRZ 查询 ' + this._esc(key) + '" type="button">' + this._QRZ_SVG + '</button>';
+      }
+
+      return `<div class="top-item${selfClass}">
         <span class="top-rank">${i + 1}</span>
-        <span class="top-call">${callHtml}${this._todayBadge(call, todaySet)}${qrzBtn}</span>
+        <span class="top-call" title="${this._esc(title)}">${mainHtml}</span>
         <span class="top-bar-wrap"><span class="top-bar" style="width:${barPct}%;background:${barColor}"></span></span>
         <span class="top-count">${count}次</span>
       </div>`;
     }).join('');
-    this._bindQrz(container);
+
+    this._bindQrz(container); // A5
+    // E2 + A4：中继排行里点名字可直接切换服务器
+    container.querySelectorAll('[data-relay]').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this._switchToRelay(el.dataset.relay);
+      });
+    });
   },
+
+  /** 兼容旧调用名 */
+  renderTopCallers() { this.renderRank('callsign'); },
 
   async refreshStats() {
     // QSO 统计已由 updateQsoCount() 无条件本地计算，无需设备 API 查询
@@ -3755,6 +4058,10 @@ const App = {
         document.getElementById('fmo-protocol').value = protocol || 'ws';
       } catch (e) {}
     }
+    // C2：打开设置时刷新本地缓存信息
+    this._idbGetAll('qso').then(list => {
+      this._idbGetMeta('meta').then(meta => this._updateCacheInfo(list.length, meta && meta.savedAt));
+    });
   },
 
   closeSettings() {

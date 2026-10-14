@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" data-page-node-id="XhXhwhxqB397QaCGYC914u">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin data-page-node-id="a1Blyd2eBfByxb5WLWMDzr">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" data-page-node-id="IpPQGTu3BlviiZVEl9oYxl">
-  <link rel="stylesheet" href="style.css?v=1014c" data-page-node-id="ATWCsppPDIzcDQz3y7BDAF">
+  <link rel="stylesheet" href="style.css?v=1014d" data-page-node-id="ATWCsppPDIzcDQz3y7BDAF">
 </head>
 <body data-page-node-id="0eTqUaa7itPg7UuUXy0v5G">
 <div class="app-wrapper" data-page-node-id="RRCSHqXticB7YEC9y3Al8C">
@@ -285,8 +285,10 @@
       <div class="panel-header" data-page-node-id="dEsyjPJogH9MIgB41Jw7iD">
         <!-- E1：TOP20 / 老朋友 切换 -->
         <div class="panel-tabs" id="top-panel-tabs">
-          <button class="panel-tab is-active" id="tab-top20" type="button">TOP20</button>
-          <button class="panel-tab" id="tab-friends" type="button">老朋友</button>
+          <button class="panel-tab is-active" id="tab-top20" type="button" title="按呼号排行">TOP20</button>
+          <button class="panel-tab" id="tab-friends" type="button" title="历史通联过的友台">老友</button>
+          <button class="panel-tab" id="tab-grid" type="button" title="按网格方块排行">网格</button>
+          <button class="panel-tab" id="tab-relay" type="button" title="按中继排行">中继</button>
         </div>
         <span class="panel-count" id="top-count" data-page-node-id="IDv0VK1ZUh0Weh6gk0Wi8A">0</span>
       </div>
@@ -493,7 +495,12 @@
           <option value="wss" data-page-node-id="gzDi4HHA5lbTLsOBBJBxy4">wss</option>
         </select>
       </div>
+      <div class="settings-row">
+        <label>本地缓存（IndexedDB）</label>
+        <span class="coord-hint" id="cache-info">读取中…</span>
+      </div>
       <div class="overlay-btns" data-page-node-id="qTk2sIdzFHKDQNUghBMHhf">
+        <button id="settings-clear-cache" class="btn-muted" title="清空本地缓存的 QSO 日志与服务器列表">清空缓存</button>
         <button id="settings-save" class="btn-accent" data-page-node-id="yez1GCfFoJkCm5H8R86GHo">保存并连接</button>
         <button id="settings-close" class="btn-muted" data-page-node-id="OJleboEPxBozXBW7tHgQR6">取消</button>
       </div>
@@ -532,6 +539,6 @@
 
 </div>
 
-  <script src="app.js?v=1014c"></script>
+  <script src="app.js?v=1014d"></script>
 </body>
 </html>

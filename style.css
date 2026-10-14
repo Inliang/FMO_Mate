@@ -1776,6 +1776,27 @@ button { font: inherit; color: inherit; }
 }
 .top-item.is-self .top-call { color: var(--accent-ink); }
 
+/* E2：多维排行榜的键名与副标题（网格 / 中继） */
+.rank-key {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.rank-sub {
+  font-size: var(--fs-2xs);
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
 .top-bar-wrap {
   height: 6px;
   border-radius: var(--r-full);
@@ -2003,7 +2024,7 @@ button { font: inherit; color: inherit; }
 }
 .panel-tab {
   height: 18px;
-  padding: 0 9px;
+  padding: 0 7px;
   border: none;
   border-radius: var(--r-full);
   background: transparent;

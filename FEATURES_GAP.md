@@ -76,7 +76,7 @@
 | # | 缺失功能 | 依据 | 说明 |
 |---|---------|------|------|
 | C1 | **日志全量备份下载** | HTTP `POST http://<host>/api/qso/backup`，再 GET 同一地址拿 `.db`/`.zip`（FmoLogs `fmoBackupService.ts` 中 `BACKUP_PATH = '/api/qso/backup'`） | ✅ **已实现**（2026-10-14）：通联记录面板「备份」按钮，隐藏 iframe POST 触发导出 + 新标签页 GET 下载，规避 CORS |
-| C2 | **本地持久化（IndexedDB）** | FmoLogs / FMO-Dashboard / FmoDeck 都用 IndexedDB + sql.js | 我们刷新即丢历史，重连要重拉 |
+| C2 | **本地持久化（IndexedDB）** | FmoLogs / FMO-Dashboard / FmoDeck 都用 IndexedDB + sql.js | ✅ **已实现**（2026-10-14）：IndexedDB 缓存 QSO + 服务器列表，启动先渲染缓存再增量合并，翻页命中缓存即停；设置里可查缓存量与清空 |
 | C3 | **导入 `.db` 日志** | FmoLogs 支持 | 需 sql.js（引入即破坏零依赖，可做成可选模块） |
 | C4 | **.db / ADIF 双向导出** | 我们只有 ADIF | FmoLogs 可导出 .db |
 
@@ -94,7 +94,7 @@
 | # | 缺失功能 | 对照 |
 |---|---------|------|
 | E1 | **「老朋友」页** | ✅ **已实现**（2026-10-14）：TOP 面板新增「TOP20 / 老朋友」tab；老朋友按呼号聚合（次数 / 最近 / 首次 / 网格），今日已联高亮；点击弹出与该友台的全部通联历史，每行可再点开 A7 详情 |
-| E2 | **排行榜多维度** | FmoLogs：接收方呼号 / 网格 / 中继三组 TOP20；我们只有呼号 TOP20 |
+| E2 | **排行榜多维度** | ✅ **已实现**（2026-10-14）：TOP 面板 4 个 tab —— TOP20（呼号）/ 老友 / **网格**（取前 4 位方块 + QTH 地名）/ **中继**（点击名字直接切换，复用 A4） |
 | E3 | **多 FMO 地址管理** | FMO-Dashboard / FmoLogs 都支持多个地址切换（含 `fmo.local` mDNS） |
 | E4 | **地图视图**（外链版） | FmoDeck 有全屏地图 + 我↔对方连线 + 距离标签。真地图要引库，折中方案：网格点击跳 `https://maidenmap.wh0am1i.com/` 或 aprs.fi |
 | E5 | **UTC / 本地双时钟** | ✅ **已实现**（2026-10-11）：状态栏并排显示本地时间与 UTC，点击 UTC 可复制 |
@@ -138,11 +138,11 @@
 
 ## 三、建议实施顺序
 
-**已完成**：A1–A8（全清）、B1–B9（全清，除主动放弃的 setUrl/setPort）、C1、E1、E5、H1 —— 共 21 项
+**已完成**：A1–A8（全清）、B1–B9（全清，除主动放弃的 setUrl/setPort）、C1、C2、E1、E2、E5、H1 —— 共 23 项
 
 1. **下一步可做（都很轻）**：H2 APRS/节点地图外链、H3 台网点名外链、H4 浏览器定位写坐标、E6 回到顶部
-2. **中等工作量**：E2 多维排行榜、C2 IndexedDB 持久化、D1-D3 语音播报（NATO）
-3. **较重**：C3/C4 `.db` 日志导入与转 ADIF（H6，需 sql.js）、E3 多地址、D4 离线 TTS 兜底
+2. **中等工作量**：D1-D3 语音播报（NATO）、E3 多地址
+3. **较重**：C3/C4 `.db` 日志导入与转 ADIF（H6，需 sql.js）、D4 离线 TTS 兜底
 4. **需先实测**：H8 设备端网页其他接口（`message.*` / `/api/provision` / 待机控制 / 台站导入）
 5. **暂缓**：F 平台化、G 不做项、H5 日志签名验证、H7 黑名单库
 
