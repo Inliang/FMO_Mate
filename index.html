@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" data-page-node-id="XhXhwhxqB397QaCGYC914u">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin data-page-node-id="a1Blyd2eBfByxb5WLWMDzr">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" data-page-node-id="IpPQGTu3BlviiZVEl9oYxl">
-  <link rel="stylesheet" href="style.css?v=0911b" data-page-node-id="ATWCsppPDIzcDQz3y7BDAF">
+  <link rel="stylesheet" href="style.css?v=1014a" data-page-node-id="ATWCsppPDIzcDQz3y7BDAF">
 </head>
 <body data-page-node-id="0eTqUaa7itPg7UuUXy0v5G">
 <div class="app-wrapper" data-page-node-id="RRCSHqXticB7YEC9y3Al8C">
@@ -382,6 +382,43 @@
         </div>
       </div>
 
+      <div class="device-group">
+        <div class="device-group-title">服务器（B1 / B7）</div>
+        <div class="device-row">
+          <label for="dev-cfg-servername">服务器名称</label>
+          <input id="dev-cfg-servername" type="text" maxlength="31" placeholder="≤31 字符" autocomplete="off">
+        </div>
+        <div class="device-row">
+          <label for="dev-cfg-filter">服务器过滤器</label>
+          <select id="dev-cfg-filter"></select>
+        </div>
+      </div>
+
+      <div class="device-group">
+        <div class="device-group-title">通联（B6 / B3）</div>
+        <div class="device-row">
+          <label for="dev-cfg-wish">QSO 祝福语</label>
+          <input id="dev-cfg-wish" type="text" maxlength="64" placeholder="≤64 字节" autocomplete="off">
+        </div>
+        <div class="device-row">
+          <label for="dev-cfg-announce">登录公告</label>
+          <input id="dev-cfg-announce" type="text" maxlength="127" placeholder="≤127 字节" autocomplete="off">
+        </div>
+        <div class="device-row is-stacked">
+          <label for="dev-cfg-blacklist">黑名单</label>
+          <input id="dev-cfg-blacklist" type="text" maxlength="511" placeholder="大写字母 / 数字，逗号分隔，≤511 字符" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="device-group">
+        <div class="device-group-title">广播模式（B8）</div>
+        <div class="device-mode-row">
+          <button id="dev-cfg-bcast-server" class="btn-muted" title="config.setBroadcastServer">广播服务器</button>
+          <button id="dev-cfg-bcast-user" class="btn-muted" title="config.setBroadcastUser">广播用户</button>
+        </div>
+        <p class="device-note">两种模式互斥，点击立即生效。设备不提供查询接口，无法回显当前处于哪种模式。</p>
+      </div>
+
       <div class="overlay-btns">
         <button id="dev-cfg-restart" class="btn-muted" title="restartAprsService">重启 APRS</button>
         <button id="dev-cfg-save" class="btn-accent">写入设备</button>
@@ -448,6 +485,6 @@
 
 </div>
 
-  <script src="app.js?v=0911b"></script>
+  <script src="app.js?v=1014a"></script>
 </body>
 </html>

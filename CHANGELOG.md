@@ -1,5 +1,19 @@
 # FMO 副屏伴侣 — 更新日志
 
+## 2026-10-14
+
+### B 级收尾：实现 B1 / B3 / B6 / B7 / B8，主动放弃 setUrl · setPort（v=1014a）
+
+- **B1 服务器名称**：`config.setServerName`（≤31 字符），弹窗打开时 `getServerName` 预填
+- **B3 黑名单**：`config.setBlacklist`，前端校验 `/^[A-Z0-9, ]*$/` 且 ≤511 字符；长字段改用标签上置的堆叠布局
+- **B6 QSO 祝福语 / 登录公告**：`setQsoBestWish`（TextEncoder 实测 ≤64 字节）/ `setServerLoginAnnouncement`（≤127 字节）
+- **B7 服务器过滤器**：`setServerFilter`，0-8 整数下拉（含「不修改」）
+- **B8 广播服务器 / 广播用户**：`setBroadcastMode(kind)` 两个即时按钮。这两个接口无参数、也无对应 getter，无法回显当前模式，弹窗内以说明文字标注
+- **读取端扩展**：`openDeviceConfig()` 的并发 getter 从 7 个扩到 12 个（+ `getServerName` / `getServerFilter` / `getQsoBestWish` / `getServerLoginAnnouncement` / `getBlacklist`）
+- **新增诊断 `probeConfigApi()`**：逐个探测 13 个 `config` getter 并打印 ✅/✗ 清单。用法：URL 加 `?probe=config`，或控制台 `FMO.probeConfigApi()`。固件未实现的方法据此可从界面移除
+- **主动放弃**：`config.setUrl` / `config.setPort` —— 修改设备上游地址，改错即掉线，设备就在手边，网页端收益低风险高，不做 UI
+- 版本串 `?v=0911b` → `?v=1014a`
+
 ## 2026-10-11
 
 ### 新增 A1 / A2 / A3 / A4 / A7 / B2 / B5 / B9 八项功能（v=0911b）

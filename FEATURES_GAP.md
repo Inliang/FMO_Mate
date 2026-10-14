@@ -44,22 +44,25 @@
 | A7 | **QSO 详情弹窗** | `qso.getDetail`（已在用） | ✅ **已实现**（2026-10-11）：点击通联记录整行弹窗，字段含呼号 / 本机 / 网格 / QTH / 频率 / 距离 / 方位 / 中继 / 通联次数 / 时间 / 留言，可一键按该呼号筛选 |
 | A8 | **今日已联 ⭐ 标记** | 前端比对今日日期 | ✅ **已实现**（2026-10-11）：通联记录 / 最近发言 / TOP20 的今日已联呼号带 ★ 徽标 |
 
-### B 级：设备配置读写（`config` 命名空间，官方 v2 完整列出 30 个方法，我们只用了 5 个 get）
+### B 级：设备配置读写 —— ✅ 已全部实现（仅 `setUrl` / `setPort` 主动放弃）
 
-我们当前只读：`getCordinate`、`getUserPhyDeviceName`、`getUserPhyAnt`、`getUserPhyAntHeight`、`getUserPhyFreq`。
-可写但没做 UI 的：
+> **2026-10-14 收尾**：B1 / B3 / B6 / B7 / B8 全部并入「设备配置」弹窗，B 级只剩主动放弃的两项。
+> **可用性别确认**：设备固件可能并未实现全部 `config` 方法。打开弹窗时会自动读取，读不回来的字段保持空白；
+> 也可在 URL 加 `?probe=config`（或控制台 `FMO.probeConfigApi()`）逐个探测，控制台会打印 ✅/✗ 清单——
+> 带 ✗ 的即为固件未实现，可据此从界面移除。
 
-| # | 缺失功能 | 写接口 | 约束 |
-|---|---------|--------|------|
-| B1 | **修改设备/服务器名称** | `config.setServerName` | ≤31 字符 |
-| B2 | **APRS 备注 / 图标 / Passcode** | `setAprsRemark`(≤63字节) / `setAprsType`(1-15) / `setPasscode`(5位或-1) | ✅ **已实现**（2026-10-11）：设备配置弹窗 APRS 分组，另有「重启 APRS」按钮 |
-| B3 | **黑名单管理** | `setBlacklist` | 大写字母+数字+逗号+空格，≤511 字符 |
-| B4 | **设备坐标设置** | `setCordinate {latitude, longitude}` | ✅ **已实现**（2026-10-11）：KPI 行新增独立「坐标 / GRID」卡片，点击弹窗写入设备并实时预览网格 |
-| B5 | **天线描述 / 高度 / 物理频率** | `setUserPhyAnt`(≤15) / `setUserPhyAntHeight`(0-100000m) / `setUserPhyFreq`(0-1000MHz) | ✅ **已实现**（2026-10-11）：设备配置弹窗「物理设备」分组 |
-| B6 | **QSO 祝福语 / 登录公告** | `setQsoBestWish`(≤64字节) / `setServerLoginAnnouncement`(≤127字节) | 待做 |
-| B7 | **服务器过滤器** | `setServerFilter` (0-8) | 待做。控制台可见列表范围 |
-| B8 | **广播服务器 / 广播用户模式** | `setBroadcastServer` / `setBroadcastUser` | 待做。无参数 |
-| B9 | **物理设备名** | `setUserPhyDeviceName`(≤15) | ✅ **已实现**（2026-10-11）：设备配置弹窗「物理设备」分组 |
+| # | 功能 | 写接口 | 约束 / 状态 |
+|---|------|--------|------------|
+| B1 | **服务器名称** | `config.setServerName` | ≤31 字符 · ✅ 已实现（2026-10-14） |
+| B2 | **APRS 备注 / 图标 / Passcode** | `setAprsRemark` / `setAprsType` / `setPasscode` | ≤63字节 / 1-15 / 5位或-1 · ✅ 已实现（2026-10-11） |
+| B3 | **黑名单** | `setBlacklist` | `^[A-Z0-9, ]*$`，≤511 字符 · ✅ 已实现（2026-10-14） |
+| B4 | **设备坐标** | `setCordinate {latitude, longitude}` | ✅ 已实现（2026-10-11） |
+| B5 | **天线描述 / 高度 / 物理频率** | `setUserPhyAnt` / `setUserPhyAntHeight` / `setUserPhyFreq` | ≤15 / 0-100000m / 0-1000MHz · ✅ 已实现（2026-10-11） |
+| B6 | **QSO 祝福语 / 登录公告** | `setQsoBestWish` / `setServerLoginAnnouncement` | ≤64字节 / ≤127字节 · ✅ 已实现（2026-10-14） |
+| B7 | **服务器过滤器** | `setServerFilter` | 0-8 整数 · ✅ 已实现（2026-10-14） |
+| B8 | **广播服务器 / 广播用户模式** | `setBroadcastServer` / `setBroadcastUser` | 无参数、无查询接口，做成即时按钮 · ✅ 已实现（2026-10-14） |
+| B9 | **物理设备名** | `setUserPhyDeviceName` | ≤15 字符 · ✅ 已实现（2026-10-11） |
+| — | ~~上游服务器地址 / 端口~~ | ~~`setUrl` / `setPort`~~ | ⛔ **主动放弃**：改错即掉线，设备就在手边，网页端收益低风险高 |
 
 > 注意：`config.setUrl` / `setPort` 会改设备连的上游地址，**不建议做**（改错就掉线）。
 
@@ -114,9 +117,9 @@
 
 ## 三、建议实施顺序
 
-**已完成（2026-10-11）**：A1、A2、A3、A4、A5、A6、A7、A8、B2、B4、B5、B9、E5 —— 共 13 项
+**已完成**：A1–A8（全清）、B1–B9（全清，除主动放弃的 setUrl/setPort）、E5 —— 共 18 项
 
-1. **下一步可做（A 级已清空）**：E1 老朋友页、E2 多维排行榜、B1 设备名、B3 黑名单、B6 祝福语/公告、B7 服务器过滤器、B8 广播模式
+1. **下一步可做**：E1 老朋友页、E2 多维排行榜
 2. **第三批**：C1 日志备份下载（`/api/qso/backup`）、C2 IndexedDB 持久化、C3 导入 .db、C4 导出 .db
 3. **第四批**：D1-D4 语音播报（NATO）、E3 多地址、E4 地图外链、E6 回到顶部
 4. **暂缓**：F 平台化、G 不做项

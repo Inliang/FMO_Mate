@@ -2127,6 +2127,27 @@ button { font: inherit; color: inherit; }
 .device-row input:focus,
 .device-row select:focus { border-color: var(--accent); box-shadow: var(--sh-focus); }
 
+/* 长文本字段：标签换行到上方，输入框独占一行 */
+.device-row.is-stacked {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+}
+.device-row.is-stacked label { font-size: var(--fs-2xs); color: var(--ink-3); }
+
+/* B8：广播模式（无查询接口，只能即时触发） */
+.device-mode-row {
+  display: flex;
+  gap: var(--sp-2);
+}
+.device-mode-row .btn-muted { flex: 1; height: 30px; font-size: var(--fs-xs); }
+.device-mode-row .btn-muted:hover { background: var(--accent-wash); border-color: var(--accent-line); color: var(--accent-ink); }
+
+.device-note {
+  font-size: var(--fs-2xs);
+  line-height: 1.6;
+  color: var(--ink-3);
+}
+
 /* ---- 设备坐标弹窗（B4）---- */
 .coord-box { width: 340px; }
 .coord-hint {

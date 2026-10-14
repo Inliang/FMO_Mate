@@ -252,6 +252,11 @@ const App = {
     if (devSave) devSave.addEventListener('click', () => this.saveDeviceConfig());
     const devRestart = $('dev-cfg-restart');
     if (devRestart) devRestart.addEventListener('click', () => this.restartAprsService());
+    // B8：广播模式（无查询接口，即时触发）
+    const devBcastS = $('dev-cfg-bcast-server');
+    if (devBcastS) devBcastS.addEventListener('click', () => this.setBroadcastMode('server'));
+    const devBcastU = $('dev-cfg-bcast-user');
+    if (devBcastU) devBcastU.addEventListener('click', () => this.setBroadcastMode('user'));
 
     const fmoIp = $('fmo-ip');
     const fmoPort = $('fmo-port');
@@ -995,6 +1000,10 @@ const App = {
     // URL 带 ?probe=fav 时自动探测设备是否提供收藏服务器接口
     if (location.search.includes('probe=fav')) {
       setTimeout(() => this.probeFavoriteApi(), 800);
+    }
+    // URL 带 ?probe=config 时探测 config 域接口真实可用情况
+    if (location.search.includes('probe=config')) {
+      setTimeout(() => this.probeConfigApi(), 800);
     }
   },
 
@@ -1957,10 +1966,16 @@ const App = {
       sel.innerHTML = '<option value="">（不修改）</option>'
         + Array.from({ length: 15 }, (_, i) => '<option value="' + (i + 1) + '">图标类型 ' + (i + 1) + '</option>').join('');
     }
+    const selFilter = $('dev-cfg-filter');
+    if (selFilter && !selFilter.options.length) {
+      selFilter.innerHTML = '<option value="">（不修改）</option>'
+        + Array.from({ length: 9 }, (_, i) => '<option value="' + i + '">过滤器 ' + i + '</option>').join('');
+    }
 
     if (this.connected) {
       this._showToast('读取设备配置…');
-      const [name, ant, antH, freq, remark, aprsType, pass] = await Promise.all([
+      const [name, ant, antH, freq, remark, aprsType, pass,
+             serverName, serverFilter, wish, announce, blacklist] = await Promise.all([
         this._cfgGet('getUserPhyDeviceName', d => d.name ?? d.deviceName ?? d.model),
         this._cfgGet('getUserPhyAnt', d => Array.isArray(d) && d.length
           ? (d[0]?.ant ?? d[0]?.type ?? d[0]?.name ?? '')
@@ -1969,15 +1984,26 @@ const App = {
         this._cfgGet('getUserPhyFreq', d => d.frequency ?? d.freq ?? d.rx_freq),
         this._cfgGet('getAprsRemark', d => d.remark ?? d.aprsRemark),
         this._cfgGet('getAprsType', d => d.aprsType ?? d.type),
-        this._cfgGet('getPasscode', d => d.passcode ?? d.value)
+        this._cfgGet('getPasscode', d => d.passcode ?? d.value),
+        this._cfgGet('getServerName', d => d.serverName ?? d.name),
+        this._cfgGet('getServerFilter', d => d.serverFilter ?? d.filter ?? d.value),
+        this._cfgGet('getQsoBestWish', d => d.qsoBestWish ?? d.wish ?? d.value),
+        this._cfgGet('getServerLoginAnnouncement', d => d.serverLoginAnnouncement ?? d.announcement ?? d.value),
+        this._cfgGet('getBlacklist', d => d.blacklist ?? d.list ?? d.value)
       ]);
-      if ($('dev-cfg-name')) $('dev-cfg-name').value = name ?? '';
-      if ($('dev-cfg-ant')) $('dev-cfg-ant').value = ant ?? '';
-      if ($('dev-cfg-ant-h')) $('dev-cfg-ant-h').value = (antH === '' || antH === undefined) ? '' : String(antH);
-      if ($('dev-cfg-freq')) $('dev-cfg-freq').value = (freq === '' || freq === undefined) ? '' : String(freq);
-      if ($('dev-cfg-remark')) $('dev-cfg-remark').value = remark ?? '';
+      const set = (id, v) => { const el = $(id); if (el) el.value = (v === '' || v === undefined || v === null) ? '' : String(v); };
+      set('dev-cfg-name', name);
+      set('dev-cfg-ant', ant);
+      set('dev-cfg-ant-h', antH);
+      set('dev-cfg-freq', freq);
+      set('dev-cfg-remark', remark);
       if (sel) sel.value = (aprsType === '' || aprsType === undefined) ? '' : String(aprsType);
-      if ($('dev-cfg-pass')) $('dev-cfg-pass').value = (pass === '' || pass === undefined) ? '' : String(pass);
+      set('dev-cfg-pass', pass);
+      set('dev-cfg-servername', serverName);
+      if (selFilter) selFilter.value = (serverFilter === '' || serverFilter === undefined) ? '' : String(serverFilter);
+      set('dev-cfg-wish', wish);
+      set('dev-cfg-announce', announce);
+      set('dev-cfg-blacklist', blacklist);
     } else {
       this._showToast('未连接设备，仅可查看（写入需先连接）');
     }
@@ -2031,6 +2057,47 @@ const App = {
       tasks.push(['Passcode', { type: 'config', subType: 'setPasscode', data: { passcode: pass } }]);
     }
 
+    // ---- B1：服务器名称 ----
+    const serverName = val('dev-cfg-servername');
+    if (serverName) {
+      if (serverName.length > 31) { this._showToast('服务器名称超长：' + serverName.length + '（上限 31）'); return; }
+      tasks.push(['服务器名称', { type: 'config', subType: 'setServerName', data: { serverName } }]);
+    }
+
+    // ---- B7：服务器过滤器（0-8）----
+    const rawFilter = (($('dev-cfg-filter') && $('dev-cfg-filter').value) || '').trim();
+    if (rawFilter !== '') {
+      const fv = Number(rawFilter);
+      if (!Number.isInteger(fv) || fv < 0 || fv > 8) { this._showToast('服务器过滤器须为 0 - 8 的整数'); return; }
+      tasks.push(['服务器过滤器', { type: 'config', subType: 'setServerFilter', data: { serverFilter: fv } }]);
+    }
+
+    // ---- B6：QSO 祝福语 / 登录公告 ----
+    const wish = val('dev-cfg-wish');
+    if (wish) {
+      const wb = new TextEncoder().encode(wish).length;
+      if (wb > 64) { this._showToast('QSO 祝福语超长：' + wb + ' 字节（上限 64）'); return; }
+      tasks.push(['QSO 祝福语', { type: 'config', subType: 'setQsoBestWish', data: { qsoBestWish: wish } }]);
+    }
+
+    const announce = val('dev-cfg-announce');
+    if (announce) {
+      const ab = new TextEncoder().encode(announce).length;
+      if (ab > 127) { this._showToast('登录公告超长：' + ab + ' 字节（上限 127）'); return; }
+      tasks.push(['登录公告', { type: 'config', subType: 'setServerLoginAnnouncement', data: { serverLoginAnnouncement: announce } }]);
+    }
+
+    // ---- B3：黑名单（大写字母 / 数字 / 逗号 / 空格，≤511）----
+    const blacklist = val('dev-cfg-blacklist');
+    if (blacklist) {
+      if (blacklist.length > 511) { this._showToast('黑名单超长：' + blacklist.length + '（上限 511）'); return; }
+      if (!/^[A-Z0-9, ]*$/.test(blacklist)) {
+        this._showToast('黑名单只允许大写字母、数字、逗号和空格');
+        return;
+      }
+      tasks.push(['黑名单', { type: 'config', subType: 'setBlacklist', data: { blacklist } }]);
+    }
+
     if (!tasks.length) { this._showToast('没有需要修改的项'); return; }
 
     const failed = [];
@@ -2048,6 +2115,47 @@ const App = {
       this.closeDeviceConfig();
       await this.fetchDeviceInfo(); // 刷新 KPI（设备名 / 天线 / 频率 / 高度）
     }
+  },
+
+  /** B8：广播服务器 / 广播用户（无参数、无查询接口，点击即时生效） */
+  async setBroadcastMode(kind) {
+    if (!this.connected) { this._showToast('未连接设备'); return; }
+    const sub = kind === 'user' ? 'setBroadcastUser' : 'setBroadcastServer';
+    const label = kind === 'user' ? '广播用户' : '广播服务器';
+    try {
+      const r = await this.send({ type: 'config', subType: sub, data: {} });
+      this._showToast(!r || r.code === 0 || r.code === undefined ? ('已切换为' + label + '模式') : ('切换失败 code=' + r.code));
+    } catch (e) {
+      this._showToast('切换失败：' + (e.message || e));
+    }
+  },
+
+  /**
+   * 诊断用：逐个探测 config 域接口是否可用。
+   * 用法：URL 加 ?probe=config，或控制台执行 FMO.probeConfigApi()
+   */
+  async probeConfigApi() {
+    const log = (...a) => console.log('[FMO-PROBE-CONFIG]', ...a);
+    log('=== config 域接口探测开始 ===');
+    const getters = [
+      'getUserPhyDeviceName', 'getUserPhyAnt', 'getUserPhyAntHeight', 'getUserPhyFreq',
+      'getServerName', 'getServerFilter', 'getAprsRemark', 'getAprsType', 'getPasscode',
+      'getQsoBestWish', 'getServerLoginAnnouncement', 'getBlacklist', 'getCordinate'
+    ];
+    const ok = [];
+    for (const sub of getters) {
+      try {
+        const r = await this.send({ type: 'config', subType: sub });
+        const good = r && (r.code === 0 || r.code === undefined);
+        log((good ? '✅ ' : '✗ ') + sub, JSON.stringify(r && r.data).slice(0, 200));
+        if (good) ok.push(sub);
+      } catch (e) {
+        log('✗ ' + sub + ' 无响应/超时:', e.message);
+      }
+    }
+    log('=== 可用 getter：' + (ok.join(', ') || '（无）') + ' ===');
+    log('结论：上面带 ✅ 的即为设备真实支持的配置项；✗ 的说明固件未实现，可从界面移除。');
+    return ok;
   },
 
   async restartAprsService() {
