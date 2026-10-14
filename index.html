@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" data-page-node-id="XhXhwhxqB397QaCGYC914u">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin data-page-node-id="a1Blyd2eBfByxb5WLWMDzr">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" data-page-node-id="IpPQGTu3BlviiZVEl9oYxl">
-  <link rel="stylesheet" href="style.css?v=1014a" data-page-node-id="ATWCsppPDIzcDQz3y7BDAF">
+  <link rel="stylesheet" href="style.css?v=1014b" data-page-node-id="ATWCsppPDIzcDQz3y7BDAF">
 </head>
 <body data-page-node-id="0eTqUaa7itPg7UuUXy0v5G">
 <div class="app-wrapper" data-page-node-id="RRCSHqXticB7YEC9y3Al8C">
@@ -269,6 +269,7 @@
             <button class="panel-search-clear" id="qso-search-clear" title="清除" type="button">×</button>
           </span>
           <button id="panel-export-btn" class="panel-export-btn" title="导出 ADIF 日志" data-page-node-id="9OmH12NYMAsObwMmmBOpRf">导出 ADIF</button>
+          <button id="panel-backup-btn" class="panel-export-btn" title="从 FMO 设备下载完整日志备份（/api/qso/backup）">备份</button>
           <span class="panel-count" id="qso-count" data-page-node-id="bKODBnsz8Rscy89BTq1E9f">0</span>
         </div>
       </div>
@@ -282,11 +283,18 @@
 
     <section class="top-panel" data-page-node-id="ewfSygUHoqpG48DP8dEukt">
       <div class="panel-header" data-page-node-id="dEsyjPJogH9MIgB41Jw7iD">
-        <span data-page-node-id="II77cixz1K1EIb7EJXo85g">通联排行 TOP20</span>
+        <!-- E1：TOP20 / 老朋友 切换 -->
+        <div class="panel-tabs" id="top-panel-tabs">
+          <button class="panel-tab is-active" id="tab-top20" type="button">TOP20</button>
+          <button class="panel-tab" id="tab-friends" type="button">老朋友</button>
+        </div>
         <span class="panel-count" id="top-count" data-page-node-id="IDv0VK1ZUh0Weh6gk0Wi8A">0</span>
       </div>
       <div id="top-callers" class="live-table-wrap" data-page-node-id="uvZuHJT6qL6RiAM6LFOeaY">
         <div class="list-empty" data-page-node-id="0gUhksmHweswnlS39QVj94">暂无数据</div>
+      </div>
+      <div id="friends-list" class="live-table-wrap" style="display:none;">
+        <div class="list-empty">暂无通联记录</div>
       </div>
     </section>
   </div><!-- end .main-body -->
@@ -320,6 +328,45 @@
       <div class="overlay-btns">
         <button id="coord-save" class="btn-accent">写入设备</button>
         <button id="coord-close" class="btn-muted">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 隐藏: 日志备份（C1）===== -->
+  <div id="backup-overlay" class="overlay">
+    <div class="overlay-box backup-box">
+      <h2>FMO 日志备份</h2>
+      <p class="coord-hint">
+        从设备下载完整 QSO 日志（<code>/api/qso/backup</code>）。设备导出需要几秒时间，
+        页面会先发起导出、稍后自动在新标签页下载（<code>.db</code> 或 <code>.zip</code>）。
+      </p>
+      <div class="backup-url" id="backup-url">--</div>
+      <div class="backup-status" id="backup-status">准备就绪</div>
+      <div class="overlay-btns">
+        <button id="backup-start" class="btn-accent">开始导出并下载</button>
+        <button id="backup-download-only" class="btn-muted" title="不触发展开，直接 GET 下载">直接下载</button>
+        <button id="backup-close" class="btn-muted">关闭</button>
+      </div>
+      <p class="device-note">
+        若下载到的文件为空或报错，说明设备还没导出完，等 10 秒再点一次「直接下载」。
+        另：本页以 <code>https</code> 打开时（如 GitHub Pages），浏览器会拦截对设备 <code>http</code> 地址的
+        iframe 请求，此时将自动跳过「发起导出」步骤，只做下载。
+      </p>
+    </div>
+  </div>
+
+  <!-- ===== 隐藏: 老朋友通联历史（E1）===== -->
+  <div id="friend-overlay" class="overlay">
+    <div class="overlay-box friend-box">
+      <div class="qso-detail-head">
+        <h2 id="friend-callsign">--</h2>
+        <span class="qso-detail-badge" id="friend-count">--</span>
+      </div>
+      <div class="friend-meta" id="friend-meta"></div>
+      <div class="friend-history" id="friend-history"></div>
+      <div class="overlay-btns">
+        <button id="friend-filter" class="btn-muted" title="在通联记录中只看这个呼号">在记录中筛选</button>
+        <button id="friend-close" class="btn-accent">关闭</button>
       </div>
     </div>
   </div>
@@ -485,6 +532,6 @@
 
 </div>
 
-  <script src="app.js?v=1014a"></script>
+  <script src="app.js?v=1014b"></script>
 </body>
 </html>

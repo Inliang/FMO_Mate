@@ -1991,6 +1991,179 @@ button { font: inherit; color: inherit; }
   padding-right: 32px;
 }
 
+/* ---- E1：面板内 tab 切换（TOP20 / 老朋友）---- */
+.panel-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--r-full);
+  flex-shrink: 0;
+}
+.panel-tab {
+  height: 18px;
+  padding: 0 9px;
+  border: none;
+  border-radius: var(--r-full);
+  background: transparent;
+  color: var(--ink-3);
+  font-family: var(--font-sans);
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--dur-1) var(--ease-std), color var(--dur-1) var(--ease-std);
+}
+.panel-tab:hover { color: var(--ink-2); }
+.panel-tab.is-active {
+  background: var(--accent);
+  color: #FFFFFF;
+}
+[data-theme="e-ink"] .panel-tab.is-active { background: var(--ink); }
+
+/* ---- E1：老朋友列表 ---- */
+#friends-list { padding: var(--sp-2); }
+
+.friend-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 6px var(--sp-2);
+  border-radius: var(--r-xs);
+  border-left: 2px solid transparent;
+  cursor: pointer;
+  transition: background var(--dur-1) var(--ease-std), border-color var(--dur-1) var(--ease-std);
+}
+.friend-item:hover { background: var(--sunken); }
+.friend-item.is-today { border-left-color: var(--accent); }
+.friend-item.is-self { border-left-color: var(--live); }
+
+.friend-main {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.friend-call {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.friend-item.is-today .friend-call { color: var(--accent-ink); }
+.friend-qth {
+  font-size: var(--fs-2xs);
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+  max-width: 62px;
+}
+.friend-side {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-shrink: 0;
+}
+.friend-last {
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.friend-times {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--accent-ink);
+  min-width: 30px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- E1：老朋友历史弹窗 ---- */
+.friend-box { width: 440px; }
+.friend-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
+}
+.friend-meta span { font-family: var(--font-mono); }
+.friend-history {
+  max-height: 46vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--sunken);
+}
+.friend-history-row {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  gap: var(--sp-2);
+  align-items: center;
+  padding: 6px var(--sp-3);
+  background: var(--surface);
+  border-radius: var(--r-xs);
+  cursor: pointer;
+  transition: background var(--dur-1) var(--ease-std);
+}
+.friend-history-row:hover { background: var(--accent-wash); }
+.friend-history-time {
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.friend-history-main {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  font-size: var(--fs-xs);
+}
+.friend-history-main .fh-grid { font-family: var(--font-mono); color: var(--accent-ink); flex-shrink: 0; }
+.friend-history-main .fh-memo {
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.friend-history-main .fh-relay { color: var(--ink-3); flex-shrink: 0; }
+
+/* ---- C1：日志备份弹窗 ---- */
+.backup-box { width: 420px; }
+.backup-url {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--accent-ink);
+  padding: 8px var(--sp-3);
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-sm);
+  background: var(--accent-wash);
+  word-break: break-all;
+}
+.backup-status {
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
+  min-height: 18px;
+}
+
 /* ---- A4：中继名可点击切换 ---- */
 .qso-relay-clickable,
 .recent-relay-clickable {

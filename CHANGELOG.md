@@ -2,6 +2,26 @@
 
 ## 2026-10-14
 
+### 新增 C1 日志备份 + E1 老朋友页（v=1014b）
+
+- **C1 FMO 日志全量备份下载**
+  - 通联记录面板头部新增「备份」按钮 → 弹出备份对话框，显示实际请求地址 `http(s)://<host>/api/qso/backup`
+  - 协议跟随当前页面（`https` 页面用 `https`，避免混合内容被拦）
+  - 「开始导出并下载」：隐藏 iframe 提交 POST 触发设备导出（**不受 CORS 限制、不跳走当前页**）→ 倒计时 4 秒 → 新标签页 GET 下载（跨域导航不受 CORS 限制，由浏览器按 `Content-Disposition` 落盘）
+  - 「直接下载」：跳过 POST，只做 GET 下载（设备导出未完成时再点一次即可）
+  - 页面以 `https` 打开时（如 GitHub Pages）自动跳过 iframe POST 步骤并给出说明
+  - 依据：FmoLogs `fmoBackupService.ts`（`BACKUP_PATH = '/api/qso/backup'`，其 web 平台同样走「POST 触发 + GET 下载」，失败即回退纯 GET）
+
+- **E1「老朋友」页**
+  - TOP 面板头部改为「TOP20 / 老朋友」双 tab（`.panel-tabs`），两个视图共用同一块面板空间，不破坏单屏布局
+  - 老朋友按呼号聚合（`_buildFriendsList()`）：通联次数、最近通联（相对时间）、首次通联日期、网格/QTH
+  - 今日已联的友台左侧 accent 高亮 + ★ 徽标；自己的呼号打「您」标签
+  - 点击任一友台 → 弹出与该友台的全部通联历史（时间 / 网格 / 留言 / 中继），每行可再点开 A7 详情弹窗
+  - 「在记录中筛选」一键把该呼号填入 A6 搜索框
+  - 数据刷新统一走 `_refreshTopPanel()` 按当前 tab 分派渲染
+
+## 2026-10-14（B 级收尾）
+
 ### B 级收尾：实现 B1 / B3 / B6 / B7 / B8，主动放弃 setUrl · setPort（v=1014a）
 
 - **B1 服务器名称**：`config.setServerName`（≤31 字符），弹窗打开时 `getServerName` 预填

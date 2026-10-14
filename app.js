@@ -79,6 +79,7 @@ const App = {
   _myLon: undefined,
   qsoList: [],
   qsoSearch: '',
+  _topPanelTab: 'top20',   // E1：TOP20 / 老朋友
   serverList: [],
   currentServerName: '',
   _prevServer: '',
@@ -133,6 +134,7 @@ const App = {
     this.updateVU();
     this._startClock();
     this.updateCoordCard();
+    this._setTopPanelTab(this._topPanelTab || 'top20'); // E1：初始化 TOP20 / 老朋友 tab
   },
 
   bindEvents() {
@@ -216,6 +218,46 @@ const App = {
     if (srvPrev) srvPrev.addEventListener('click', () => this.switchServerStep(-1));
     const srvNext = $('srv-next-btn');
     if (srvNext) srvNext.addEventListener('click', () => this.switchServerStep(1));
+
+    // C1：日志备份弹窗
+    const backupBtn = $('panel-backup-btn');
+    if (backupBtn) backupBtn.addEventListener('click', () => this.openBackupDialog());
+    const backupOverlay = $('backup-overlay');
+    if (backupOverlay) {
+      backupOverlay.addEventListener('click', (e) => { if (e.target === backupOverlay) this.closeBackupDialog(); });
+    }
+    const backupClose = $('backup-close');
+    if (backupClose) backupClose.addEventListener('click', () => this.closeBackupDialog());
+    const backupStart = $('backup-start');
+    if (backupStart) backupStart.addEventListener('click', () => this.startBackup(true));
+    const backupDl = $('backup-download-only');
+    if (backupDl) backupDl.addEventListener('click', () => this.startBackup(false));
+
+    // E1：老朋友页（TOP20 / 老朋友 tab 切换 + 历史弹窗）
+    const tabTop = $('tab-top20');
+    if (tabTop) tabTop.addEventListener('click', () => this._setTopPanelTab('top20'));
+    const tabFriends = $('tab-friends');
+    if (tabFriends) tabFriends.addEventListener('click', () => this._setTopPanelTab('friends'));
+    const friendOverlay = $('friend-overlay');
+    if (friendOverlay) {
+      friendOverlay.addEventListener('click', (e) => { if (e.target === friendOverlay) this.closeFriendHistory(); });
+    }
+    const friendClose = $('friend-close');
+    if (friendClose) friendClose.addEventListener('click', () => this.closeFriendHistory());
+    const friendFilter = $('friend-filter');
+    if (friendFilter) {
+      friendFilter.addEventListener('click', () => {
+        const call = this._friendCallsign || '';
+        const si = $('qso-search');
+        if (si) si.value = call;
+        this.qsoSearch = call;
+        const wrap = si && si.closest('.panel-search-wrap');
+        if (wrap) wrap.classList.toggle('has-value', !!call);
+        this.renderQsoList();
+        this.closeFriendHistory();
+        this._showToast(call ? ('已在通联记录中筛选「' + call + '」') : '无呼号');
+      });
+    }
 
     // A7：QSO 详情弹窗
     const detailOverlay = $('qso-detail-overlay');
@@ -1429,7 +1471,7 @@ const App = {
     all.forEach(q => { if (q.grid || q.locator) this._resolveGridLocation(q.grid || q.locator); });
     this.updateQsoCount();
     this.renderPrevCard();
-    this.renderTopCallers();
+    this._refreshTopPanel();
   },
 
   /* 通过 qso.getDetail 补全列表中 QSO 的留言/中继字段（getList 只返回基础字段） */
@@ -2117,6 +2159,279 @@ const App = {
     }
   },
 
+  // ============ C1: FMO 日志全量备份下载 ============
+
+  /** 设备端备份地址：http(s)://<host>/api/qso/backup（协议跟随当前页面，避免混合内容） */
+  _backupUrl() {
+    const host = (this.hostPort || '').trim();
+    if (!host) return '';
+    const scheme = window.location.protocol === 'https:' ? 'https' : 'http';
+    const base = /^(https?):\/\//i.test(host) ? host : (scheme + '://' + host);
+    return base.replace(/\/+$/, '') + '/api/qso/backup';
+  },
+
+  openBackupDialog() {
+    const overlay = document.getElementById('backup-overlay');
+    if (!overlay) return;
+    const url = this._backupUrl();
+    const urlEl = document.getElementById('backup-url');
+    const stEl = document.getElementById('backup-status');
+    if (urlEl) urlEl.textContent = url || '（未配置设备地址）';
+    if (stEl) {
+      stEl.textContent = url ? '准备就绪' : '请先在「设置」中填写 FMO 设备地址';
+    }
+    const startBtn = document.getElementById('backup-start');
+    if (startBtn) startBtn.disabled = !url;
+    const dlBtn = document.getElementById('backup-download-only');
+    if (dlBtn) dlBtn.disabled = !url;
+    overlay.classList.add('open');
+  },
+
+  closeBackupDialog() {
+    const overlay = document.getElementById('backup-overlay');
+    if (overlay) overlay.classList.remove('open');
+  },
+
+  /** 用隐藏 iframe 提交 POST：既触发设备导出，又不受 CORS 限制、也不会跳走当前页 */
+  _postViaIframe(url) {
+    return new Promise((resolve) => {
+      try {
+        const name = 'fmo-backup-' + Date.now();
+        const iframe = document.createElement('iframe');
+        iframe.name = name;
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+        const form = document.createElement('form');
+        form.action = url;
+        form.method = 'POST';
+        form.target = name;
+        form.style.display = 'none';
+        document.body.appendChild(form);
+        // 无论成功失败都清理（跨域 iframe 读不到状态）
+        setTimeout(() => {
+          if (form.parentNode) form.parentNode.removeChild(form);
+          if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+          resolve(true);
+        }, 1500);
+        form.submit();
+      } catch (e) {
+        resolve(false);
+      }
+    });
+  },
+
+  /** 新标签页打开下载地址：跨域导航不受 CORS 限制，由浏览器按 Content-Disposition 落盘 */
+  _downloadBackup(url) {
+    if (!url) return;
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { if (a.parentNode) a.parentNode.removeChild(a); }, 0);
+  },
+
+  /** 发起导出 → 等待 → 下载 */
+  async startBackup(exportFirst) {
+    const url = this._backupUrl();
+    if (!url) { this._showToast('未配置设备地址'); return; }
+    const stEl = document.getElementById('backup-status');
+    const setStatus = (t) => { if (stEl) stEl.textContent = t; };
+    const btnIds = ['backup-start', 'backup-download-only'];
+    const setBusy = (busy) => btnIds.forEach(id => {
+      const b = document.getElementById(id);
+      if (b) b.disabled = busy;
+    });
+
+    setBusy(true);
+    const pageHttps = window.location.protocol === 'https:';
+
+    if (exportFirst && !pageHttps) {
+      setStatus('① 已向设备发起导出，等待设备生成备份文件…');
+      await this._postViaIframe(url);
+      for (let i = 4; i > 0; i--) {
+        setStatus('① 设备导出中，' + i + ' 秒后开始下载…');
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    } else if (exportFirst && pageHttps) {
+      setStatus('本页为 https，跳过「发起导出」（浏览器会拦截 http iframe），直接下载…');
+    }
+
+    setStatus('② 正在下载，请查看浏览器的下载内容…');
+    this._downloadBackup(url);
+    setTimeout(() => { setStatus('已触发下载。若文件为空，等 10 秒再点「直接下载」。'); }, 1200);
+    setBusy(false);
+  },
+
+  // ============ E1: 老朋友页 ============
+
+  /** 按呼号聚合历史友台：次数、最近/首次通联、网格、今日是否联过 */
+  _buildFriendsList() {
+    const map = new Map();
+    for (const q of this.qsoList) {
+      const raw = this._extractQsoCallsign(q);
+      if (!raw) continue;
+      const call = this.parseCallsignSsid(raw).call;
+      if (!call) continue;
+      const ts = q.timestamp ?? q.time;
+      const t = ts ? ((typeof ts === 'number' && ts < 1e10 ? ts * 1000 : Number(ts)) || 0) : 0;
+      let e = map.get(call);
+      if (!e) {
+        e = { call, count: 0, last: 0, first: Infinity, grid: '', qsos: [] };
+        map.set(call, e);
+      }
+      e.count++;
+      e.qsos.push(q);
+      if (t) {
+        if (t > e.last) { e.last = t; e.grid = q.grid ?? q.locator ?? e.grid; }
+        if (t < e.first) e.first = t;
+      }
+      if (!e.grid) e.grid = q.grid ?? q.locator ?? '';
+    }
+    const list = [...map.values()];
+    list.forEach(e => {
+      e.qsos.sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
+      if (!Number.isFinite(e.first)) e.first = 0;
+    });
+    // 最近通联过的排前面
+    list.sort((a, b) => b.last - a.last);
+    return list;
+  },
+
+  renderFriends() {
+    const container = document.getElementById('friends-list');
+    if (!container) return;
+
+    const list = this._buildFriendsList();
+    const countEl = document.getElementById('top-count');
+    if (countEl) countEl.textContent = list.length;
+
+    if (!list.length) {
+      container.innerHTML = '<div class="list-empty">暂无通联记录</div>';
+      return;
+    }
+
+    const todaySet = this._todayContactedSet();
+    const now = Date.now();
+    container.innerHTML = list.map(f => {
+      const isSelf = this.isSameOperator(f.call, this.myCallsign);
+      const isToday = todaySet.has(String(f.call).toUpperCase());
+      const qth = f.grid ? (this._gridLocationCache[f.grid] || f.grid) : '';
+      if (f.grid) this._resolveGridLocation(f.grid);
+      const lastStr = f.last ? this.formatTimeAgo(Math.floor(f.last / 1000), now) : '--';
+      const firstStr = f.first
+        ? new Date(f.first).toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' })
+        : '--';
+      return '<div class="friend-item' + (isToday ? ' is-today' : '') + (isSelf ? ' is-self' : '') + '"'
+        + ' data-call="' + this._esc(f.call) + '"'
+        + ' title="' + this._esc(f.call) + ' · 共 ' + f.count + ' 次 · 首次 ' + firstStr + ' · 最近 ' + lastStr + (qth ? ' · ' + this._esc(qth) : '') + '">'
+        + '<span class="friend-main">'
+        + '<span class="friend-call">' + this._esc(f.call) + '</span>'
+        + (isSelf ? '<span class="self-tag">您</span>' : '')
+        + this._todayBadge(f.call, todaySet)
+        + (qth ? '<span class="friend-qth">' + this._esc(qth) + '</span>' : '')
+        + '</span>'
+        + '<span class="friend-side">'
+        + '<span class="friend-last">' + this._esc(lastStr) + '</span>'
+        + '<span class="friend-times">x' + f.count + '</span>'
+        + '</span>'
+        + '</div>';
+    }).join('');
+
+    container.querySelectorAll('.friend-item').forEach(el => {
+      el.addEventListener('click', () => this.openFriendHistory(el.dataset.call));
+    });
+  },
+
+  /** 数据刷新时按当前 tab 分派渲染 */
+  _refreshTopPanel() {
+    if (this._topPanelTab === 'friends') this.renderFriends();
+    else this.renderTopCallers();
+  },
+
+  _setTopPanelTab(tab) {
+    this._topPanelTab = tab;
+    const t20 = document.getElementById('tab-top20');
+    const fr = document.getElementById('tab-friends');
+    if (t20) t20.classList.toggle('is-active', tab === 'top20');
+    if (fr) fr.classList.toggle('is-active', tab === 'friends');
+    const topBox = document.getElementById('top-callers');
+    const friendBox = document.getElementById('friends-list');
+    if (topBox) topBox.style.display = tab === 'top20' ? '' : 'none';
+    if (friendBox) friendBox.style.display = tab === 'friends' ? '' : 'none';
+    if (tab === 'friends') this.renderFriends();
+    else this.renderTopCallers();
+  },
+
+  openFriendHistory(call) {
+    const overlay = document.getElementById('friend-overlay');
+    if (!overlay || !call) return;
+
+    const info = this._buildFriendsList().find(f => f.call === call);
+    if (!info) return;
+
+    const csEl = document.getElementById('friend-callsign');
+    if (csEl) csEl.textContent = info.call;
+    const cntEl = document.getElementById('friend-count');
+    if (cntEl) cntEl.textContent = '共 ' + info.count + ' 次';
+
+    const first = info.first ? new Date(info.first) : null;
+    const last = info.last ? new Date(info.last) : null;
+    const fmt = (d) => d
+      ? d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+      : '--';
+    const qth = info.grid ? (this._gridLocationCache[info.grid] || info.grid) : '';
+
+    const metaEl = document.getElementById('friend-meta');
+    if (metaEl) {
+      const parts = [];
+      if (info.grid) parts.push('网格 <span>' + this._esc(info.grid) + '</span>');
+      if (qth && qth !== info.grid) parts.push('QTH <span>' + this._esc(qth) + '</span>');
+      parts.push('首次 <span>' + fmt(first) + '</span>');
+      parts.push('最近 <span>' + fmt(last) + '</span>');
+      metaEl.innerHTML = parts.join('　');
+    }
+
+    const histEl = document.getElementById('friend-history');
+    if (histEl) {
+      histEl.innerHTML = info.qsos.map((q, i) => {
+        const tsRaw = q.timestamp ?? q.time;
+        let timeStr = '--';
+        if (tsRaw) {
+          const d = new Date((typeof tsRaw === 'number' && tsRaw < 1e10 ? tsRaw * 1000 : tsRaw));
+          timeStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+            + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+        }
+        const { memo, relay } = this._getQsoMemoRelay(q);
+        const grid = q.grid ?? q.locator ?? '';
+        return '<div class="friend-history-row" data-index="' + i + '">'
+          + '<span class="friend-history-time">' + this._esc(timeStr) + '</span>'
+          + '<span class="friend-history-main">'
+          + (grid ? '<span class="fh-grid">' + this._esc(grid) + '</span>' : '')
+          + '<span class="fh-memo">' + this._esc(memo || '（无留言）') + '</span>'
+          + (relay ? '<span class="fh-relay">' + this._esc(relay) + '</span>' : '')
+          + '</span></div>';
+      }).join('');
+
+      histEl.querySelectorAll('.friend-history-row').forEach(el => {
+        el.addEventListener('click', () => {
+          const q = info.qsos[Number(el.dataset.index)];
+          if (q) this.openQsoDetail(q);
+        });
+      });
+    }
+
+    this._friendCallsign = info.call;
+    overlay.classList.add('open');
+  },
+
+  closeFriendHistory() {
+    const overlay = document.getElementById('friend-overlay');
+    if (overlay) overlay.classList.remove('open');
+  },
+
   /** B8：广播服务器 / 广播用户（无参数、无查询接口，点击即时生效） */
   async setBroadcastMode(kind) {
     if (!this.connected) { this._showToast('未连接设备'); return; }
@@ -2263,7 +2578,7 @@ const App = {
     this.updateQsoCount();
     this.refreshStats();
     this.renderPrevCard();
-    this.renderTopCallers();
+    this._refreshTopPanel();
   },
 
   updateQsoCount() {
