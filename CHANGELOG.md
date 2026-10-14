@@ -2,6 +2,18 @@
 
 ## 2026-10-14
 
+### 修复 QRZ 查询在新标签页被拦截时不生效（v=1014f → v=1014g）
+
+- **现象**：当前呼叫卡的 QRZ 地球按钮点了没反应
+- **排查**：真实浏览器实测（Playwright + Edge），点击后 `window.open('https://www.qrz.com/db/BG4LJJ')` 正常调用、新标签页正常打开——代码逻辑本身没坏，**坏在弹窗打开方式**：`window.open(url, '_blank', 'noopener')` 传了 features 参数，浏览器把它当"脚本弹窗"处理，在弹窗拦截器 / iframe 沙箱（内置预览等）环境下会被**静默拦截**，且 `'noopener'` 特性使返回值恒为 `null`，连"被拦了"都无法感知
+- **修复**（新增通用 `_openExternal(url)`）：
+  1. `window.open(url, '_blank')` 不带 features；返回 `null` 或抛异常即判定被拦截
+  2. 被拦截时降级为**临时 `<a target="_blank" rel="noopener noreferrer">` 导航**（与备份下载同款机制，更抗拦截）
+  3. 仍失败则 toast 提示手动访问链接
+- 顺带把 QSO 列表"点网格 → 跳 fmo.net.cn 地图"也切到 `_openExternal`，同样受益
+
+## 2026-10-14
+
 ### 移除迷你 QRZ 图标按钮，统一为点击呼号查询（v=1014e → v=1014f）
 
 - **背景**：「最近发言」和「TOP20」列表里呼号旁的迷你地球图标按钮，与「点击呼号 → QRZ」是同一个功能，两个入口重复

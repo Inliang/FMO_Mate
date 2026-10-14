@@ -1605,7 +1605,7 @@ const App = {
         e.preventDefault();
         const callsign = el.dataset.callsign;
         navigator.clipboard.writeText(callsign).then(() => {
-          window.open('https://map.fmo.net.cn/', '_blank');
+          this._openExternal('https://map.fmo.net.cn/');
         }).catch(() => {});
       });
     });
@@ -1663,10 +1663,33 @@ const App = {
     return c ? 'https://www.qrz.com/db/' + encodeURIComponent(c.toUpperCase()) : '';
   },
 
+  /** 打开外部链接：window.open 被拦截（弹窗拦截器 / iframe 沙箱）时降级为临时 <a> 导航 */
+  _openExternal(url) {
+    let w = null;
+    try {
+      // 不带 features 参数：返回 null 即被弹窗拦截器 / iframe 沙箱拦截
+      w = window.open(url, '_blank');
+    } catch (e) { /* 沙箱环境可能直接抛 SecurityError */ }
+    if (!w) {
+      // 兜底 1：临时 <a target="_blank"> 触发导航（与备份下载同款机制，更抗拦截）
+      try {
+        const a = document.createElement('a');
+        a.href = url;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } catch (e) { /* ignore */ }
+      // 兜底 2：仍未打开时提示用户手动访问
+      this._showToast('若未打开新标签页，请手动访问：' + url);
+    }
+  },
+
   _openQrz(callsign) {
     const url = this._qrzUrl(callsign);
     if (!url) return;
-    window.open(url, '_blank', 'noopener');
+    this._openExternal(url);
   },
 
   /** 渲染后统一绑定 [data-qrz] 元素的点击 → 打开 QRZ */
