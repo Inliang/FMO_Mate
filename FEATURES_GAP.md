@@ -25,7 +25,7 @@
 | 上个通联卡 | 相对时间（超过 24h 显示"X天X小时前"） |
 | 服务器卡 | 全量滚轮列表、按 **uid** 精确切换、拼音/名称/UID 搜索弹窗 |
 | 底部三面板 | 最近发言、QSO 通联记录（含 `qso.getDetail` 补全留言/中继）、TOP20 |
-| ADIF 导出 | 通联记录面板导出按钮 |
+| 日志备份 | 通联记录面板「备份」按钮 → 设备 `/api/qso/backup` 下载完整原始日志（v=1014e 起已取代 ADIF 导出） |
 | 设备 KPI | 呼号 / UID / 固件 / MAC / 硬件 / 天线 / 频率 / 在线数 / 地址 |
 | 音频 | 播放 + 静音按钮 + 音量滑块 + VU 电平 + 24 柱真实 FFT 迷你频谱 |
 | 三主题 | 亮 / 暗 / 水墨 + 横竖屏切换 |
@@ -78,7 +78,7 @@
 | C1 | **日志全量备份下载** | HTTP `POST http://<host>/api/qso/backup`，再 GET 同一地址拿 `.db`/`.zip`（FmoLogs `fmoBackupService.ts` 中 `BACKUP_PATH = '/api/qso/backup'`） | ✅ **已实现**（2026-10-14）：通联记录面板「备份」按钮，隐藏 iframe POST 触发导出 + 新标签页 GET 下载，规避 CORS |
 | C2 | **本地持久化（IndexedDB）** | FmoLogs / FMO-Dashboard / FmoDeck 都用 IndexedDB + sql.js | ✅ **已实现**（2026-10-14）：IndexedDB 缓存 QSO + 服务器列表，启动先渲染缓存再增量合并，翻页命中缓存即停；设置里可查缓存量与清空 |
 | C3 | **导入 `.db` 日志** | FmoLogs 支持 | 需 sql.js（引入即破坏零依赖，可做成可选模块） |
-| C4 | **.db / ADIF 双向导出** | 我们只有 ADIF | FmoLogs 可导出 .db |
+| C4 | **.db / ADIF 双向导出** | 我们现在只有设备备份（原始 `.db`） | FmoLogs 可导出 .db（前端 ADIF 拼装已于 v=1014e 移除，ADIF 需求统一走 H6 离线转换） |
 
 ### D 级：语音播报（零依赖可做，`speechSynthesis`）
 

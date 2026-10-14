@@ -1,0 +1,7 @@
+# 本地遗留的旧版嵌套仓库（8 月克隆，含独立 .git），不纳入主仓库
+/FMO_Mate/
+
+# 系统 / 编辑器
+.DS_Store
+Thumbs.db
+*.swp

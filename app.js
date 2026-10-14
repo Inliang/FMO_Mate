@@ -8,7 +8,7 @@
    v0.4.0: 推翻四象限布局，FMO-Dashboard 风格纵向信息流
    - 适配新 DOM 结构（speaking-bar 分词填充、device/server 标签组）
    - QSO 列表改用 .item-row 系列 CSS 类
-   - 保留所有核心功能（Speaking Bar / 设备 / 服务器 / 最近发言 / QSO / 服务器切换 / 设置 / ADIF 导出）
+   - 保留所有核心功能（Speaking Bar / 设备 / 服务器 / 最近发言 / QSO / 服务器切换 / 设置 / 日志备份）
    ============================================================ */
 
 function normalizeHost(addr) {
@@ -382,12 +382,6 @@ const App = {
         document.body.classList.add('mobile-landscape');
         orientBtn.textContent = '⇊';
       }
-    }
-
-    // 导出 ADIF（通过通联记录面板按钮触发）
-    const panelExportBtn = $('panel-export-btn');
-    if (panelExportBtn) {
-      panelExportBtn.addEventListener('click', () => this.exportQso());
     }
 
     // 静音/放音按钮
@@ -3915,128 +3909,6 @@ const App = {
 
   stopPolling() {
     if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
-  },
-
-  // ============ ADIF 导出 ============
-
-  _parseTimestamp(raw) {
-    if (raw == null || raw === '') return null;
-    if (typeof raw === 'string') {
-      const d = new Date(raw);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    if (typeof raw === 'number') {
-      if (raw < 10000000000) {
-        const d = new Date(raw * 1000);
-        if (!isNaN(d.getTime())) return d;
-      }
-      const d = new Date(raw);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    return null;
-  },
-
-  _freqToBand(mhz) {
-    if (typeof mhz !== 'number' || isNaN(mhz) || mhz <= 0) return '2m';
-    if (mhz >= 0.1357 && mhz <= 0.1378) return '2190m';
-    if (mhz >= 0.472 && mhz <= 0.479) return '630m';
-    if (mhz >= 1.8 && mhz <= 2.0) return '160m';
-    if (mhz >= 3.5 && mhz <= 4.0) return '80m';
-    if (mhz >= 7.0 && mhz <= 7.3) return '40m';
-    if (mhz >= 10.1 && mhz <= 10.15) return '30m';
-    if (mhz >= 14.0 && mhz <= 14.35) return '20m';
-    if (mhz >= 18.068 && mhz <= 18.168) return '17m';
-    if (mhz >= 21.0 && mhz <= 21.45) return '15m';
-    if (mhz >= 24.89 && mhz <= 24.99) return '12m';
-    if (mhz >= 28.0 && mhz <= 29.7) return '10m';
-    if (mhz >= 50 && mhz <= 54) return '6m';
-    if (mhz >= 144 && mhz <= 148) return '2m';
-    if (mhz >= 219 && mhz <= 225) return '1.25m';
-    if (mhz >= 420 && mhz <= 450) return '70cm';
-    if (mhz >= 902 && mhz <= 928) return '33cm';
-    if (mhz >= 1240 && mhz <= 1300) return '23cm';
-    if (mhz >= 2300 && mhz <= 2450) return '13cm';
-    return '2m';
-  },
-
-  _buildAdifString() {
-    if (!this.qsoList.length) return '';
-    const pad = (n, len) => String(n).padStart(len, '0');
-    const byteLen = (s) => new TextEncoder().encode(s).length;
-    const lines = [
-      '<ADIF_VER:5>3.1.4',
-      '<PROGRAMID:14>fmo-secondary',
-      '<EOH>'
-    ];
-    for (const item of this.qsoList) {
-      const toCallsign = this._extractQsoCallsign(item).trim();
-      const grid = (item.grid ?? item.locator ?? '').trim();
-      const ts = this._parseTimestamp(item.timestamp);
-      const freqRaw = (item.frequency ?? item.freq ?? '').toString().trim();
-      const mode = (item.mode ?? 'FM').toString().trim().toUpperCase() || 'FM';
-      const memo = (item.greeting ?? item.blessing ?? item.memo ?? item.message ?? '').trim();
-      const relay = (item.relayName ?? item.serverName ?? item.stationName ?? item.relay ?? item.gateway ?? '').trim();
-      const logId = (item.logId ?? '').toString().trim();
-
-      if (!toCallsign || !ts) continue;
-
-      const date = `${ts.getUTCFullYear()}${pad(ts.getUTCMonth()+1,2)}${pad(ts.getUTCDate(),2)}`;
-      const time = `${pad(ts.getUTCHours(),2)}${pad(ts.getUTCMinutes(),2)}${pad(ts.getUTCSeconds(),2)}`;
-      lines.push(`<CALL:${byteLen(toCallsign)}>${toCallsign}`);
-      lines.push(`<QSO_DATE:8>${date}`);
-      lines.push(`<TIME_ON:6>${time}`);
-
-      const f = parseFloat(freqRaw);
-      let band;
-      if (freqRaw && !isNaN(f) && f > 0) {
-        const mhz = f > 1000 ? f / 1e6 : f;
-        band = this._freqToBand(mhz);
-        lines.push(`<FREQ:${freqRaw.length}>${freqRaw}`);
-      } else {
-        band = '2m';
-      }
-      lines.push(`<BAND:${band.length}>${band}`);
-
-      if (grid) {
-        lines.push(`<GRIDSQUARE:${byteLen(grid)}>${grid}`);
-      }
-      lines.push(`<MODE:${byteLen(mode)}>${mode}`);
-      lines.push('<RST_SENT:2>59');
-      lines.push('<RST_RCVD:2>59');
-      if (this.myCallsign) {
-        lines.push(`<OPERATOR:${byteLen(this.myCallsign)}>${this.myCallsign}`);
-        lines.push(`<STATION_CALLSIGN:${byteLen(this.myCallsign)}>${this.myCallsign}`);
-      }
-      if (logId) {
-        const comment = `Server:${this.currentServerName || ''} LogID:${logId}` + (memo ? ` Memo:${memo}` : '') + (relay ? ` Relay:${relay}` : '');
-        lines.push(`<COMMENT:${byteLen(comment)}>${comment}`);
-      } else if (this.currentServerName || memo || relay) {
-        const comment = [this.currentServerName ? `Server:${this.currentServerName}` : '', memo ? `Memo:${memo}` : '', relay ? `Relay:${relay}` : ''].filter(Boolean).join(' ');
-        lines.push(`<COMMENT:${byteLen(comment)}>${comment}`);
-      }
-      lines.push('<EOR>');
-    }
-    return lines.join('\n');
-  },
-
-  exportQso() {
-    const adi = this._buildAdifString();
-    if (!adi) {
-      alert('暂无通联记录可导出');
-      return;
-    }
-    const pad = (n, len) => String(n).padStart(len, '0');
-    const blob = new Blob([adi], { type: 'text/plain;charset=UTF-8' });
-    const url = URL.createObjectURL(blob);
-    const now = new Date();
-    const filename = `fmo_qso_${now.getFullYear()}${pad(now.getMonth()+1,2)}${pad(now.getDate(),2)}_${pad(now.getHours(),2)}${pad(now.getMinutes(),2)}${pad(now.getSeconds(),2)}.adi`;
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   },
 
   // ============ 设置 ============
