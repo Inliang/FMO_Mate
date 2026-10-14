@@ -1658,8 +1658,6 @@ const App = {
 
   // ============ A5: QRZ 查询 ============
 
-  _QRZ_SVG: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8"/><path d="M12 3c2.6 2.4 4 5.6 4 9s-1.4 6.6-4 9c-2.6-2.4-4-5.6-4-9s1.4-6.6 4-9z"/></svg>',
-
   _qrzUrl(callsign) {
     const c = (this.parseCallsignSsid(callsign).call || callsign || '').trim();
     return c ? 'https://www.qrz.com/db/' + encodeURIComponent(c.toUpperCase()) : '';
@@ -2928,8 +2926,7 @@ const App = {
         title = 'QRZ 查询 ' + key;
         // A5：呼号 → QRZ；A8：今日已联 ★
         mainHtml = '<a class="callsign-link rank-key" href="#" data-qrz="' + this._esc(key) + '" title="QRZ 查询 ' + this._esc(key) + '">' + this._esc(key) + '</a>'
-          + this._todayBadge(key, todaySet)
-          + '<button class="qrz-mini" data-qrz="' + this._esc(key) + '" title="QRZ 查询 ' + this._esc(key) + '" type="button">' + this._QRZ_SVG + '</button>';
+          + this._todayBadge(key, todaySet);
       }
 
       return `<div class="top-item${selfClass}">
@@ -3613,7 +3610,6 @@ const App = {
         + '<span class="recent-callsign"><a class="callsign-link" href="#" data-qrz="' + this._esc(item.callsign) + '" title="QRZ 查询 ' + this._esc(item.callsign) + '">' + this._esc(item.callsign) + '</a></span>'
         + (isSelf ? '<span class="self-tag">您</span>' : '')
         + this._todayBadge(item.callsign, todaySet)
-        + '<button class="qrz-mini" type="button" data-qrz="' + this._esc(item.callsign) + '" title="QRZ 查询 ' + this._esc(item.callsign) + '">' + this._QRZ_SVG + '</button>'
         + (qth ? '<span class="recent-grid" title="' + this._esc(grid || '') + '">' + this._esc(qth) + '</span>' : '')
         + (midLine ? '<span class="recent-extra">' + midLine + '</span>' : '')
         + '<span class="recent-spacer"></span>'

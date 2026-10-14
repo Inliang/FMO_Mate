@@ -1679,28 +1679,6 @@ button { font: inherit; color: inherit; }
   border-bottom-color: var(--accent);
 }
 
-/* 迷你 QRZ 图标按钮（最近发言 / TOP20） */
-.qrz-mini {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 15px;
-  height: 15px;
-  padding: 0;
-  border: none;
-  border-radius: var(--r-xs);
-  background: transparent;
-  color: var(--ink-3);
-  cursor: pointer;
-  flex-shrink: 0;
-  opacity: 0.4;
-  transition: opacity var(--dur-1) var(--ease-std), color var(--dur-1) var(--ease-std), background var(--dur-1) var(--ease-std);
-}
-.qrz-mini svg { width: 11px; height: 11px; }
-.recent-item:hover .qrz-mini,
-.top-item:hover .qrz-mini { opacity: 1; }
-.qrz-mini:hover { color: var(--accent-ink); background: var(--accent-wash); }
-
 /* 今日已联标记 */
 .today-badge {
   display: inline-flex;
