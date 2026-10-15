@@ -92,7 +92,11 @@ const App = {
   isMuted: false,
   vuLevel: 0,
   volume: 80,
+  VOL_MIN: 0,
+  VOL_MAX: 300,   // 设备过来的声音偏小，允许增益到 300%
+  VOL_STEP: 10,
   gainNode: null,
+  compNode: null, // 限幅器，避免大增益时爆音
 
   // --- Speaking ---
   _currentSpeaker: null,
@@ -131,6 +135,7 @@ const App = {
     this.loadSettings();
     this.updateConnectionUI(false);
     this.initAudioCtx();
+    this.loadVolume();
     this.updateVU();
     this._startClock();
     this.updateCoordCard();
@@ -391,6 +396,21 @@ const App = {
         e.stopPropagation();
         this.toggleMute();
       });
+    }
+
+    // 音量加减（− / 数值 / +）
+    const volDown = $('vol-down-btn');
+    if (volDown) volDown.addEventListener('click', (e) => { e.stopPropagation(); this.changeVolume(-this.VOL_STEP); });
+    const volUp = $('vol-up-btn');
+    if (volUp) volUp.addEventListener('click', (e) => { e.stopPropagation(); this.changeVolume(this.VOL_STEP); });
+    const volVal = $('vol-value');
+    if (volVal) volVal.addEventListener('click', (e) => { e.stopPropagation(); this.setVolume(100); });
+    const volGroup = $('audio-vol-group');
+    if (volGroup) {
+      volGroup.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        this.changeVolume(e.deltaY < 0 ? this.VOL_STEP : -this.VOL_STEP);
+      }, { passive: false });
     }
 
     // 刷新按钮：点击刷新页面
@@ -3846,7 +3866,15 @@ const App = {
         this.audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 8000 });
         this.gainNode = this.audioCtx.createGain();
         this.gainNode.gain.value = this.volume / 100;
-        this.gainNode.connect(this.audioCtx.destination);
+        // 限幅器：增益 >100% 时压制峰值，避免爆音刺耳
+        this.compNode = this.audioCtx.createDynamicsCompressor();
+        this.compNode.threshold.value = -6;
+        this.compNode.knee.value = 6;
+        this.compNode.ratio.value = 12;
+        this.compNode.attack.value = 0.003;
+        this.compNode.release.value = 0.25;
+        this.gainNode.connect(this.compNode);
+        this.compNode.connect(this.audioCtx.destination);
         this._audioInitDone = true;
       } catch (e) { console.warn('[FMO] AudioContext init failed:', e.message); }
     };
@@ -3856,9 +3884,15 @@ const App = {
         this.audioCtx.resume().catch(() => {});
       }
     };
+    this._audioResume = resume; // 供静音 / 音量按钮直接调用（它们的点击被 stopPropagation 拦住了冒泡）
     document.addEventListener('click', resume, { once: false });
     document.addEventListener('keydown', resume, { once: false });
     document.addEventListener('touchstart', resume, { once: false });
+  },
+
+  /** 确保 AudioContext 已创建并恢复（浏览器要求用户手势后才能出声） */
+  _ensureAudio() {
+    if (this._audioResume) this._audioResume();
   },
 
   handleAudioFrame(buf) {
@@ -3907,11 +3941,59 @@ const App = {
   },
 
   toggleMute() {
+    this._ensureAudio();
     this.isMuted = !this.isMuted;
-    if (this.gainNode) {
-      this.gainNode.gain.value = this.isMuted ? 0 : (this.volume || 80) / 100;
-    }
+    this._applyGain();
     this.updateVU();
+  },
+
+  // ============ 音量调节 ============
+
+  /** 把 volume / isMuted 同步到 gainNode */
+  _applyGain() {
+    if (!this.gainNode) return;
+    this.gainNode.gain.value = this.isMuted ? 0 : this.volume / 100;
+  },
+
+  /** 读取上次音量（localStorage），无记录则保持默认 80 */
+  loadVolume() {
+    const raw = localStorage.getItem('fmo-volume');
+    if (raw !== null) {
+      const n = parseInt(raw, 10);
+      if (!isNaN(n)) this.volume = Math.min(this.VOL_MAX, Math.max(this.VOL_MIN, n));
+    }
+    this._applyGain();
+    this.updateVolumeUI();
+  },
+
+  /** 设置绝对音量；>100 为增益放大，最高 300 */
+  setVolume(v) {
+    this._ensureAudio();
+    const n = Math.round(Number(v) || 0);
+    this.volume = Math.min(this.VOL_MAX, Math.max(this.VOL_MIN, n));
+    try { localStorage.setItem('fmo-volume', String(this.volume)); } catch (e) { /* ignore */ }
+    this._applyGain();
+    this.updateVolumeUI();
+  },
+
+  /** 步进调节（±VOL_STEP） */
+  changeVolume(delta) {
+    this.setVolume(this.volume + delta);
+  },
+
+  updateVolumeUI() {
+    const valEl = document.getElementById('vol-value');
+    if (valEl) {
+      valEl.textContent = this.volume + '%';
+      valEl.classList.toggle('is-boost', this.volume > 100);
+      valEl.title = this.volume > 100
+        ? ('增益 ' + this.volume + '%（已启用限幅，点击恢复 100%）')
+        : '点击恢复 100%';
+    }
+    const down = document.getElementById('vol-down-btn');
+    if (down) down.disabled = this.volume <= this.VOL_MIN;
+    const up = document.getElementById('vol-up-btn');
+    if (up) up.disabled = this.volume >= this.VOL_MAX;
   },
 
   // ============ 轮询 ============

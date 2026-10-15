@@ -1,0 +1,2 @@
+[     629ms] [WARNING] [FMO-ADDR] _updateServerAddr 被 init 调用但无可用 IP（hostPort=空，localStorage=无） @ http://127.0.0.1:8843/app.js?v=1014h:1108
+[     999ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://127.0.0.1:8843/favicon.ico:0

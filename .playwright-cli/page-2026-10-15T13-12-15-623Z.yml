@@ -1,0 +1,160 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]: FMO
+      - generic [ref=e12]:
+        - generic [ref=e14]: 未连接
+        - generic [aria-hidden] [ref=e15]: "|"
+        - generic "本地时间" [ref=e16]: 21:12:15
+        - generic "UTC 协调世界时" [ref=e17] [cursor=pointer]: UTC 13:12:15
+        - generic "访问方式" [ref=e18]: 本机
+      - generic [ref=e19]:
+        - generic "总通联 / 今日" [ref=e20]:
+          - generic [ref=e24]: "--"
+          - generic [ref=e25]: /
+          - generic [ref=e26]: "--"
+        - generic "友台数" [ref=e27]: "--"
+        - generic [ref=e34]:
+          - button "暗" [ref=e35] [cursor=pointer]
+          - button "亮" [ref=e36] [cursor=pointer]
+          - button "墨" [ref=e37] [cursor=pointer]
+          - button "⇅" [ref=e38] [cursor=pointer]
+          - button "设备" [ref=e39] [cursor=pointer]
+          - button "设置" [ref=e40] [cursor=pointer]
+    - generic [ref=e41]:
+      - generic [ref=e42]:
+        - generic [ref=e43]: CALL
+        - generic [ref=e44]: N0CALL
+      - generic [ref=e45]:
+        - generic [ref=e46]: UID
+        - generic [ref=e47]: "--"
+      - generic [ref=e48]:
+        - generic [ref=e49]: AGL
+        - generic [ref=e50]: "--"
+      - generic [ref=e51]:
+        - generic [ref=e52]: VER
+        - generic [ref=e53]: "--"
+      - generic [ref=e54]:
+        - generic [ref=e55]: HW
+        - generic [ref=e56]: "--"
+      - generic [ref=e57]:
+        - generic [ref=e58]: ANT
+        - generic [ref=e59]: "--"
+      - generic [ref=e60]:
+        - generic [ref=e61]: FREQ
+        - generic [ref=e62]: "--"
+      - generic [ref=e63]:
+        - generic [ref=e64]: 在线
+        - generic [ref=e65]: "--"
+      - generic [ref=e66]:
+        - generic [ref=e67]: FMO IP
+        - generic [ref=e68]: "--"
+      - generic "未获取到设备坐标，点击可手动设置" [ref=e69] [cursor=pointer]:
+        - generic [ref=e70]: 坐标 / GRID
+        - generic [ref=e71]: "-- ✎"
+  - generic [ref=e72]:
+    - generic [ref=e73]:
+      - generic [ref=e74]:
+        - generic [ref=e75]: 当前呼叫
+        - generic [ref=e76]: LIVE
+      - generic [ref=e77]:
+        - generic [ref=e78]:
+          - heading "--" [level=1] [ref=e80]
+          - generic [ref=e81]:
+            - button "刷新现场" [ref=e82] [cursor=pointer]
+            - button "QRZ 查询" [ref=e88] [cursor=pointer]
+            - generic "音量（滚轮可调）" [ref=e93]:
+              - button "减小音量" [ref=e94] [cursor=pointer]: −
+              - button "80%" [ref=e95] [cursor=pointer]
+              - button "增大音量" [ref=e96] [cursor=pointer]: +
+            - button "静音" [ref=e97] [cursor=pointer]
+        - generic [ref=e104]:
+          - generic [ref=e105]: 北
+          - strong [ref=e110]: 方位未知
+      - generic [ref=e111]: 等待通联...
+    - complementary [ref=e112]:
+      - generic [ref=e113]:
+        - generic [ref=e114]:
+          - generic [ref=e115]: 上个通联
+          - generic [ref=e116]: 暂无
+        - generic [ref=e118]:
+          - generic [ref=e119]:
+            - generic [ref=e120]: 方位
+            - generic [ref=e121]: "--"
+          - generic [ref=e122]:
+            - generic [ref=e123]: 距离
+            - generic [ref=e124]: "--"
+          - generic [ref=e125]:
+            - generic [ref=e126]: 呼号
+            - generic [ref=e127]: "--"
+          - generic [ref=e128]:
+            - generic [ref=e129]: 通联
+            - generic [ref=e130]: "--"
+      - generic [ref=e131]:
+        - generic [ref=e132]:
+          - generic [ref=e133]: 中继 / 服务器
+          - generic [ref=e134] [cursor=pointer]: 搜索
+        - generic [ref=e135]:
+          - button "上一台" [disabled] [ref=e136]
+          - generic "当前中继" [ref=e139]: "--"
+          - generic "当前中继 ID" [ref=e140]: "#--"
+          - button "下一台" [disabled] [ref=e141]
+        - generic [ref=e144]: 正在获取服务器列表...
+  - generic [ref=e152]:
+    - generic [ref=e154]:
+      - generic [ref=e155]:
+        - generic [ref=e156]:
+          - generic [ref=e157]: 最近发言
+          - generic [ref=e158]: "0"
+        - generic [ref=e159]: 暂无最近发言
+      - generic [ref=e161]:
+        - generic [ref=e162]:
+          - generic [ref=e163]: 通联记录
+          - generic [ref=e164]:
+            - textbox "呼号 / 网格" [ref=e166]
+            - button "备份" [ref=e167] [cursor=pointer]
+            - generic [ref=e168]: "0"
+        - generic [ref=e169]: 暂无通联记录
+    - generic [ref=e171]:
+      - generic [ref=e172]:
+        - generic [ref=e173]:
+          - button "TOP20" [ref=e174] [cursor=pointer]
+          - button "老友" [ref=e175] [cursor=pointer]
+          - button "网格" [ref=e176] [cursor=pointer]
+          - button "中继" [ref=e177] [cursor=pointer]
+        - generic [ref=e178]: "0"
+      - generic [ref=e179]: 暂无数据
+  - generic [ref=e182]:
+    - heading "首次使用 · 请设置 FMO 设备地址" [level=2] [ref=e183]
+    - generic [ref=e184]:
+      - generic [ref=e185]: IP / 主机
+      - textbox "IP / 主机" [ref=e186]:
+        - /placeholder: 192.168.x.x
+    - generic [ref=e187]:
+      - generic [ref=e188]: 端口
+      - textbox "端口" [ref=e189]: "80"
+    - generic [ref=e190]:
+      - generic [ref=e191]: 协议
+      - combobox "协议" [ref=e192] [cursor=pointer]:
+        - option "ws" [selected]
+        - option "wss"
+    - generic [ref=e193]:
+      - generic [ref=e194]: 本地缓存（IndexedDB）
+      - generic [ref=e195]: 暂无缓存（连接设备后自动建立）
+    - generic [ref=e196]:
+      - button "清空缓存" [ref=e197] [cursor=pointer]
+      - button "保存并连接" [ref=e198] [cursor=pointer]
+      - button "取消" [ref=e199] [cursor=pointer]
+  - contentinfo [ref=e200]:
+    - link [ref=e202] [cursor=pointer]:
+      - /url: https://v6.51.la/land/3QfdwbkEAE8udblG
+      - img "51la" [ref=e203]
+    - generic [ref=e204]:
+      - link "FMO Mate" [ref=e205] [cursor=pointer]:
+        - /url: https://inliang.github.io/FMO_Mate/
+      - link "GitHub" [ref=e210] [cursor=pointer]:
+        - /url: https://github.com/Inliang/FMO_Mate
+      - link "Envo" [ref=e214] [cursor=pointer]:
+        - /url: https://inliang.github.io/envo/
+      - link "QSL" [ref=e219] [cursor=pointer]:
+        - /url: https://qsl.jdbot.top/
