@@ -2,38 +2,28 @@
 
 ## 2026-10-14
 
-### 修复 QRZ 查询在新标签页被拦截时不生效（v=1014f → v=1014g）
+### 收敛入口 + 修复 QRZ 弹窗拦截（v=1014d → v=1014g）
 
-- **现象**：当前呼叫卡的 QRZ 地球按钮点了没反应
-- **排查**：真实浏览器实测（Playwright + Edge），点击后 `window.open('https://www.qrz.com/db/BG4LJJ')` 正常调用、新标签页正常打开——代码逻辑本身没坏，**坏在弹窗打开方式**：`window.open(url, '_blank', 'noopener')` 传了 features 参数，浏览器把它当"脚本弹窗"处理，在弹窗拦截器 / iframe 沙箱（内置预览等）环境下会被**静默拦截**，且 `'noopener'` 特性使返回值恒为 `null`，连"被拦了"都无法感知
-- **修复**（新增通用 `_openExternal(url)`）：
-  1. `window.open(url, '_blank')` 不带 features；返回 `null` 或抛异常即判定被拦截
-  2. 被拦截时降级为**临时 `<a target="_blank" rel="noopener noreferrer">` 导航**（与备份下载同款机制，更抗拦截）
-  3. 仍失败则 toast 提示手动访问链接
-- 顺带把 QSO 列表"点网格 → 跳 fmo.net.cn 地图"也切到 `_openExternal`，同样受益
+三轮改动都是"去掉重复入口 / 修静默失败"，界面更干净，功能更好用。
 
-## 2026-10-14
+- **移除 ADIF 导出，保留设备备份**（1014d → 1014e）
+  - 通联记录面板上「导出 ADIF」与「备份」职能重叠；保留备份，它走设备原生 `POST/GET http://<host>/api/qso/backup`，拿到的是**设备上的完整原始日志**，比前端拼装的 ADIF 覆盖面更全（本机清过缓存、换过浏览器也不丢）
+  - `index.html` 删除 `#panel-export-btn`；`app.js` 删除 `_parseTimestamp()` / `_freqToBand()` / `_buildAdifString()` / `exportQso()` 及其事件绑定（约 120 行）
+  - 后续若需要 ADIF，走 H6 路线：备份的 `.db` 用官方 `FMO-sqlite-2-adif` 离线转换，比前端拼装准确
 
-### 移除迷你 QRZ 图标按钮，统一为点击呼号查询（v=1014e → v=1014f）
+- **移除迷你 QRZ 图标按钮，统一为点击呼号查询**（1014e → 1014f）
+  - 「最近发言」和「TOP20」里呼号旁的迷你地球图标，与"点击呼号 → QRZ"是同一个功能
+  - 删除 `renderRecent` / `renderRank` 中拼接的 `<button class="qrz-mini">`、只为图标服务的 `_QRZ_SVG` 常量及其 CSS
+  - `_qrzUrl` / `_openQrz` / `_bindQrz` 保留，呼号链接仍靠它们工作
 
-- **背景**：「最近发言」和「TOP20」列表里呼号旁的迷你地球图标按钮，与「点击呼号 → QRZ」是同一个功能，两个入口重复
-- **保留点击呼号查询**：呼号本身仍是可点击链接（`callsign-link` + `data-qrz`），点一下直接打开 qrz.com 词条
-- **移除**：
-  - `app.js`：删除 `_renderRecent` / `renderRank` 里拼接的 `<button class="qrz-mini">`，以及只为图标服务的 `_QRZ_SVG` 常量（`_qrzUrl` / `_openQrz` / `_bindQrz` 保留，呼号链接仍靠它们工作）
-  - `style.css`：删除 `.qrz-mini` 全部样式
-- 版本号 1014e → 1014f
-
-## 2026-10-14
-
-### 移除 ADIF 导出，保留设备备份（v=1014d → v=1014e）
-
-- **背景**：通联记录面板上「导出 ADIF」与「备份」两个按钮职能重叠，都是把日志导出到本机，界面上多一个入口反而容易混淆
-- **保留「备份」**：它走设备原生 `POST/GET http://<host>/api/qso/backup`，拿到的是**设备上的完整原始日志**（本机清过缓存、换过浏览器也不丢），覆盖面比前端拼装的 ADIF 更全
-- **移除「导出 ADIF」**：
-  - `index.html`：删除 `#panel-export-btn` 按钮，面板右上角只留「备份」
-  - `app.js`：删除 `_parseTimestamp()` / `_freqToBand()` / `_buildAdifString()` / `exportQso()` 四个方法及其事件绑定（约 120 行）
-  - 头部注释中的能力清单由「ADIF 导出」改为「日志备份」
-- 后续若需要 ADIF，走 H6 路线：把备份下来的 `.db` 用官方 `FMO-sqlite-2-adif` 离线转换，比前端拼装更准确
+- **修复 QRZ 弹窗被拦截时静默失效**（1014f → 1014g）
+  - 现象：当前呼叫卡的 QRZ 地球按钮点了没反应
+  - 排查：真实浏览器实测（Playwright + Edge），`window.open` 正常调用、新标签页正常打开——**代码逻辑没坏，坏在打开方式**：`window.open(url, '_blank', 'noopener')` 带 features 参数会被浏览器当作"脚本弹窗"，在弹窗拦截器 / iframe 沙箱环境下被**静默拦截**，且 `'noopener'` 使返回值恒为 `null`，连"被拦了"都感知不到
+  - 修复：新增通用 `_openExternal(url)` 降级链
+    1. `window.open(url, '_blank')` 不带 features，返回 `null` / 抛异常即判定被拦截
+    2. 被拦截时降级为**临时 `<a target="_blank" rel="noopener noreferrer">` 导航**（与备份下载同款机制，更抗拦截）
+    3. 仍失败则 toast 提示手动访问链接
+  - QSO 列表"点网格 → 跳 `map.fmo.net.cn`"同步切到 `_openExternal`
 
 ## 2026-10-14
 
@@ -241,8 +231,6 @@
 - **服务器列表铺满卡片**（v=0725g）：`.server-list-sidebar` 改为 `flex: 1; min-height: 0`，自动占满剩余空间
 - **最近发言与 QSO 行高统一**：`.recent-item` 由双行改为单行布局，字号与 padding 对齐 `.qso-row`
 - **51la 访客统计**：页脚集成 51la 统计代码
-
-### 最近发言卡片 memo/relay 全链路修复 — 追溯式补全（v=0721c → v=0722a）
 
 ### 最近发言卡片 memo/relay 全链路修复 — 追溯式补全（v=0721c → v=0722a）
 
