@@ -1,5 +1,22 @@
 # FMO 副屏伴侣 — 更新日志
 
+## 2026-10-15
+
+### 新增 REFERENCES.md 参考项目总清单
+
+- 此前参考项目散落在 README 的 4 行表格和 `FEATURES_GAP.md` 的对照说明里，不成体系
+- 新建 `REFERENCES.md`，按 **8 个分类**汇总全部参考来源：
+  1. 直接上游（fmo-show / FmoDeck）
+  2. 同生态网页端（FMO-Dashboard / FmoLogs / fmo-mobile-controller / FMO 魔方 / FMOC / FMO Console / FMO 设备信息统计）
+  3. 官方开源工具集（BG5ESN：APRS 远控 / GPS 定位 / 日志签名验证 / sqlite→ADIF / 黑名单库）
+  4. 地图查询与数据服务（APRS 实时地图 / FMO Tracker / maidenmap / grid.lzyike.cn / qrz.com / 台网点名 / V4 公告接收站）
+  5. 集群与服务器管理（西南集群 / 洛凯探针 / 彩云之南 ×2）
+  6. 硬件与结构件（开源背板 V2.00 / 三合一背板 / 伴侣与网关 / M5CORE / 竖版伴侣 / PAB 背板 / 军旅外壳）
+  7. 文档与教程（官方文档站 / 使用说明书 / 产品指南 / 教程合集）
+  8. 设计参考（UI UX Pro Max / awesome-design-md / Dribbble / React Bits）
+- 资料来源：社区维护的 [FMO 工具导航](https://fmo.net.cn/) 与各项目 GitHub 仓库
+- README 参考项目章节同步扩写并指向总清单；文件结构补 `REFERENCES.md`
+
 ## 2026-10-14
 
 ### 收敛入口 + 修复 QRZ 弹窗拦截（v=1014d → v=1014g）

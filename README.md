@@ -140,6 +140,7 @@ fmo-secondary/
 ├── ARCHITECTURE.md   # 架构设计文档
 ├── PROTOCOL.md       # WebSocket 协议映射
 ├── FEATURES_GAP.md   # 功能缺口清单（对照第三方项目）
+├── REFERENCES.md     # FMO 生态参考项目总清单
 ├── UI_DESIGN.md      # UI/UX 设计规范
 ├── CHANGELOG.md      # 更新日志
 └── README.md
@@ -149,12 +150,28 @@ fmo-secondary/
 
 ## 参考项目
 
-| 项目 | 说明 |
-|------|------|
-| [fmo-show](https://github.com/EthanYan6/fmo-show) | 墨水屏风格单行紧凑布局参考 |
-| [FmoDeck](https://github.com/wh0am1i/FmoDeck) | 战术 HUD 主题，SpeakingBar + SSTV 解码 |
-| [FmoLogs](https://github.com/dingle1122/FmoLogs) | 原始 FMO 日志平台（`/api/qso/backup` 来源） |
-| [FMO 文档](https://bg5esn.com/categories/docs/) | 固件接口文档 |
+本项目站在 FMO 生态众多开源项目的肩膀上，完整清单见 [REFERENCES.md](REFERENCES.md)。
+
+### 直接上游
+
+| 项目 | 作者 | 说明 |
+|------|------|------|
+| [fmo-show](https://github.com/EthanYan6/fmo-show) | EthanYan6 | 墨水屏风格网页端，协议逆向来源 |
+| [FmoDeck](https://github.com/wh0am1i/FmoDeck) | wh0am1i（BH6SCA） | 战术 HUD + SpeakingBar + SSTV 解码 |
+
+### 功能对照对象
+
+| 项目 | 作者 | 说明 |
+|------|------|------|
+| [FMO-Dashboard](https://github.com/54dashayu/FMO-Dashboard) | 54dashayu（BH1JSS） | Vue3 + Tauri，功能最全，缺口清单主要对照它 |
+| [FmoLogs](https://github.com/dingle1122/FmoLogs) | dingle1122（BH5HSJ） | 日志管理 + APRS 远控，`/api/qso/backup` 来源 |
+| [fmo-mobile-controller](https://github.com/niufox/fmo-mobile-controller) | niufox | **官方 API v2 最完整文档** |
+| [FMO 魔方](https://fmo.feel101.com/) | BI2RHY | 多终端网页控制端 |
+| [FMOC](http://fmo.bg5eit.cn/) | BG5EIT | 网页控制端（非 HTTPS） |
+| [FMO Console](https://map.fmoconsole.cn/) | — | 台站与通联状态面板 + iOS App |
+| [FMO 设备信息统计](https://fmo.panyong.top/fmo-statistics) | BI1THT | 全网设备统计，按 CA 分组 |
+
+其余分类（官方工具集 · 地图查询服务 · 集群管理 · 硬件结构件 · 文档教程 · 设计参考）详见 [REFERENCES.md](REFERENCES.md)。
 
 ---
 
