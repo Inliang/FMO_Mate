@@ -5,3 +5,6 @@
 .DS_Store
 Thumbs.db
 *.swp
+
+# 浏览器自动化产物（playwright-cli）
+.playwright-cli/
