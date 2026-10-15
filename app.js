@@ -98,6 +98,15 @@ const App = {
   gainNode: null,
   compNode: null, // 限幅器，避免大增益时爆音
 
+  // --- AGC 自动增益 ---
+  _agcOn: true,       // 默认开启
+  _agcGain: 1,        // 当前自动增益倍数
+  AGC_TARGET: 0.125,  // 目标 RMS −18 dBFS
+  AGC_MAX: 8,         // 最大补偿 +18 dB
+  AGC_MIN: 0.5,       // 最多衰减 −6 dB
+  AGC_GATE: 0.003,    // −50 dBFS 以下视为静音/底噪，冻结增益
+  AGC_SMOOTH: 0.06,   // 每帧趋近系数（约 400ms 时间常数）
+
   // --- Speaking ---
   _currentSpeaker: null,
   _speakingTimer: null,
@@ -136,6 +145,7 @@ const App = {
     this.updateConnectionUI(false);
     this.initAudioCtx();
     this.loadVolume();
+    this.loadAgc();
     this.updateVU();
     this._startClock();
     this.updateCoordCard();
@@ -412,6 +422,8 @@ const App = {
         this.changeVolume(e.deltaY < 0 ? this.VOL_STEP : -this.VOL_STEP);
       }, { passive: false });
     }
+    const agcBtn = $('agc-btn');
+    if (agcBtn) agcBtn.addEventListener('click', (e) => { e.stopPropagation(); this.toggleAgc(); });
 
     // 刷新按钮：点击刷新页面
     const refreshBtn = $('ac-refresh-btn');
@@ -3866,13 +3878,14 @@ const App = {
         this.audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 8000 });
         this.gainNode = this.audioCtx.createGain();
         this.gainNode.gain.value = this.volume / 100;
-        // 限幅器：增益 >100% 时压制峰值，避免爆音刺耳
+        // 限幅器：只在接近满刻度（−1dBFS）时才压，避免数字削波
+        // 注意：阈值不能设太低（曾设 −6dB，实测把 300% 增益的 11.5dB 提升压到只剩 3.9dB）
         this.compNode = this.audioCtx.createDynamicsCompressor();
-        this.compNode.threshold.value = -6;
-        this.compNode.knee.value = 6;
-        this.compNode.ratio.value = 12;
-        this.compNode.attack.value = 0.003;
-        this.compNode.release.value = 0.25;
+        this.compNode.threshold.value = -1;
+        this.compNode.knee.value = 3;
+        this.compNode.ratio.value = 20;
+        this.compNode.attack.value = 0.002;
+        this.compNode.release.value = 0.15;
         this.gainNode.connect(this.compNode);
         this.compNode.connect(this.audioCtx.destination);
         this._audioInitDone = true;
@@ -3896,11 +3909,14 @@ const App = {
   },
 
   handleAudioFrame(buf) {
-    if (!buf || !this.audioCtx || this.isMuted) {
-      if (buf) this.computeVU(buf);
-      return;
+    if (!buf) return;
+    const rms = this.computeVU(buf);
+    // AGC：先按本帧能量更新自动增益（静音时也要更新，取消静音后才有正确增益）
+    if (this._agcOn) {
+      this._updateAgc(rms);
+      this._applyGain();
     }
-    this.computeVU(buf);
+    if (!this.audioCtx || this.isMuted) return;
     const raw = new Int16Array(buf);
     const buffer = this.audioCtx.createBuffer(1, raw.length, 8000);
     const channel = buffer.getChannelData(0);
@@ -3919,6 +3935,7 @@ const App = {
     const db = 20 * Math.log10(rms + 0.0001);
     this.vuLevel = Math.max(0, Math.min(100, (db + 60) * (100 / 60)));
     this.updateVU();
+    return rms;
   },
 
   updateVU() {
@@ -3938,6 +3955,11 @@ const App = {
       btn.title = muted ? '已静音，点击放音' : '静音';
       btn.setAttribute('aria-label', btn.title);
     }
+    // AGC 实时倍数（每 10 帧刷一次，避免频繁写 DOM）
+    if (this._agcOn) {
+      this._agcUiTick = (this._agcUiTick || 0) + 1;
+      if (this._agcUiTick % 10 === 0) this.updateAgcUI();
+    }
   },
 
   toggleMute() {
@@ -3949,10 +3971,43 @@ const App = {
 
   // ============ 音量调节 ============
 
-  /** 把 volume / isMuted 同步到 gainNode */
+  /** 把 volume / AGC / isMuted 同步到 gainNode */
   _applyGain() {
     if (!this.gainNode) return;
-    this.gainNode.gain.value = this.isMuted ? 0 : this.volume / 100;
+    const agc = this._agcOn ? this._agcGain : 1;
+    this.gainNode.gain.value = this.isMuted ? 0 : (this.volume / 100) * agc;
+  },
+
+  /** AGC：按本帧 RMS 平滑逼近目标响度 */
+  _updateAgc(rms) {
+    if (!rms || rms < this.AGC_GATE) return; // 静音/底噪，冻结当前增益，避免把噪声拉满
+    const need = this.AGC_TARGET / rms;
+    const clamped = Math.min(this.AGC_MAX, Math.max(this.AGC_MIN, need));
+    this._agcGain += (clamped - this._agcGain) * this.AGC_SMOOTH;
+  },
+
+  toggleAgc() {
+    this._agcOn = !this._agcOn;
+    if (!this._agcOn) this._agcGain = 1;
+    try { localStorage.setItem('fmo-agc', this._agcOn ? '1' : '0'); } catch (e) { /* ignore */ }
+    this._applyGain();
+    this.updateAgcUI();
+  },
+
+  loadAgc() {
+    const raw = localStorage.getItem('fmo-agc');
+    if (raw !== null) this._agcOn = raw !== '0';
+    this.updateAgcUI();
+  },
+
+  updateAgcUI() {
+    const btn = document.getElementById('agc-btn');
+    if (!btn) return;
+    btn.classList.toggle('is-on', this._agcOn);
+    btn.textContent = 'AGC';
+    btn.title = this._agcOn
+      ? ('自动增益已开启（当前 ×' + this._agcGain.toFixed(1) + '）点击关闭')
+      : '自动增益已关闭，点击开启（设备声音偏小时很有用）';
   },
 
   /** 读取上次音量（localStorage），无记录则保持默认 80 */
