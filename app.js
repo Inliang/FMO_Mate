@@ -189,6 +189,11 @@ const App = {
         el.addEventListener('keydown', (e) => { if (e.key === 'Enter') this.saveCoord(); });
       }
     });
+    // 地址查网格：按钮 + 回车
+    const coordAddrBtn = $('coord-addr-search');
+    if (coordAddrBtn) coordAddrBtn.addEventListener('click', () => this.searchCoordAddress());
+    const coordAddr = $('coord-addr');
+    if (coordAddr) coordAddr.addEventListener('keydown', (e) => { if (e.key === 'Enter') this.searchCoordAddress(); });
 
     // QSO 搜索框（A6）
     const qsoSearch = $('qso-search');
@@ -1807,8 +1812,12 @@ const App = {
     if (!overlay) return;
     const latEl = document.getElementById('coord-lat');
     const lonEl = document.getElementById('coord-lon');
+    const addrEl = document.getElementById('coord-addr');
+    const stEl = document.getElementById('coord-addr-status');
     if (latEl) latEl.value = Number.isFinite(this._myLat) ? String(this._myLat) : '';
     if (lonEl) lonEl.value = Number.isFinite(this._myLon) ? String(this._myLon) : '';
+    if (addrEl) addrEl.value = '';
+    if (stEl) stEl.textContent = '';
     this._updateCoordGridPreview();
     overlay.classList.add('open');
     if (latEl) setTimeout(() => latEl.focus(), 30);
@@ -1830,6 +1839,72 @@ const App = {
       out.textContent = this.latLonToGrid(lat, lon);
     } else {
       out.textContent = '--';
+    }
+  },
+
+  /** 地址 → 经纬度（正查）：高德优先（中文地址准），Nominatim 兜底（国际地址） */
+  async geocodeAddress(addr) {
+    const q = (addr || '').trim();
+    if (!q) throw new Error('请输入地址');
+
+    // Tier 1：高德地理编码（返回 geocodes[].location = "lon,lat"）
+    try {
+      const url = `https://restapi.amap.com/v3/geocode/geo?key=${this._getAmapKey()}&address=${encodeURIComponent(q)}&output=JSON`;
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 6000);
+      const resp = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(timer);
+      if (!resp.ok) throw new Error('Amap HTTP ' + resp.status);
+      const data = await resp.json();
+      if (data.status === '1' && Array.isArray(data.geocodes) && data.geocodes.length) {
+        const loc = (data.geocodes[0].location || '').split(',');
+        const lon = parseFloat(loc[0]);
+        const lat = parseFloat(loc[1]);
+        if (Number.isFinite(lat) && Number.isFinite(lon)) {
+          const district = data.geocodes[0].district || data.geocodes[0].city || data.geocodes[0].province || '';
+          return { lat, lon, source: '高德', matched: district };
+        }
+      }
+      throw new Error(data.info || 'Amap 无结果');
+    } catch (amapErr) {
+      console.warn('[FMO] Amap geo failed, falling back to Nominatim:', amapErr.message || amapErr);
+    }
+
+    // Tier 2：Nominatim（OpenStreetMap，适合国际地址）
+    const url2 = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1&accept-language=zh`;
+    const ctrl2 = new AbortController();
+    const timer2 = setTimeout(() => ctrl2.abort(), 6000);
+    const resp2 = await fetch(url2, { headers: { 'User-Agent': 'fmo-secondary/1.0' }, signal: ctrl2.signal });
+    clearTimeout(timer2);
+    if (!resp2.ok) throw new Error('Nominatim HTTP ' + resp2.status);
+    const list = await resp2.json();
+    if (!Array.isArray(list) || !list.length) throw new Error('未找到该地址');
+    const hit = list[0];
+    const lat = parseFloat(hit.lat);
+    const lon = parseFloat(hit.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) throw new Error('解析结果无效');
+    return { lat, lon, source: 'Nominatim', matched: (hit.display_name || '').split(',').slice(0, 2).join(',') };
+  },
+
+  /** 坐标弹窗：地址查网格 */
+  async searchCoordAddress() {
+    const addrEl = document.getElementById('coord-addr');
+    const stEl = document.getElementById('coord-addr-status');
+    const addr = (addrEl && addrEl.value || '').trim();
+    if (!addr) { this._showToast('请先输入地址'); return; }
+    if (stEl) { stEl.textContent = '查询中…'; stEl.classList.remove('is-err'); }
+    try {
+      const r = await this.geocodeAddress(addr);
+      const latEl = document.getElementById('coord-lat');
+      const lonEl = document.getElementById('coord-lon');
+      if (latEl) latEl.value = String(r.lat);
+      if (lonEl) lonEl.value = String(r.lon);
+      this._updateCoordGridPreview();
+      const grid = this.latLonToGrid(r.lat, r.lon);
+      if (stEl) stEl.textContent = '已定位 · ' + (r.matched ? r.matched + ' · ' : '') + '网格 ' + grid;
+      this._showToast('已定位（' + r.source + '）· 网格 ' + grid);
+    } catch (e) {
+      if (stEl) { stEl.textContent = '查询失败：' + (e.message || e); stEl.classList.add('is-err'); }
     }
   },
 

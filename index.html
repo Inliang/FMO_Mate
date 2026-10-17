@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" data-page-node-id="XhXhwhxqB397QaCGYC914u">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin data-page-node-id="a1Blyd2eBfByxb5WLWMDzr">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" data-page-node-id="IpPQGTu3BlviiZVEl9oYxl">
-  <link rel="stylesheet" href="style.css?v=1014i" data-page-node-id="ATWCsppPDIzcDQz3y7BDAF">
+  <link rel="stylesheet" href="style.css?v=1014j" data-page-node-id="ATWCsppPDIzcDQz3y7BDAF">
 </head>
 <body data-page-node-id="0eTqUaa7itPg7UuUXy0v5G">
 <div class="app-wrapper" data-page-node-id="RRCSHqXticB7YEC9y3Al8C">
@@ -320,6 +320,16 @@
     <div class="overlay-box coord-box">
       <h2>设备坐标</h2>
       <p class="coord-hint">坐标用于计算对方台的方位角与距离，写入设备后即刻生效（<code>config.setCordinate</code>）。</p>
+      <div class="settings-row coord-addr-row">
+        <label for="coord-addr">地址</label>
+        <div class="coord-addr-wrap">
+          <input id="coord-addr" type="text" placeholder="例：上海市黄浦区南京东路" autocomplete="off">
+          <div class="coord-addr-line">
+            <button id="coord-addr-search" class="btn-muted coord-addr-btn" type="button">地址查网格</button>
+            <span class="coord-addr-status" id="coord-addr-status"></span>
+          </div>
+        </div>
+      </div>
       <div class="settings-row">
         <label for="coord-lat">纬度</label>
         <input id="coord-lat" type="text" placeholder="例：31.2304" autocomplete="off">
@@ -544,6 +554,6 @@
 
 </div>
 
-  <script src="app.js?v=1014i"></script>
+  <script src="app.js?v=1014j"></script>
 </body>
 </html>
