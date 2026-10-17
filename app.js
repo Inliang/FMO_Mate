@@ -442,6 +442,11 @@ const App = {
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') this.closeSettings();
     });
+
+    // 回到页面标签时立即同步通联记录（节流由 refreshQsoPage0 内部处理）
+    window.addEventListener('focus', () => {
+      if (this.connected) this.refreshQsoPage0();
+    });
   },
 
   _applyTheme(theme) {
@@ -3601,6 +3606,8 @@ const App = {
     const now = Date.now();
     this._speakingHistory.forEach(h => { if (!h.endTime) h.endTime = now; });
     this.renderRecentSpeakers();
+    // 通话结束 → 设备写日志有几秒延迟，5s 后拉一次第 0 页同步新 QSO
+    this._schedulePostSpeakQsoRefresh();
   },
 
   _cleanupOldHistory() {
@@ -4134,8 +4141,66 @@ const App = {
       if (this.connected) {
         this.fetchServerList();
         this.fetchRadioInfo();
+        this.refreshQsoPage0(); // 实时同步设备通联记录（30s）
       }
     }, 30000);
+  },
+
+  /**
+   * 轻量轮询：只拉第 0 页，增量合并新通联记录。
+   * 背景：fetchQsoListAll 只在连接/切换服务器时调用，页面挂久了设备新写入的
+   * QSO 永远不会出现，「通联记录」与「上个通联」全部停摆。
+   * 无新记录时也顺手重渲染上个通联卡，保持「X天X小时前」相对时间新鲜。
+   */
+  async refreshQsoPage0(force) {
+    if (!this.connected) return;
+    // 节流：距上次轮询不足 10s 则跳过（防止 focus 事件与定时器叠加刷屏）
+    const now = Date.now();
+    if (!force && this._lastQsoPoll && now - this._lastQsoPoll < 10000) return;
+    this._lastQsoPoll = now;
+    if (this._qsoPollBusy) return;
+    this._qsoPollBusy = true;
+    try {
+      const resp = await this.send({ type: 'qso', subType: 'getList', data: { page: 0 } });
+      if (!resp || (resp.code !== undefined && resp.code !== 0)) return;
+      const payload = resp.data;
+      let list;
+      if (Array.isArray(payload)) { list = payload; }
+      else if (payload && Array.isArray(payload.list)) { list = payload.list; }
+      else if (payload && Array.isArray(payload.data)) { list = payload.data; }
+      else { list = []; }
+      if (!list.length) return;
+      const known = new Set();
+      for (const q of this.qsoList) {
+        if (q && q.logId !== undefined && q.logId !== null) known.add(String(q.logId));
+      }
+      // 只统计带 logId 的新记录（无 logId 的条目合并会重复，交给全量拉取处理）
+      const newItems = list.filter(it => it && it.logId !== undefined && it.logId !== null && !known.has(String(it.logId)));
+      if (!newItems.length) {
+        this.renderPrevCard();
+        return;
+      }
+      console.log('[FMO-QSO] 轮询发现 ' + newItems.length + ' 条新通联记录，增量合并');
+      this.qsoList = this._mergeQso(this.qsoList, newItems);
+      await this._enrichQsoDetails();
+      this.renderQsoList();
+      this.renderRecentSpeakers();
+      newItems.forEach(q => { if (q.grid || q.locator) this._resolveGridLocation(q.grid || q.locator); });
+      this.updateQsoCount();
+      this.renderPrevCard();
+      this._refreshTopPanel();
+      this._scheduleCacheSave();
+    } catch (e) { /* 静默，下一轮再试 */ }
+    finally { this._qsoPollBusy = false; }
+  },
+
+  /** 通话结束后延迟刷新（设备写日志有几秒延迟） */
+  _schedulePostSpeakQsoRefresh() {
+    if (this._postSpeakTimer) clearTimeout(this._postSpeakTimer);
+    this._postSpeakTimer = setTimeout(() => {
+      this._postSpeakTimer = null;
+      if (this.connected) this.refreshQsoPage0();
+    }, 5000);
   },
 
   stopPolling() {
