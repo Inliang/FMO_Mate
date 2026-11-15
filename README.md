@@ -10,7 +10,7 @@
 
 基于 [fmo-show](https://github.com/EthanYan6/fmo-show)（[@EthanYan6](https://github.com/EthanYan6)）和 [FmoDeck](https://github.com/wh0am1i/FmoDeck)（[@wh0am1i](https://github.com/wh0am1i)）的二次开发。
 
-**当前版本：`v=1014g`**（版本号体现在 `style.css?v=xxxx` / `app.js?v=xxxx` 查询串上，用于强制刷新浏览器缓存）
+**当前版本：`v=1014m`**（版本号体现在 `style.css?v=xxxx` / `app.js?v=xxxx` 查询串上，用于强制刷新浏览器缓存）
 
 ---
 
@@ -131,7 +131,7 @@
 
 ## 版本说明
 
-缓存失效依赖查询串 `?v=1014g`，每次改动都会同步 bump。若发现样式或行为异常，先强制刷新（<kbd>Ctrl</kbd>+<kbd>F5</kbd>）。
+缓存失效依赖查询串 `?v=1014m`，每次改动都会同步 bump。若发现样式或行为异常，先强制刷新（<kbd>Ctrl</kbd>+<kbd>F5</kbd>）。
 
 ---
 

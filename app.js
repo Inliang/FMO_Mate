@@ -65,7 +65,11 @@ const App = {
   protocol: 'ws',
   hostPort: '',
   reconnectAttempts: 0,
-  maxReconnectAttempts: 10,
+  maxReconnectAttempts: 10,        // 仅作记录，已不作为硬性上限（见 scheduleReconnect）
+  _reconnecting: false,           // 处于自动重连阶段（用于展示「重连中」）
+  _lastWsTraffic: 0,               // 最近一次收到 WS/事件数据的时刻（看门狗用）
+  _fatalShown: false,              // 全局错误 banner 去重
+  _watchdogTimer: null,
 
   // --- 串行队列 ---
   _queue: null,
@@ -473,7 +477,7 @@ const App = {
 
   connect(ip, port) {
     this.disconnect();
-    this.updateConnectionUI(false, 'connecting');
+    this.updateConnectionUI(false, this._reconnecting ? 'reconnecting' : 'connecting');
     const host = normalizeHost(ip);
     this.hostPort = `${host}:${port}`;
     // 立即显示服务器IP，不等待 WebSocket 连接或 fetchServerListAll 完成
@@ -486,6 +490,7 @@ const App = {
       this.ws = new WebSocket(wsUrl);
       this.ws.onopen = () => {
         this.connected = true;
+        this._reconnecting = false;
         this.reconnectAttempts = 0;
         this.updateConnectionUI(true, 'connected');
         // 立即显示服务器IP，不等 fetchAllData 完成
@@ -499,9 +504,11 @@ const App = {
       this.ws.onmessage = (e) => this.handleWsMessage(e.data);
       this.ws.onclose = () => {
         this.connected = false;
-        this.updateConnectionUI(false, 'disconnected');
         this.stopPolling();
         this.failAllPending(new Error('WS closed'));
+        // 不再「静默放弃」：进入自动重连阶段，封顶退避无限重试，持续显示「重连中」
+        this._reconnecting = true;
+        this.updateConnectionUI(false, 'reconnecting');
         this.scheduleReconnect();
       };
       this.ws.onerror = () => {};
@@ -537,20 +544,24 @@ const App = {
   },
 
   scheduleReconnect() {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) return;
     this.reconnectAttempts++;
-    const delay = 1000 * Math.pow(2, this.reconnectAttempts - 1);
+    // 指数退避但封顶 30s，之后无限重试（值守屏不应静默放弃）
+    const delay = Math.min(30000, 1000 * Math.pow(2, this.reconnectAttempts - 1));
     setTimeout(() => {
       if (!this.connected) {
-        const raw = localStorage.getItem('fmo-settings');
-        if (raw) {
-          try {
-            const { ip, port } = JSON.parse(raw);
-            if (ip) this.connect(ip, port || '80');
-          } catch (e) {}
-        }
+        const s = this._readSettings();
+        if (s) this.connect(s.ip, s.port || '80');
       }
     }, delay);
+  },
+
+  _readSettings() {
+    try {
+      const raw = localStorage.getItem('fmo-settings');
+      if (!raw) return null;
+      const { ip, port } = JSON.parse(raw);
+      return ip ? { ip, port } : null;
+    } catch (e) { return null; }
   },
 
   updateConnectionUI(connected, status) {
@@ -560,6 +571,9 @@ const App = {
     if (status === 'connecting') {
       dot.className = 'status-dot connecting';
       text.textContent = '连接中';
+    } else if (status === 'reconnecting') {
+      dot.className = 'status-dot connecting';
+      text.textContent = '重连中';
     } else if (connected) {
       dot.className = 'status-dot connected';
       text.textContent = '已连接';
@@ -571,6 +585,22 @@ const App = {
     }
     this._updateNetworkType();
     this._updateCurrentServerBar(); // A1：未连接时禁用上/下一台
+  },
+
+  // P0 值守韧性 ②：未处理异常兜底 —— 弹错误条 + 限频自动重载
+  _onFatalError(msg) {
+    console.error('[FMO-FATAL]', msg);
+    if (this._fatalShown) return;
+    this._fatalShown = true;
+    this._showToast('页面出错，15 秒后自动恢复：' + msg);
+    // 限频自动重载：避免渲染期异常导致无限刷新循环（最多 1 次 / 90s）
+    try {
+      const last = parseInt(sessionStorage.getItem('fmo-last-reload') || '0', 10);
+      if (Date.now() - last > 90000) {
+        sessionStorage.setItem('fmo-last-reload', String(Date.now()));
+        setTimeout(() => location.reload(), 15000);
+      }
+    } catch (e) {}
   },
 
   /* 检测本机 / 外网访问 */
@@ -644,44 +674,19 @@ const App = {
   handleWsMessage(data) {
     let msg;
     try { msg = JSON.parse(data); } catch (e) { return; }
-    const dbg = (...args) => console.log('[FMO-DEBUG]', ...args);
+    this._lastWsTraffic = Date.now();
+    const dbg = (...args) => FMOCore.dbg('[FMO-DEBUG]', ...args);
     dbg('recv', msg.type, msg.event, msg.subType, msg.code, Object.keys(msg.data||{}));
 
-    // 响应匹配：FmoLogs 风格 — 剥离 Response 后缀后直接比较
-    if (this._inFlight) {
-      const r = this._inFlight.req;
-      const respSubType = (msg.subType || '').replace('Response', '');
-      let effectiveSubType = respSubType;
-      if (r.type === 'station' && effectiveSubType === 'getList') {
-        effectiveSubType = 'getListRange';
-      }
-      dbg('matching', r.type, r.subType, 'respSubType', respSubType, 'effectiveSubType', effectiveSubType);
-
-      let matched = false;
-      if (msg.type === r.type && effectiveSubType === r.subType) {
-        matched = true;
-        dbg('match', 'first');
-      }
-
-      // V2: 响应带 event:"ok" 且含 data，通过 type 匹配（排除纯心跳）
-      if (!matched && msg.event === 'ok' && msg.type === r.type && msg.data !== undefined) {
-        matched = true;
-        dbg('match', 'second');
-      }
-
-      if (!matched) {
-        dbg('match', 'none');
-      }
-
-      if (matched) {
-        dbg('matched');
-        clearTimeout(this._inFlight.timer);
-        const resolve = this._inFlight.resolve;
-        this._inFlight = null;
-        resolve(msg);
-        this._processQueue();
-        return;
-      }
+    // 响应匹配已抽取到 core.js（FMOCore.matchResponse），逻辑与原有实现完全一致
+    if (this._inFlight && FMOCore.matchResponse(msg, this._inFlight.req)) {
+      dbg('matched');
+      clearTimeout(this._inFlight.timer);
+      const resolve = this._inFlight.resolve;
+      this._inFlight = null;
+      resolve(msg);
+      this._processQueue();
+      return;
     }
 
     if (!this._inFlight) {
@@ -704,6 +709,7 @@ const App = {
   },
 
   handleEvent(data) {
+    this._lastWsTraffic = Date.now();
     const self = this;
     const parts = data.split('}{');
     let messages;
@@ -726,7 +732,7 @@ const App = {
 
   _processEvent(evt) {
     if (evt.event === 'speaking_start') {
-      console.log('[FMO-DEBUG-SPEAKING] speaking_start raw keys:', Object.keys(evt).join(', '));
+      FMOCore.dbg('[FMO-DEBUG-SPEAKING] speaking_start raw keys:', Object.keys(evt).join(', '));
       const srv = this._lookupServerName(evt.addressId);
       const derived = this._deriveStationInfo(evt.callsign);
       this.showSpeaking({
@@ -754,7 +760,7 @@ const App = {
     if (evt.type === 'qso' && evt.subType === 'callsign') {
       const d = evt.data || {};
       if (d.isSpeaking) {
-        console.log('[FMO-DEBUG-SPEAKING] qso.callsign isSpeaking raw keys:', Object.keys(d).join(', '));
+        FMOCore.dbg('[FMO-DEBUG-SPEAKING] qso.callsign isSpeaking raw keys:', Object.keys(d).join(', '));
         const srv = this._lookupServerName(d.addressId || evt.addressId);
         const derived = this._deriveStationInfo(d.callsign);
         this.showSpeaking({
@@ -819,13 +825,13 @@ const App = {
   // ============ 数据获取 ============
 
   async fetchAllData() {
-    console.log('[FMO-DEBUG-SERVER] fetchAllData 开始（Phase 1: device + server）');
+    FMOCore.dbg('[FMO-DEBUG-SERVER] fetchAllData 开始（Phase 1: device + server）');
 
     const withTimeout = (promise, name, ms) => {
       return Promise.race([
         promise,
         new Promise((resolve) => setTimeout(() => {
-          console.warn('[FMO-DEBUG-SERVER] ' + name + ' 超时(' + ms + 'ms)，强制继续 Phase 2');
+          FMOCore.dbg('[FMO-DEBUG-SERVER] ' + name + ' 超时(' + ms + 'ms)，强制继续 Phase 2');
           resolve();
         }, ms))
       ]);
@@ -835,15 +841,15 @@ const App = {
       withTimeout(this.fetchDeviceInfo(), 'fetchDeviceInfo', 15000),
       withTimeout(this.fetchServerListAll(), 'fetchServerListAll', 30000)
     ]);
-    console.log('[FMO-DEBUG-SERVER] Phase 1 完成，Phase 2: 加载 QSO 列表');
+    FMOCore.dbg('[FMO-DEBUG-SERVER] Phase 1 完成，Phase 2: 加载 QSO 列表');
     await this.fetchQsoListAll();
     // 如果以上都未能获取频率，额外尝试 radio API
     if (!this._currentFreq) await this.fetchRadioInfo();
-    console.log('[FMO-DEBUG-SERVER] fetchAllData 全部完成');
+    FMOCore.dbg('[FMO-DEBUG-SERVER] fetchAllData 全部完成');
   },
 
   async fetchDeviceInfo() {
-    console.log('[FMO-DEBUG-DEVICE] fetchDeviceInfo 开始');
+    FMOCore.dbg('[FMO-DEBUG-DEVICE] fetchDeviceInfo 开始');
     const tasks = [];
 
     // user.getInfo
@@ -937,7 +943,7 @@ const App = {
     // 以上 6 个 API 均来自 FmoLogs 参考实现（BG5ESN 官方仓库），为设备固件支持的接口
     // 注意：getFirmwareVersion / getContactCount / getRxFrequency / getStatus 不在 FmoLogs 列表中，不可用
     await Promise.all(tasks);
-    console.log('[FMO-DEBUG-DEVICE] fetchDeviceInfo 完成，共 ' + tasks.length + ' 个任务');
+    FMOCore.dbg('[FMO-DEBUG-DEVICE] fetchDeviceInfo 完成，共 ' + tasks.length + ' 个任务');
 
     // 自身呼号显示（FMO 规范：界面元素4 - 未认证显示 N0CALL，已认证显示真实呼号）
     const devCallsignEl = document.getElementById('dev-callsign');
@@ -955,15 +961,9 @@ const App = {
     // 设备固件不提供 getRxFrequency / getStatus API（参考 FmoLogs / fmo-show）
   },
 
+  // 网格换算已抽取到 core.js（FMOCore.latLonToGrid），此处仅做委托，保证单一真源
   latLonToGrid(lat, lon) {
-    lat = +lat; lon = +lon;
-    const L = lon + 180, La = lat + 90;
-    const fl = Math.floor(L / 20), fL = Math.floor(La / 10);
-    const sl = Math.floor((L % 20) / 2), sL = Math.floor(La % 10);
-    const ssLon = Math.floor((L % 2) * 12), ssLat = Math.floor((La % 1) * 24);
-    return String.fromCharCode(65+fl) + String.fromCharCode(65+fL) +
-           String(sl) + String(sL) +
-           String.fromCharCode(97+ssLon) + String.fromCharCode(97+ssLat);
+    return FMOCore.latLonToGrid(lat, lon);
   },
 
   // ============ 辅助函数 ============
@@ -1005,7 +1005,7 @@ const App = {
   async fetchServerListAll() {
     const pageSize = 20, maxPages = 50;
     const all = [];
-    console.log('[FMO-DEBUG-SERVER] fetchServerListAll 开始，pageSize=20, maxPages=50');
+    FMOCore.dbg('[FMO-DEBUG-SERVER] fetchServerListAll 开始，pageSize=20, maxPages=50');
 
     try {
       // 批量预取前 5 页（覆盖100个服务器），大部分场景下足够
@@ -1027,14 +1027,14 @@ const App = {
         )
       );
 
-      if (firstBatch.length > 0) console.log('[FMO-DEBUG-SERVER] 第1页原始响应:', JSON.stringify(firstBatch[0]));
+      if (firstBatch.length > 0) FMOCore.dbg('[FMO-DEBUG-SERVER] 第1页原始响应:', JSON.stringify(firstBatch[0]));
 
       let stoppedEarly = false;
       for (let i = 0; i < firstBatch.length; i++) {
         const resp = firstBatch[i];
         if (!resp || (resp.code !== undefined && resp.code !== 0)) { stoppedEarly = true; break; }
         const list = respExtract(resp);
-        console.log('[FMO-DEBUG-SERVER] 第 ' + (i + 1) + ' 页返回，listLength=' + list.length);
+        FMOCore.dbg('[FMO-DEBUG-SERVER] 第 ' + (i + 1) + ' 页返回，listLength=' + list.length);
         if (list.length === 0) { stoppedEarly = true; break; }
         all.push(...list);
         if (list.length < pageSize) { stoppedEarly = true; break; }
@@ -1045,7 +1045,7 @@ const App = {
           const resp = await this.send({ type: 'station', subType: 'getListRange', data: { start: i * pageSize, count: pageSize } });
           if (resp.code !== undefined && resp.code !== 0) break;
           const list = respExtract(resp);
-          console.log('[FMO-DEBUG-SERVER] 第 ' + (i + 1) + ' 页返回，listLength=' + list.length);
+          FMOCore.dbg('[FMO-DEBUG-SERVER] 第 ' + (i + 1) + ' 页返回，listLength=' + list.length);
           if (list.length === 0) break;
           all.push(...list);
           if (list.length < pageSize) break;
@@ -1053,7 +1053,7 @@ const App = {
       }
     } catch (e) { console.warn('station list:', e.message); }
 
-    console.log('[FMO-DEBUG-SERVER] 循环结束，共累积 ' + all.length + ' 条');
+    FMOCore.dbg('[FMO-DEBUG-SERVER] 循环结束，共累积 ' + all.length + ' 条');
 
     this.serverList = all;
 
@@ -1061,7 +1061,7 @@ const App = {
     try {
       const r = await this.send({ type: 'station', subType: 'getCurrent' });
       if ((r.code === 0 || r.code === undefined) && r.data) {
-        console.log('[FMO-DEBUG-OC] getCurrent data keys:', Object.keys(r.data).join(', '));
+        FMOCore.dbg('[FMO-DEBUG-OC] getCurrent data keys:', Object.keys(r.data).join(', '));
         this.currentServerName = r.data.name || '';
         this._prevServer = this.currentServerName;
         this._currentServerUid = r.data.uid ?? r.data._id ?? r.data.id ?? '';
@@ -1069,7 +1069,7 @@ const App = {
         const oc = r.data.onlineCount ?? r.data.count ?? r.data.users ?? r.data.online ?? r.data.userCount;
         if (oc !== undefined && oc !== null) {
           this._updateOnlineCount(oc);
-          console.log('[FMO-DEBUG-OC] getCurrent 直接返回在线人数:', oc);
+          FMOCore.dbg('[FMO-DEBUG-OC] getCurrent 直接返回在线人数:', oc);
         }
         this._showServerInfo();
         // A3：记录最近使用过的中继
@@ -1093,6 +1093,36 @@ const App = {
     if (location.search.includes('probe=config')) {
       setTimeout(() => this.probeConfigApi(), 800);
     }
+
+    // 调试总开关（P1-4）：URL 带 ?debug 或 localStorage fmo-debug=1 时开启，默认关闭
+    if (window.FMOCore) {
+      const debugOn = location.search.includes('debug') || localStorage.getItem('fmo-debug') === '1';
+      FMOCore.setDebug(debugOn);
+    }
+
+    // P0 值守韧性 ①：看门狗 —— WS 已连但长时间无任何数据（假死）则强制重连
+    this._lastWsTraffic = Date.now();
+    if (this._watchdogTimer) clearInterval(this._watchdogTimer);
+    this._watchdogTimer = setInterval(() => {
+      const stalled = this.connected && this._lastWsTraffic &&
+                      (Date.now() - this._lastWsTraffic) > 180000;
+      if (stalled) {
+        if (window.FMOCore) FMOCore.dbg('[FMO-WATCHDOG]', '检测到连接假死，强制重连');
+        this._reconnecting = true;
+        this.updateConnectionUI(false, 'reconnecting');
+        this.disconnect();
+        const s = this._readSettings();
+        if (s) this.connect(s.ip, s.port || '80');
+      }
+    }, 60000);
+
+    // P0 值守韧性 ②：全局错误兜底 —— 捕获未处理异常，弹错误条并限频自动重载
+    window.addEventListener('error', (e) =>
+      this._onFatalError(e.message || (e.error && e.error.message) || 'unknown error'));
+    window.addEventListener('unhandledrejection', (e) => {
+      const r = e.reason;
+      this._onFatalError('unhandledrejection: ' + ((r && r.message) || r || 'unknown'));
+    });
   },
 
   async fetchServerList() {
@@ -1182,7 +1212,7 @@ const App = {
     }
 
     // API 层无在线人数时，用服务器总数兜底（122 台即 122 在线）
-    console.log('[FMO-DEBUG-OC] _syncKpiOnlineCount: 未在任何 station 中找到在线人数字段。serverList.length=' + this.serverList.length + ', 回退使用服务器总数');
+    FMOCore.dbg('[FMO-DEBUG-OC] _syncKpiOnlineCount: 未在任何 station 中找到在线人数字段。serverList.length=' + this.serverList.length + ', 回退使用服务器总数');
     if (this.serverList.length > 0) {
       this._updateOnlineCount(this.serverList.length);
     }
@@ -1213,7 +1243,7 @@ const App = {
    * 用法：页面 URL 加 ?probe=fav 后连接设备自动运行，或在控制台执行 FMO.probeFavoriteApi()
    */
   async probeFavoriteApi() {
-    const log = (...a) => console.log('[FMO-PROBE]', ...a);
+    const log = (...a) => FMOCore.dbg('[FMO-PROBE]', ...a);
     log('=== 收藏服务器接口探测开始 ===');
 
     // 1) 先看已拉取的中继数据里有没有收藏相关字段
@@ -1268,7 +1298,7 @@ const App = {
   },
 
   renderServerList() {
-    console.log('[FMO-DEBUG-SERVER] renderServerList 被调用，serverList 长度=' + (this.serverList ? this.serverList.length : 'undefined'));
+    FMOCore.dbg('[FMO-DEBUG-SERVER] renderServerList 被调用，serverList 长度=' + (this.serverList ? this.serverList.length : 'undefined'));
 
     const container = document.getElementById('server-list-container');
     if (!container) return;
@@ -1314,7 +1344,7 @@ const App = {
     container.querySelectorAll('.server-item').forEach(el => {
       el.addEventListener('click', () => this.switchServer(el.dataset.serverUid));
     });
-    console.log('[FMO-DEBUG-SERVER] renderServerList 完成，渲染了 ' + filtered.length + ' 项');
+    FMOCore.dbg('[FMO-DEBUG-SERVER] renderServerList 完成，渲染了 ' + filtered.length + ' 项');
 
     // 每次重绘服务器列表都同步 KPI 在线人数
     this._syncKpiOnlineCount();
@@ -1487,7 +1517,7 @@ const App = {
   // ============ QSO 列表 ============
 
   async fetchQsoListAll() {
-    console.log('[FMO-DEBUG-QSO] fetchQsoListAll 开始');
+    FMOCore.dbg('[FMO-DEBUG-QSO] fetchQsoListAll 开始');
     const all = [];
     // C2：已有 logId 的集合，用于命中缓存时提前停止翻页
     const known = new Set();
@@ -1526,9 +1556,9 @@ const App = {
         }
         page++;
       }
-    } catch (e) { console.warn('[FMO-DEBUG-QSO] fetchQsoListAll 异常:', e.message); }
+    } catch (e) { FMOCore.dbg('[FMO-DEBUG-QSO] fetchQsoListAll 异常:', e.message); }
 
-    console.log('[FMO-DEBUG-QSO] fetchQsoListAll 完成，本轮拉取 ' + all.length + ' 条'
+    FMOCore.dbg('[FMO-DEBUG-QSO] fetchQsoListAll 完成，本轮拉取 ' + all.length + ' 条'
       + (this._qsoCacheHits ? '（其中 ' + this._qsoCacheHits + ' 条已在本地缓存中）' : ''));
 
     // C2：与本地缓存合并，而不是整体覆盖（避免缓存中更早的历史记录被丢掉）
@@ -1577,9 +1607,9 @@ const App = {
           this._qsoDetailCache[batch[j].logId] = detail;
           Object.assign(batch[j], detail);
         } else if (r.status === 'fulfilled') {
-          console.warn('[FMO-DEBUG-QSO] getDetail 响应异常:', JSON.stringify(r.value).slice(0, 200));
+          FMOCore.dbg('[FMO-DEBUG-QSO] getDetail 响应异常:', JSON.stringify(r.value).slice(0, 200));
         } else {
-          console.warn('[FMO-DEBUG-QSO] getDetail 失败:', r.reason?.message || r.reason);
+          FMOCore.dbg('[FMO-DEBUG-QSO] getDetail 失败:', r.reason?.message || r.reason);
         }
       });
     }
@@ -2832,7 +2862,7 @@ const App = {
    * 用法：URL 加 ?probe=config，或控制台执行 FMO.probeConfigApi()
    */
   async probeConfigApi() {
-    const log = (...a) => console.log('[FMO-PROBE-CONFIG]', ...a);
+    const log = (...a) => FMOCore.dbg('[FMO-PROBE-CONFIG]', ...a);
     log('=== config 域接口探测开始 ===');
     const getters = [
       'getUserPhyDeviceName', 'getUserPhyAnt', 'getUserPhyAntHeight', 'getUserPhyFreq',
@@ -3512,7 +3542,7 @@ const App = {
       this._currentAltitude = height || this._currentAltitude || '';
       // 仅更新“当前呼叫”卡片；设备信息面板由 getUserPhyFreq / getUserPhyAntHeight 提供，不在此写入。
       this._updateFreqDisplay(freq, this._currentAltitude || '--');
-      console.log('[FMO-DEBUG-FREQ] APRS BEACON(发言人) 频率:', freq, '高度:', height || '无');
+      FMOCore.dbg('[FMO-DEBUG-FREQ] APRS BEACON(发言人) 频率:', freq, '高度:', height || '无');
     }
   },
 
@@ -3536,7 +3566,7 @@ const App = {
         }
       }
       if (freq) {
-        console.log('[FMO-DEBUG-FREQ] BEACON 载荷提取频率:', freq, '高度:', height || '无');
+        FMOCore.dbg('[FMO-DEBUG-FREQ] BEACON 载荷提取频率:', freq, '高度:', height || '无');
         return { mhz: parseFloat(freq), alt: height || '' };
       }
     }
@@ -3554,7 +3584,7 @@ const App = {
       ?? obj.payload?.rx_freq
       ?? obj.payload?.freq;
     if (freqHz == null || freqHz <= 0) {
-      console.log('[FMO-DEBUG-FREQ] 事件中未找到频率字段, keys:', Object.keys(obj), 'data keys:', obj.data ? Object.keys(obj.data) : 'null');
+      FMOCore.dbg('[FMO-DEBUG-FREQ] 事件中未找到频率字段, keys:', Object.keys(obj), 'data keys:', obj.data ? Object.keys(obj.data) : 'null');
       return null;
     }
     const mhz = parseFloat((freqHz > 10000 ? freqHz / 1e6 : freqHz).toFixed(4));
@@ -3568,7 +3598,7 @@ const App = {
       ?? obj.payload?.altitude
       ?? obj.payload?.alt;
     const altStr = alt != null && alt !== '' ? alt + 'm' : '';
-    console.log('[FMO-DEBUG-FREQ] 提取到频率:', mhz, 'MHz, 高度:', altStr || '无');
+    FMOCore.dbg('[FMO-DEBUG-FREQ] 提取到频率:', mhz, 'MHz, 高度:', altStr || '无');
     return { mhz: mhz, alt: altStr };
   },
 
@@ -3992,6 +4022,7 @@ const App = {
 
   handleAudioFrame(buf) {
     if (!buf) return;
+    this._lastWsTraffic = Date.now();
     const rms = this.computeVU(buf);
     // AGC：先按本帧能量更新自动增益（静音时也要更新，取消静音后才有正确增益）
     if (this._agcOn) {
