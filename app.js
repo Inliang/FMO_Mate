@@ -3205,43 +3205,22 @@ const App = {
     this._gridLocationPending.add(grid);
     const coords = this._gridToLatLon(grid);
     if (!coords) { this._gridLocationPending.delete(grid); return; }
+
+    // 统一收尾：写入缓存 + 触发相关重渲染（成功路径统一走这里）
+    const finalize = (name) => {
+      if (!name) return false;
+      this._gridLocationCache[grid] = name;
+      if (this._currentSpeaker && this._currentSpeaker.grid === grid) this.renderSpeakingBar();
+      this.renderQsoList();
+      this.renderRecentSpeakers();
+      return true;
+    };
+
     try {
-      let state = '', city = '', district = '';
-
-      // Tier 0：grid.lzyike.cn —— 专为梅登海德网格设计的行政区划服务
-      // 免费、无需 Key（高德 Key 有每日配额，超限会返回 CUQPS_HAS_EXCEEDED_THE_LIMIT）
-      // 返回 { retcode, data: { country, province, city, district, township } }
-      // 注意：只取前 4 位网格查询，6 位精度该服务只返回国家
-      try {
-        const g4 = String(grid).toUpperCase().slice(0, 4);
-        const ctrl0 = new AbortController();
-        const timer0 = setTimeout(() => ctrl0.abort(), 5000);
-        const resp0 = await fetch('https://grid.lzyike.cn/api/grid2addr/' + encodeURIComponent(g4), { signal: ctrl0.signal });
-        clearTimeout(timer0);
-        if (!resp0.ok) throw new Error('grid2addr HTTP ' + resp0.status);
-        const d0 = await resp0.json();
-        if (d0.retcode === 0 && d0.data) {
-          const a = d0.data;
-          const p = [];
-          if (a.province && a.province !== '中华人民共和国') p.push(a.province);
-          if (a.city && !p.some(x => x.includes(a.city))) p.push(a.city);
-          if (a.district && !p.some(x => x.includes(a.district))) p.push(a.district);
-          if (p.length) {
-            this._gridLocationCache[grid] = p.join('');
-            if (this._currentSpeaker && this._currentSpeaker.grid === grid) { this.renderSpeakingBar(); }
-            this.renderQsoList();
-            this.renderRecentSpeakers();
-            this._gridLocationPending.delete(grid);
-            return;
-          }
-          throw new Error('grid2addr 无行政区划数据');
-        }
-        throw new Error('grid2addr retcode=' + d0.retcode);
-      } catch (gErr) {
-        console.warn('[FMO] grid2addr failed, falling back to Amap:', gErr.message || gErr);
-      }
-
-      // Tier 1：高德 REST API（CORS *，直接 fetch，无 JSONP）
+      // Tier 1（主用，精确）：高德反向地理编码
+      // 输入为 6 位网格反算的中心经纬度（精度 ±几 km），而非 4 位网格，
+      // 这样台站位置能精确到区/街道，而不是整个 4 位网格（≈100×220km）都显示同一个城市。
+      // 高德 Key 有每日配额，但结果按网格缓存，单个值守面板唯一网格数有限，不会频繁打满。
       try {
         const amapUrl = `https://restapi.amap.com/v3/geocode/regeo?key=${this._getAmapKey()}&location=${coords.lon},${coords.lat}&output=JSON`;
         const ctrl = new AbortController();
@@ -3250,63 +3229,76 @@ const App = {
         clearTimeout(timer);
         if (!resp.ok) throw new Error(`Amap HTTP ${resp.status}`);
         const data = await resp.json();
-        if (data.status !== '1' || !data.regeocode) throw new Error(data.info || 'Amap error');
-        const ac = data.regeocode.addressComponent || {};
-        state = ac.province || '';
-        city = ac.city || '';
-        district = ac.district || '';
-      } catch (amapErr) {
-        console.warn('[FMO] Amap failed, falling back to Nominatim:', amapErr.message || amapErr);
-
-        // Tier 2：Nominatim（国际环境兜底）
-        try {
-          const nomUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.lat}&lon=${coords.lon}&zoom=10&accept-language=zh`;
-          const ctrl = new AbortController();
-          const timer = setTimeout(() => ctrl.abort(), 5000);
-          const resp = await fetch(nomUrl, { headers: { 'User-Agent': 'fmo-secondary/1.0' }, signal: ctrl.signal });
-          clearTimeout(timer);
-          if (!resp.ok) throw new Error(`Nominatim HTTP ${resp.status}`);
-          const data = await resp.json();
-          const addr = data.address || {};
-          const displayParts = (data.display_name || '').split(',').map(s => s.trim());
-          state = addr.state || addr.province || '';
-          district = addr.city || addr.county || addr.district || '';
-          if (!city && district && state) {
-            const stateIdx = displayParts.indexOf(state);
-            const districtIdx = displayParts.indexOf(district);
-            if (stateIdx >= 0 && districtIdx >= 0 && districtIdx < stateIdx) {
-              for (let i = districtIdx + 1; i < stateIdx; i++) {
-                const part = displayParts[i];
-                if (part && !/^\d+$/.test(part) && !part.includes('国')) { city = part; break; }
-              }
-            }
-          }
-          if (!state && !city) {
-            for (let i = displayParts.length - 1; i >= 0; i--) {
-              const part = displayParts[i];
-              if (part && (part.endsWith('市') || part.endsWith('省'))) { city = city || part; break; }
-            }
-          }
-        } catch (nomErr) {
-          console.warn('[FMO] Nominatim failed:', nomErr.message || nomErr);
+        if (data.status === '1' && data.regeocode) {
+          const ac = data.regeocode.addressComponent || {};
+          const parts = [];
+          if (ac.province && ac.province !== '中华人民共和国') parts.push(ac.province);
+          if (ac.city && ac.city !== ac.province && !parts.some(p => p.includes(ac.city))) parts.push(ac.city);
+          if (ac.district && !parts.some(p => p.includes(ac.district))) parts.push(ac.district);
+          if (parts.length && finalize(parts.join(''))) return;
         }
+      } catch (amapErr) {
+        console.warn('[FMO] Amap regeo failed, trying Nominatim:', amapErr.message || amapErr);
       }
 
-      // 组装结果
-      const parts = [];
-      if (state) parts.push(state);
-      if (city && !parts.some(p => p.includes(city))) parts.push(city);
-      if (district && !parts.some(p => p.includes(district))) parts.push(district);
-      const region = parts.join('');
-      if (region) {
-        this._gridLocationCache[grid] = region;
-        if (this._currentSpeaker && this._currentSpeaker.grid === grid) { this.renderSpeakingBar(); }
-        this.renderQsoList();
-        this.renderRecentSpeakers();
-      } else {
-        // 所有地理服务均失败，缓存网格码本身避免重复请求
-        this._gridLocationCache[grid] = grid;
+      // Tier 2（国际兜底，精确）：Nominatim 反向地理编码 6 位精度经纬度
+      try {
+        const nomUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.lat}&lon=${coords.lon}&zoom=10&accept-language=zh`;
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 5000);
+        const resp = await fetch(nomUrl, { headers: { 'User-Agent': 'fmo-secondary/1.0' }, signal: ctrl.signal });
+        clearTimeout(timer);
+        if (!resp.ok) throw new Error(`Nominatim HTTP ${resp.status}`);
+        const data = await resp.json();
+        const addr = data.address || {};
+        const displayParts = (data.display_name || '').split(',').map(s => s.trim());
+        const state = addr.state || addr.province || '';
+        let district = addr.city || addr.county || addr.district || '';
+        let city = '';
+        if (district && state) {
+          const stateIdx = displayParts.indexOf(state);
+          const districtIdx = displayParts.indexOf(district);
+          if (stateIdx >= 0 && districtIdx >= 0 && districtIdx < stateIdx) {
+            for (let i = districtIdx + 1; i < stateIdx; i++) {
+              const part = displayParts[i];
+              if (part && !/^\d+$/.test(part) && !part.includes('国')) { city = part; break; }
+            }
+          }
+        }
+        if (!state && !city) {
+          for (let i = displayParts.length - 1; i >= 0; i--) {
+            const part = displayParts[i];
+            if (part && (part.endsWith('市') || part.endsWith('省'))) { city = city || part; break; }
+          }
+        }
+        const parts = [];
+        if (state) parts.push(state);
+        if (city && !parts.some(p => p.includes(city))) parts.push(city);
+        if (district && !parts.some(p => p.includes(district))) parts.push(district);
+        if (parts.length && finalize(parts.join(''))) return;
+      } catch (nomErr) {
+        console.warn('[FMO] Nominatim regeo failed, falling back to grid.lzyike.cn:', nomErr.message || nomErr);
       }
+
+      // Tier 3（免费兜底，4 位网格精度）：grid.lzyike.cn 专做梅登海德网格 -> 行政区划
+      // 返回 { retcode, data: { country, province, city, district, township } }
+      // 注意：只取前 4 位网格查询，6 位精度该服务只返回国家，故此处仅作最后兜底
+      const g4 = String(grid).toUpperCase().slice(0, 4);
+      const ctrl0 = new AbortController();
+      const timer0 = setTimeout(() => ctrl0.abort(), 5000);
+      const resp0 = await fetch('https://grid.lzyike.cn/api/grid2addr/' + encodeURIComponent(g4), { signal: ctrl0.signal });
+      clearTimeout(timer0);
+      if (!resp0.ok) throw new Error('grid2addr HTTP ' + resp0.status);
+      const d0 = await resp0.json();
+      if (d0.retcode === 0 && d0.data) {
+        const a = d0.data;
+        const p = [];
+        if (a.province && a.province !== '中华人民共和国') p.push(a.province);
+        if (a.city && !p.some(x => x.includes(a.city))) p.push(a.city);
+        if (a.district && !p.some(x => x.includes(a.district))) p.push(a.district);
+        if (p.length && finalize(p.join(''))) return;
+      }
+      throw new Error('grid2addr 无行政区划数据');
     } catch (e) {
       console.warn('[FMO] _resolveGridLocation failed for', grid, e.message || e);
       this._gridLocationCache[grid] = grid; // 失败则缓存网格码，避免无限重试
