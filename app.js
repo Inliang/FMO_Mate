@@ -189,7 +189,7 @@ const App = {
     ['coord-lat', 'coord-lon'].forEach(id => {
       const el = $(id);
       if (el) {
-        el.addEventListener('input', () => this._updateCoordGridPreview());
+        el.addEventListener('input', () => { this._updateCoordGridPreview(); this._updateCoordGeo(); });
         el.addEventListener('keydown', (e) => { if (e.key === 'Enter') this.saveCoord(); });
       }
     });
@@ -1854,6 +1854,7 @@ const App = {
     if (addrEl) addrEl.value = '';
     if (stEl) stEl.textContent = '';
     this._updateCoordGridPreview();
+    this._updateCoordGeo();
     overlay.classList.add('open');
     if (latEl) setTimeout(() => latEl.focus(), 30);
   },
@@ -1875,6 +1876,74 @@ const App = {
     } else {
       out.textContent = '--';
     }
+  },
+
+  // 坐标反查：防抖触发，展示「地址 + 大体邮编」
+  _updateCoordGeo() {
+    if (this._coordGeoTimer) clearTimeout(this._coordGeoTimer);
+    this._coordGeoTimer = setTimeout(() => { this._doUpdateCoordGeo(); }, 600);
+  },
+
+  async _doUpdateCoordGeo() {
+    const out = document.getElementById('coord-geo');
+    if (!out) return;
+    const latEl = document.getElementById('coord-lat');
+    const lonEl = document.getElementById('coord-lon');
+    const lat = parseFloat(latEl && latEl.value);
+    const lon = parseFloat(lonEl && lonEl.value);
+    if (!(Number.isFinite(lat) && Number.isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180)) {
+      out.textContent = '--';
+      out.classList.remove('is-err');
+      return;
+    }
+    out.textContent = '查询中…';
+    const info = await this._reverseGeocodeInfo(lat, lon);
+    if (!out) return;
+    const addr = info.address || '未知地址';
+    out.innerHTML = this._esc(addr) + (info.postcode ? ' · 邮编<span class="postcode">' + this._esc(info.postcode) + '</span>' : '');
+  },
+
+  // 经纬度 -> 地址 + 大体邮编（高德取地址，Nominatim 取邮编；国际/兜底走 Nominatim）
+  async _reverseGeocodeInfo(lat, lon) {
+    let address = '', postcode = '';
+    try {
+      const url = `https://restapi.amap.com/v3/geocode/regeo?key=${this._getAmapKey()}&location=${lon},${lat}&output=JSON`;
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 5000);
+      const resp = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(timer);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.status === '1' && data.regeocode) {
+          const ac = data.regeocode.addressComponent || {};
+          const parts = [];
+          if (ac.province && ac.province !== '中华人民共和国') parts.push(ac.province);
+          if (ac.city && ac.city !== ac.province && !parts.some(p => p.includes(ac.city))) parts.push(ac.city);
+          if (ac.district && !parts.some(p => p.includes(ac.district))) parts.push(ac.district);
+          address = parts.join('');
+        }
+      }
+    } catch (e) { /* 高德失败则交给 Nominatim 兜底 */ }
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&accept-language=zh`;
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 5000);
+      const resp = await fetch(url, { headers: { 'User-Agent': 'fmo-secondary/1.0' }, signal: ctrl.signal });
+      clearTimeout(timer);
+      if (resp.ok) {
+        const data = await resp.json();
+        const addr = data.address || {};
+        postcode = addr.postcode || '';
+        if (!address) {
+          const parts = [];
+          if (addr.state || addr.province) parts.push(addr.state || addr.province);
+          if ((addr.city || addr.county) && !parts.some(p => p.includes(addr.city || addr.county))) parts.push(addr.city || addr.county);
+          if (addr.district && !parts.some(p => p.includes(addr.district))) parts.push(addr.district);
+          address = parts.join('');
+        }
+      }
+    } catch (e) { /* 忽略 */ }
+    return { address, postcode };
   },
 
   /** 地址 → 经纬度（正查）：高德优先（中文地址准），Nominatim 兜底（国际地址） */
@@ -1935,6 +2004,7 @@ const App = {
       if (latEl) latEl.value = String(r.lat);
       if (lonEl) lonEl.value = String(r.lon);
       this._updateCoordGridPreview();
+      this._updateCoordGeo();
       const grid = this.latLonToGrid(r.lat, r.lon);
       if (stEl) stEl.textContent = '已定位 · ' + (r.matched ? r.matched + ' · ' : '') + '网格 ' + grid;
       this._showToast('已定位（' + r.source + '）· 网格 ' + grid);

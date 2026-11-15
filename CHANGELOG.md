@@ -23,6 +23,11 @@
 - **根因**：`_resolveGridLocation()` 把 `grid.lzyike.cn`（仅按**前 4 位**网格查，精度市/区级、±50~100km）作为 **Tier 0 主用并直接采用**；而用完整 6 位网格反算出的精确经纬度做的高德 / OSM 反向地理编码（精度 ±几 km）虽已写好，却只作兜底——只有当 grid.lzyike.cn 失败时才走。换算本身（`latLonToGrid` / `gridToLatLon` / `_gridToLatLon` / `_computeGridDistance`）经 7 城市 + 20 万随机点 + 跨版本一致性 + 距离公式验证，全部正确，不是数学问题。
 - **修复**：重排优先级为 **高德精确反查（主用）→ Nominatim 精确反查（国际兜底）→ grid.lzyike.cn 4 位免费兜底（最后兜底）**。输入统一为 6 位网格中心经纬度，QTH 精确到区/街道；结果仍按网格缓存，不重复烧高德配额。`?v=1014m` → `?v=1014n` 强制刷新缓存。
 
+### 设备坐标弹窗新增「地址/邮编」反查（v=1014n → v=1014o）
+
+- **需求**：坐标弹窗"网格"行下方展示由经纬度反查的**地址**与**大体邮编**，方便核对设备坐标是否填对。
+- **实现**：新增 `_reverseGeocodeInfo(lat, lon)`——高德 regeo 取省/市/区地址，Nominatim 反查取 `postcode` 邮编（国际/高德失败兜底）；`_doUpdateCoordGeo` 防抖 600ms 写入 `#coord-geo`；在 `openCoordDialog`、纬度/经度 `input`、地址查网格成功后触发。新增 `index.html` `#coord-geo` 行 + `style.css` 样式。`?v=1014n` → `?v=1014o` 强制刷新缓存。
+
 ## 2026-10-17
 
 ### 修复「上个通联」与「通联记录」不实时同步设备信息（v=1014j → v=1014k）
