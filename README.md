@@ -10,7 +10,7 @@
 
 基于 [fmo-show](https://github.com/EthanYan6/fmo-show)（[@EthanYan6](https://github.com/EthanYan6)）和 [FmoDeck](https://github.com/wh0am1i/FmoDeck)（[@wh0am1i](https://github.com/wh0am1i)）的二次开发。
 
-**当前版本：`v=1014m`**（版本号体现在 `style.css?v=xxxx` / `app.js?v=xxxx` 查询串上，用于强制刷新浏览器缓存）
+**当前版本：`v=1014q`**（版本号体现在 `style.css?v=xxxx` / `core.js?v=xxxx` / `app.js?v=xxxx` 查询串上，用于强制刷新浏览器缓存）
 
 ---
 
@@ -130,7 +130,22 @@
 
 ## 版本说明
 
-缓存失效依赖查询串 `?v=1014m`，每次改动都会同步 bump。若发现样式或行为异常，先强制刷新（<kbd>Ctrl</kbd>+<kbd>F5</kbd>）。
+缓存失效依赖查询串 `?v=1014q`，每次改动都会同步 bump。若发现样式或行为异常，先强制刷新（<kbd>Ctrl</kbd>+<kbd>F5</kbd>）。版本变更历史见 [CHANGELOG.md](CHANGELOG.md)。
+
+---
+
+## 调试开关
+
+控制台诊断日志（形如 `[FMO-DEBUG-*]` / `[FMO-PROBE*]`）**默认关闭**，避免值守屏长时间运行时被日志刷爆。排查问题时用以下任一方式开启：
+
+| 方式 | 操作 | 生效范围 |
+|------|------|----------|
+| URL 参数 | 打开 `index.html?debug` | 仅本次页面有效 |
+| 本地存储 | 控制台执行 `localStorage.setItem('fmo-debug', '1')` 后刷新 | 长期有效，直到移除该项 |
+
+关闭方式：去掉 URL 中的 `?debug`，或执行 `localStorage.removeItem('fmo-debug')`。
+
+所有日志统一经 `core.js` 的 `FMOCore.dbg` 输出，覆盖 WebSocket 收发与响应匹配、服务器列表分页、QSO/设备信息拉取、Speaking 事件等链路。核心纯函数与调试开关位于 `core.js`，可用 `node test.js` 跑零依赖单测验证。
 
 ---
 
@@ -138,9 +153,11 @@
 
 ```
 fmo-secondary/
-├── index.html        # 主页面
-├── app.js            # 核心逻辑（WebSocket / 串行队列 / UI 渲染）
+├── index.html        # 主页面（DOM 结构 + 三主题挂载点）
+├── core.js           # 共享核心（UMD 经典脚本）：调试开关 / 响应匹配 / 梅登海德网格换算，浏览器与 Node 通用
+├── app.js            # 核心逻辑（WebSocket / 串行队列 / UI 渲染 / 音频引擎）
 ├── style.css         # 样式（三主题 + 响应式）
+├── test.js           # 零依赖单测（node test.js，Node 内置断言）
 ├── ARCHITECTURE.md   # 架构设计文档
 ├── PROTOCOL.md       # WebSocket 协议映射
 ├── FEATURES_GAP.md   # 功能缺口清单（对照第三方项目）
@@ -149,6 +166,8 @@ fmo-secondary/
 ├── CHANGELOG.md      # 更新日志
 └── README.md
 ```
+
+> 双击 `index.html` 即可运行，无需构建工具或 npm 依赖；`core.js` 与 `test.js` 分别服务于浏览器运行时和本地测试，不参与页面部署依赖。
 
 ---
 
