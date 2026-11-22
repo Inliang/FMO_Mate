@@ -78,7 +78,7 @@ Store = {
 - 直接消费 `/audio` WebSocket 的 8kHz 单声道 PCM 数据
 - Web Audio API `AudioContext` + `AudioWorklet` 实时播放
 - 静音切换（不影响数据接收）
-- VU 电平计算 → 驱动 SpeakingBar 与频谱指示
+- VU 电平计算 → 驱动 SpeakingBar 音量图标随电平提亮
 
 ## 3. 数据流
 

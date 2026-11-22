@@ -27,7 +27,7 @@
 | 底部三面板 | 最近发言、QSO 通联记录（含 `qso.getDetail` 补全留言/中继）、TOP20 |
 | 日志备份 | 通联记录面板「备份」按钮 → 设备 `/api/qso/backup` 下载完整原始日志（v=1014e 起已取代 ADIF 导出） |
 | 设备 KPI | 呼号 / UID / 固件 / MAC / 硬件 / 天线 / 频率 / 在线数 / 地址 |
-| 音频 | 播放 + 静音按钮 + 音量滑块 + VU 电平 + 24 柱真实 FFT 迷你频谱 |
+| 音频 | 播放 + 静音按钮 + 音量加减控件 + VU 电平（喇叭图标随电平提亮，无频谱柱） |
 | 三主题 | 亮 / 暗 / 水墨 + 横竖屏切换 |
 | 设置 | IP / 端口 / 协议（ws、wss） |
 | 统计 | 累计 / 今日 / 友台数 |
@@ -122,7 +122,7 @@
 
 | # | 功能 | 依据 | 状态 |
 |---|------|------|------|
-| H1 | **网格→行政区划改用 `grid.lzyike.cn`** | `GET https://grid.lzyike.cn/api/grid2addr/<GRID4>` → `{retcode,data:{country,province,city,district,township}}`。免费、免 Key | ✅ **已实现**（2026-10-14）：提到 Tier 0，高德降为 Tier 1。高德 Key 有每日配额（曾报 `CUQPS_HAS_EXCEEDED_THE_LIMIT`），此服务无配额问题。**注意只取前 4 位网格查询**，6 位精度该服务只返回国家 |
+| H1 | **网格→行政区划反查** | `GET https://grid.lzyike.cn/api/grid2addr/<GRID4>` → `{retcode,data:{country,province,city,district,township}}`。免费、免 Key | ✅ **已实现**（2026-10-14）；⚠️ **2026-11-15 重排（v=1014n）**：因 4 位网格定位不准（±50~100km，同一网格显示同一城市），`grid.lzyike.cn` 降为 Tier 3 最后兜底；高德恢复 Tier 1 主用（按 6 位网格中心经纬度精确反查，精确到区/街道），Nominatim 为 Tier 2 国际兜底。旧状态"Tier 0 主用、高德降 Tier 1"已废弃 |
 | H2 | **APRS / 节点地图外链** | [map.srv.ink](https://map.srv.ink/)（BG9JYT，实时抓 APRS 节点位置与状态）、[aprsmap.feel101.com](https://aprsmap.feel101.com)（全国 FMO 设备实时分布 + 通联事件流 + 台站与客户端一览） | 待做。替代 E4 自研地图：不引地图库，直接外链 |
 | H3 | **台网点名** | [fmo.bh1jss.net/checkin](http://fmo.bh1jss.net/checkin/)（BH1JSS 开发的点名主控软件） | 待做。可加外链入口 |
 | H4 | **浏览器定位写入设备坐标** | 官方 [FMO-Andorid-GPS-Tool](https://github.com/BG5ESN/FMO-Andorid-GPS-Tool) 用手机 GPS 实时设置 FMO 位置；网页端可用 `navigator.geolocation` + 已有 B4 的 `config.setCordinate` | 待做。零依赖，是 B4 的自然延伸（车载 / 移动场景很实用） |

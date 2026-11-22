@@ -2,7 +2,7 @@
 
 ## 2026-11-15
 
-### 抽取共享核心 core.js + 调试日志加开关（v=1014k → v=1014l）
+### 抽取共享核心 core.js + 调试日志加开关（v=1014k → v=1014m，本次一号改动）
 
 - **P1-4 调试日志加开关**：原 30+ 处 `[FMO-DEBUG-*]` / `[FMO-PROBE*]` 日志默认常开（热路径每条 WS 消息都打），值守屏 console 易被刷爆。新增总开关：URL 带 `?debug` 或 localStorage `fmo-debug=1` 才开启，默认关闭；统一走 `FMOCore.dbg`（core.js）。
 - **P1-5 抽取纯函数 + 零依赖单测**：把反复出 bug 的「响应匹配」(`matchResponse`) 与「梅登海德网格换算」(`latLonToGrid` / `gridToLatLon`) 抽到 `core.js`（UMD 经典脚本，兼容 file:// 双击打开，也可 `require` 供 Node 测试）；新增 `test.js`（`node test.js`，零依赖、零构建），回归覆盖匹配别名、V2 `event:ok` 兜底、网格往返等，当前 18 项全绿。
@@ -11,7 +11,7 @@
 
 - `gridToLatLon`（逆运算）子网格字母表原只列 a–p（16 个），标准 Maidenhead 应为 a–x（24 个）；q–x 子网格会被错误反算。已修正，并由 `test.js` 往返用例锁定。
 
-### 值守韧性增强 P0（v=1014l → v=1014m）
+### 值守韧性增强 P0（v=1014k → v=1014m，本次二号改动）
 
 - **断线重连不再静默放弃**：原 `maxReconnectAttempts=10` 指数退避到 512s 后停止重连，值守屏会黑屏。改为封顶 30s 退避后**无限重试**，状态栏持续显示「重连中」。
 - **看门狗防假死**：新增 60s 定时器，若 WS 已连但 180s 内无任何数据（主 WS 轮询每 30s 保活，不会误触发），判定连接假死并强制重连。
@@ -27,6 +27,13 @@
 
 - **需求**：坐标弹窗"网格"行下方展示由经纬度反查的**地址**与**大体邮编**，方便核对设备坐标是否填对。
 - **实现**：新增 `_reverseGeocodeInfo(lat, lon)`——高德 regeo 取省/市/区地址，Nominatim 反查取 `postcode` 邮编（国际/高德失败兜底）；`_doUpdateCoordGeo` 防抖 600ms 写入 `#coord-geo`；在 `openCoordDialog`、纬度/经度 `input`、地址查网格成功后触发。新增 `index.html` `#coord-geo` 行 + `style.css` 样式。`?v=1014n` → `?v=1014o` 强制刷新缓存。
+
+### 文档一致性修复（v1014p，纯文档）
+
+- **QTH 反查顺序**：README / FEATURES_GAP / REFERENCES 三处的旧"grid.lzyike.cn 主用"改为现行"高德主用 → Nominatim → grid.lzyike.cn 兜底"。
+- **不存在的频谱**：README / UI_DESIGN / FEATURES_GAP / ARCHITECTURE 删除"24 柱/16 段 FFT 频谱"等描述（代码从未实现，音频仅 VU 电平提亮）。
+- **虚构版本 1014l**：CHANGELOG 两条改为同一次发版（1014k → 1014m 的两个子项）；git 历史证实从未存在 1014l。
+- 说明：本次纯文档，未改代码，`?v` 仍为 1014o，无需强制刷新缓存。
 
 ## 2026-10-17
 

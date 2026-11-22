@@ -4,7 +4,7 @@
 >
 > 来源：社区维护的 [FMO 工具导航](https://fmo.net.cn/)、[BG5ESN 官方文档站](https://bg5esn.com/docs/)，以及各项目的 GitHub 仓库。
 >
-> 最近更新：2026-10-15
+> 最近更新：2026-11-22
 
 ---
 
@@ -51,8 +51,8 @@
 | FMO Tracker | [map.bg5esn.com](https://map.bg5esn.com/)（官方） | 全国 FMO 分布 + 范围显示 + 猎狐 |
 | FMO APRS 地图（魔方） | [aprsmap.feel101.com](https://aprsmap.feel101.com/) | 设备实时分布 + 通联事件流 |
 | Maidenhead Map | [maidenmap.wh0am1i.com](https://maidenmap.wh0am1i.com/) | 梅登海德网格可视化 |
-| 网格 → 行政区划 | [grid.lzyike.cn](https://grid.lzyike.cn/api/grid2addr/) | **免 Key**，当前 Tier 0 地理编码服务 |
-| 逆地理编码（备） | 高德 · Nominatim | Tier 1 / Tier 2 兜底 |
+| 网格 → 行政区划（兜底） | [grid.lzyike.cn](https://grid.lzyike.cn/api/grid2addr/) | 免 Key，仅按前 4 位网格查（±50~100km），**Tier 3 最后兜底** |
+| 逆地理编码（主用） | 高德 · Nominatim | **Tier 1 高德主用**（6 位网格中心经纬度精确反查，精确到区/街道）· Tier 2 Nominatim 国际兜底 |
 | 呼号查询 | [qrz.com](https://www.qrz.com/db/) | 点击呼号跳转 |
 | 台网点名 | [fmo.bh1jss.net/checkin](http://fmo.bh1jss.net/checkin/)（BH1JSS） | **H3**：待加外链 |
 | V4 活动公告接收站 | [events.bi8spf.cn](https://events.bi8spf.cn/)（BI8SRC） | 常驻监听节点，公告保留 7 天 |
