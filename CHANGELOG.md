@@ -2,6 +2,10 @@
 
 ## 2026-11-22
 
+### 修复 GitHub Pages 部署失败（v1014u）
+
+- 修复：升级 Pages 部署工作流至 checkout@v5 / configure-pages@v5 / upload-pages-artifact@v4 / deploy-pages@v5，解决 Node 24 强制升级后 deploy-pages@v4 查询 artifact 返回 0 个的部署失败。
+
 ### 协议文档收尾（v1014t，纯文档）
 
 - 更新：PROTOCOL.md 对齐实际实现——移除固件不支持的 4 个统计/版本接口，speaking_stop 改为立即清空，音频链改为逐帧 BufferSource，补 qso/beacon 事件与本地统计口径。
