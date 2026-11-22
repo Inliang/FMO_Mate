@@ -2,6 +2,10 @@
 
 ## 2026-11-22
 
+### 协议文档收尾（v1014t，纯文档）
+
+- 更新：PROTOCOL.md 对齐实际实现——移除固件不支持的 4 个统计/版本接口，speaking_stop 改为立即清空，音频链改为逐帧 BufferSource，补 qso/beacon 事件与本地统计口径。
+
 ### 架构 / UI 设计文档重写（v1014s，纯文档）
 
 - 更新：ARCHITECTURE 与 UI_DESIGN 两文全量重写，对齐当前代码（重连无限封顶 30s、超时 5s、轮询 30s、逐帧 BufferSource 音频链、core.js、三主题真实色值、真实断点、天气跑马灯），清除未落地的 AudioWorklet / 四象限布局等过时描述。
