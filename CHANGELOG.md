@@ -1,5 +1,13 @@
 # FMO 副屏伴侣 — 更新日志
 
+## 2026-11-22
+
+### 顶部状态栏新增「3 天天气预告跑马灯」（v1014p → v1014q）
+
+- **需求**：状态栏中间 UTC 时钟 / 「本机」标签旁的伸缩空白区常显 3 天天气，值守时一眼扫到，不额外开页面。
+- **实现（依简意白正式视觉规范）**：`index.html` 在 `.status-bar-center` 的 `#utc-clock` 与 `#net-type` 之间插入 BEM 结构 `#wx-ticker > .wx-ticker__track > 3×span.wx-ticker__seg`，三段内容完全相同、全部 `aria-hidden`，容器常驻 DOM 靠状态 class 切换避免抖动；`style.css`（独立文件，非内联）用现有设计令牌，轨道 22s linear 循环 `translateX(0 → -33.333%)`，hover/:focus-within 暂停 + title 看全文，≤980px 保留（字号降 --fs-2xs）、≤480px 隐藏。**静态降级**：项目已有 `[data-theme="e-ink"] * {animation:none!important}` 与全局 reduced-motion 会把轨道停在首/末帧露半截文本，故在这两种环境下隐藏段 2/3 与分隔符、只留「今天」一条 + `text-overflow:ellipsis`。`app.js` 扩展 `_reverseGeocodeInfo` 返回 `city`（直辖市取 `ac.province`），新增天气模块：城市优先级「设备坐标反查 → 缓存 → 北京」，5s AbortController 超时、`fmo-weather-cache` 缓存、60 分钟刷新、坐标变化重取、出错静态占位不弹错且下周期自动重试；`aria-label` 每次刷新只更新一次，不用 aria-live。`?v=1014o` → `?v=1014q` 强制刷新缓存（三处资源）。
+- **文案格式**：`城市 · MM-DD 天气 · 低~高℃ · 风向风力`，如 `上海 · 11-23 多云 · 11~20℃ · 南风3级`；每条都带城市，昼夜不同写「阴转小雨」。
+
 ## 2026-11-15
 
 ### 抽取共享核心 core.js + 调试日志加开关（v=1014k → v=1014m，本次一号改动）

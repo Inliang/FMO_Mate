@@ -81,6 +81,16 @@ const App = {
   myGrid: '',
   _myLat: undefined,
   _myLon: undefined,
+
+  // --- 天气预告跑马灯（与设备连接解耦，缓存+60分钟刷新） ---
+  _weatherTimer: null,
+  _weatherInFlight: false,
+  _weatherLoading: false,
+  _weatherPending: false,
+  _weatherGeoCache: null,            // { key:'lat,lon', city } 避免重复反查烧配额
+  _weatherRefreshMs: 60 * 60 * 1000,
+  _weatherCacheKey: 'fmo-weather-cache',
+
   qsoList: [],
   qsoSearch: '',
   _topPanelTab: 'top20',   // E1：TOP20 / 老朋友
@@ -152,6 +162,7 @@ const App = {
     this.loadAgc();
     this.updateVU();
     this._startClock();
+    this._initWeather();
     this.updateCoordCard();
     this._setTopPanelTab(this._topPanelTab || 'top20'); // E1：初始化 TOP 面板 tab
     this.loadCache(); // C2：先渲染本地缓存，连接设备后再增量合并
@@ -872,6 +883,8 @@ const App = {
           this._myLon = Number(r.data.longitude);
           const grid = this.latLonToGrid(r.data.latitude, r.data.longitude);
           this.myGrid = grid;
+          // 设备坐标到位 → 天气城市可能变化（内部有缓存/去重，不会高频请求）
+          if (Number.isFinite(this._myLat) && Number.isFinite(this._myLon)) this._weatherLoad(false);
         }
       } catch (e) {}
     })());
@@ -1903,9 +1916,9 @@ const App = {
     out.innerHTML = this._esc(addr) + (info.postcode ? ' · 邮编<span class="postcode">' + this._esc(info.postcode) + '</span>' : '');
   },
 
-  // 经纬度 -> 地址 + 大体邮编（高德取地址，Nominatim 取邮编；国际/兜底走 Nominatim）
+  // 经纬度 -> 地址 + 大体邮编 + 城市名（高德取地址/城市，Nominatim 取邮编；国际/兜底走 Nominatim）
   async _reverseGeocodeInfo(lat, lon) {
-    let address = '', postcode = '';
+    let address = '', postcode = '', city = '';
     try {
       const url = `https://restapi.amap.com/v3/geocode/regeo?key=${this._getAmapKey()}&location=${lon},${lat}&output=JSON`;
       const ctrl = new AbortController();
@@ -1916,6 +1929,9 @@ const App = {
         const data = await resp.json();
         if (data.status === '1' && data.regeocode) {
           const ac = data.regeocode.addressComponent || {};
+          // 天气城市名：普通地级市取 ac.city；直辖市 ac.city 可能为空/等于省，取 ac.province
+          city = ac.city || ac.province || '';
+          if (city === '中华人民共和国') city = '';
           const parts = [];
           if (ac.province && ac.province !== '中华人民共和国') parts.push(ac.province);
           if (ac.city && ac.city !== ac.province && !parts.some(p => p.includes(ac.city))) parts.push(ac.city);
@@ -1943,7 +1959,172 @@ const App = {
         }
       }
     } catch (e) { /* 忽略 */ }
-    return { address, postcode };
+    return { address, postcode, city };
+  },
+
+  // ============ 天气预告跑马灯（3 天 · 缓存 + 60 分钟刷新 · 安静降级） ============
+
+  /** 城市名归一化：去掉末尾「市/省」，便于反查名与接口返回名比对 */
+  _normWeatherCityName(s) {
+    return String(s || '').trim().replace(/[市省]$/, '');
+  },
+
+  /** 读本地天气缓存（city / timestamp / daily），坏数据一律当没有 */
+  _readWeatherCache() {
+    try {
+      const raw = localStorage.getItem(this._weatherCacheKey);
+      if (!raw) return null;
+      const obj = JSON.parse(raw);
+      if (!obj || !obj.city || !Array.isArray(obj.daily) || !obj.daily.length) return null;
+      return obj;
+    } catch (e) { return null; }
+  },
+
+  /** 城市优先级：设备坐标反查 → 上次成功城市缓存 → 默认北京（无设备也能显示） */
+  async _resolveWeatherCity() {
+    const lat = this._myLat, lon = this._myLon;
+    if (Number.isFinite(lat) && Number.isFinite(lon)) {
+      const key = lat.toFixed(3) + ',' + lon.toFixed(3);
+      if (this._weatherGeoCache && this._weatherGeoCache.key === key && this._weatherGeoCache.city) {
+        return this._weatherGeoCache.city;
+      }
+      try {
+        const info = await this._reverseGeocodeInfo(lat, lon);
+        const city = this._normWeatherCityName(info && info.city);
+        if (city) {
+          this._weatherGeoCache = { key, city };
+          return city;
+        }
+      } catch (e) { /* 反查失败走缓存/兜底 */ }
+    }
+    const cache = this._readWeatherCache();
+    if (cache && cache.city) return this._normWeatherCityName(cache.city);
+    return '北京';
+  },
+
+  /** 风力：优先用接口 wind_scale；缺失时按 wind_speed（实测 km/h）折算蒲福级 */
+  _windLevel(d) {
+    if (d.wind_scale) return String(d.wind_scale) + '级';
+    const v = Number(d.wind_speed);
+    if (!Number.isFinite(v)) return '';
+    const limits = [1, 6, 12, 20, 29, 39, 50, 62, 75, 89, 103, 118];
+    for (let i = 0; i < limits.length; i++) if (Math.abs(v) < limits[i]) return i + '级';
+    return '12级';
+  },
+
+  /** 单日三种文案：html 供三段轨道复用，plain 供 title，aria 供一次性摘要 */
+  _weatherDayText(city, d) {
+    const md = String(d.date || '').slice(5) || '--';
+    const mm = String(d.date || '').slice(5, 7);
+    const dd = String(d.date || '').slice(8, 10);
+    const day = d.text_day || '--';
+    const night = d.text_night || '--';
+    const sky = day === night ? day : (day + '转' + night);
+    const low = d.low ?? '--';
+    const high = d.high ?? '--';
+    const wind = (d.wind_direction ? d.wind_direction + '风' : '') + this._windLevel(d);
+    const html = '<span class="wx-ticker__meta">' + this._esc(city) + ' · ' + this._esc(md) + '</span> '
+      + this._esc(sky) + ' · <span class="wx-ticker__temp">' + this._esc(low) + '~' + this._esc(high) + '℃</span> · '
+      + this._esc(wind);
+    const plain = city + ' · ' + md + ' ' + sky + ' · ' + low + '~' + high + '℃ · ' + wind;
+    const when = (mm && dd) ? (Number(mm) + '月' + Number(dd) + '日') : md;
+    const aria = city + when + sky + low + '到' + high + '摄氏度，' + wind;
+    return { html, plain, aria };
+  },
+
+  /** 渲染：有数据→三段滚动 + 一次性摘要；无数据→七态静态占位 */
+  _renderWeather(payload, state) {
+    const box = document.getElementById('wx-ticker');
+    if (!box) return;
+    const track = box.querySelector('.wx-ticker__track');
+    if (!track) return;
+    ['is-static', 'is-loading', 'is-empty', 'is-error', 'is-unlocated'].forEach(c => box.classList.remove(c));
+
+    let segHtml, title, ariaLabel;
+    if (payload && Array.isArray(payload.daily) && payload.daily.length) {
+      const city = payload.city || '北京';
+      const parts = payload.daily.slice(0, 3).map(d => this._weatherDayText(city, d));
+      segHtml = parts.map((p, i) => (i ? '<span class="wx-ticker__sep">　·　</span>' : '') + '<span class="wx-ticker__day">' + p.html + '</span>').join('');
+      title = parts.map(p => p.plain).join('　·　');
+      ariaLabel = '未来三天天气：' + parts.map(p => p.aria).join('；');
+    } else {
+      const messages = { loading: '天气加载中…', empty: '天气暂无数据', error: '天气暂不可用', unlocated: '天气未定位' };
+      const key = messages[state] ? state : 'empty';
+      box.classList.add('is-static', 'is-' + key);
+      title = messages[key];
+      ariaLabel = title;
+      segHtml = '<span class="wx-ticker__day">' + title + '</span>';
+    }
+    const seg = '<span class="wx-ticker__seg" aria-hidden="true">' + segHtml + '</span>';
+    track.innerHTML = seg + seg + seg; // 三段完全相同，动画 -33.333% 保证任意时刻右侧有内容
+    box.title = title;
+    box.setAttribute('aria-label', ariaLabel); // 仅刷新时更新一次，不用 aria-live
+  },
+
+  /** 真正发请求：5s 超时 + 并发去重；出错静态占位、不弹窗不闪红，下周期自动重试 */
+  async _fetchWeather(city) {
+    if (this._weatherInFlight) return;
+    this._weatherInFlight = true;
+    const cache = this._readWeatherCache();
+    if (!cache || this._normWeatherCityName(cache.city) !== this._normWeatherCityName(city)) {
+      this._renderWeather(null, 'loading');
+    }
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 5000);
+    try {
+      const url = 'https://api.gmya.net/Api/Weather?appkey=31c90fa3cd1443a6de1e29976df39ba8&city=' + encodeURIComponent(city);
+      const resp = await fetch(url, { signal: ctrl.signal });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const json = await resp.json();
+      const data = json && json.data;
+      if (!json || json.code !== 200 || !data) throw new Error('bad payload');
+      if (!Array.isArray(data.daily) || !data.daily.length) { this._renderWeather(null, 'empty'); return; }
+      const payload = {
+        city: (data.location && data.location.city) || city,
+        timestamp: Date.now(),
+        daily: data.daily
+      };
+      try { localStorage.setItem(this._weatherCacheKey, JSON.stringify(payload)); } catch (e) {}
+      this._renderWeather(payload);
+    } catch (e) {
+      this._renderWeather(null, 'error'); // 缓存留着，下个刷新周期自动重试
+    } finally {
+      clearTimeout(timer);
+      this._weatherInFlight = false;
+    }
+  },
+
+  /** 统一入口：解析城市 → 缓存新鲜且城市未变则跳过请求，否则抓取 */
+  async _weatherLoad(force) {
+    if (this._weatherLoading) { this._weatherPending = true; return; }
+    this._weatherLoading = true;
+    try {
+      let runForce = !!force;
+      while (true) {
+        this._weatherPending = false;
+        const city = await this._resolveWeatherCity();
+        if (!city) { this._renderWeather(null, 'unlocated'); return; }
+        const cache = this._readWeatherCache();
+        const stale = !cache || !cache.timestamp || (Date.now() - cache.timestamp) >= this._weatherRefreshMs;
+        const cacheCity = cache ? this._normWeatherCityName(cache.city) : '';
+        const changed = !!cacheCity && cacheCity !== this._normWeatherCityName(city);
+        if (runForce || stale || changed) await this._fetchWeather(city);
+        if (!this._weatherPending) break;
+        runForce = true; // 期间有新请求（通常是设备坐标刚到位），按最新城市再走一遍
+      }
+    } catch (e) { /* 静默：天气是锦上添花，不能影响值守 */ }
+    finally { this._weatherLoading = false; }
+  },
+
+  /** 启动：先用缓存立即显示，再后台刷新；每 60 分钟一次 */
+  _initWeather() {
+    if (!document.getElementById('wx-ticker')) return;
+    const cache = this._readWeatherCache();
+    if (cache) this._renderWeather(cache);
+    else this._renderWeather(null, 'loading');
+    this._weatherLoad(false);
+    if (this._weatherTimer) clearInterval(this._weatherTimer);
+    this._weatherTimer = setInterval(() => this._weatherLoad(false), this._weatherRefreshMs);
   },
 
   /** 地址 → 经纬度（正查）：高德优先（中文地址准），Nominatim 兜底（国际地址） */
@@ -2028,6 +2209,7 @@ const App = {
       this._myLat = lat;
       this._myLon = lon;
       this.myGrid = this.latLonToGrid(lat, lon);
+      this._weatherLoad(false); // 用户改坐标 → 天气城市可能变化，触发重取
       this.updateCoordCard();
       this.closeCoordDialog();
       this._showToast('坐标已写入 · 网格 ' + this.myGrid);

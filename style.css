@@ -607,6 +607,87 @@ button { font: inherit; color: inherit; }
   min-width: 0;
 }
 
+/* ---- 天气预告跑马灯（BEM · 三段无缝滚动 · 静态降级） ---- */
+.wx-ticker {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 24px;                /* 与相邻 pill-clock 同高，不撑高状态栏 */
+  overflow: hidden;
+  border-radius: var(--r-full);
+  background: var(--sunken);
+  border: 1px solid var(--line);
+  padding: 0 var(--sp-2);
+  font-family: var(--font-sans);
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums; /* 防数字宽度跳动导致抖动 */
+  cursor: default;                    /* 纯展示，不可点击 */
+  transition: background var(--dur-2) var(--ease-std);
+}
+.wx-ticker:hover { background: var(--surface); }
+.wx-ticker__track {
+  display: flex;
+  flex: 0 0 auto;              /* 不被状态栏压缩，保证 -33.333% 恰好等于一段宽 */
+  align-items: center;
+  white-space: nowrap;
+  will-change: transform;
+  animation: wx-scroll 22s linear infinite;
+}
+.wx-ticker__seg {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  white-space: nowrap;
+  padding-right: 3rem;         /* 三段之间的自然接缝 */
+}
+.wx-ticker__day { flex: 0 0 auto; color: var(--ink-2); }
+.wx-ticker__meta { color: var(--ink-3); }   /* 城市 + 日期，弱一级 */
+.wx-ticker__temp { color: var(--ink); font-weight: 600; }
+.wx-ticker__sep { flex: 0 0 auto; color: var(--ink-3); }
+.wx-ticker:hover .wx-ticker__track,
+.wx-ticker:focus-within .wx-ticker__track { animation-play-state: paused; }
+
+@keyframes wx-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-33.333%); }
+}
+
+/* 静态降级公共形态：停滚动、隐藏后两段、只留今天一条并省略号截断 */
+.wx-ticker.is-static .wx-ticker__track { animation: none; width: 100%; flex: 1 1 auto; }
+.wx-ticker.is-static .wx-ticker__seg:not(:first-child),
+.wx-ticker.is-static .wx-ticker__sep,
+.wx-ticker.is-static .wx-ticker__day:not(:first-child) { display: none; }
+.wx-ticker.is-static .wx-ticker__seg { display: block; width: 100%; min-width: 0; padding-right: 0; }
+.wx-ticker.is-static .wx-ticker__day { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.wx-ticker.is-loading .wx-ticker__day,
+.wx-ticker.is-empty .wx-ticker__day,
+.wx-ticker.is-error .wx-ticker__day,
+.wx-ticker.is-unlocated .wx-ticker__day { color: var(--ink-3); }
+
+/* 墨屏：项目已有 [data-theme="e-ink"] * {animation:none!important}，轨道会停在首帧，
+   必须同时切成静态单条，否则右侧露出半截文本 */
+[data-theme="e-ink"] .wx-ticker__track { animation: none !important; width: 100%; flex: 1 1 auto; }
+[data-theme="e-ink"] .wx-ticker__seg:not(:first-child),
+[data-theme="e-ink"] .wx-ticker__sep,
+[data-theme="e-ink"] .wx-ticker__day:not(:first-child) { display: none; }
+[data-theme="e-ink"] .wx-ticker__seg { display: block; width: 100%; min-width: 0; padding-right: 0; }
+[data-theme="e-ink"] .wx-ticker__day { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+[data-theme="e-ink"] .wx-ticker { font-size: var(--fs-2xs); }
+
+/* 减少动效：全局把动画压成 0.01ms/1 次，同样必须切静态单条 */
+@media (prefers-reduced-motion: reduce) {
+  .wx-ticker__track { animation: none !important; width: 100%; flex: 1 1 auto; }
+  .wx-ticker__seg:not(:first-child),
+  .wx-ticker__sep,
+  .wx-ticker__day:not(:first-child) { display: none; }
+  .wx-ticker__seg { display: block; width: 100%; min-width: 0; padding-right: 0; }
+  .wx-ticker__day { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .wx-ticker { font-size: var(--fs-2xs); }
+}
+
 .status-dot {
   width: 8px;
   height: 8px;
@@ -2548,6 +2629,8 @@ button { font: inherit; color: inherit; }
 
 /* ---- ≤980px: 单列堆叠 ---- */
 @media (max-width: 980px) {
+  /* 窄屏保留天气跑马灯，字号略降 */
+  .wx-ticker { font-size: var(--fs-2xs); }
   /* 窄屏放弃「一屏显示」，恢复页面滚动，避免内容被压扁 */
   body { height: auto; overflow: auto; padding: var(--sp-3); }
   .app-wrapper {
@@ -2602,6 +2685,7 @@ button { font: inherit; color: inherit; }
 
   .brand-label { display: none; }
   .stat-pill { display: none; }
+  .wx-ticker { display: none; } /* 极窄屏优先让位给状态信息 */
   .status-bar-top { height: auto; min-height: 44px; padding: var(--sp-2) var(--sp-3); }
   .status-bar-right { width: auto; margin-left: auto; }
 
